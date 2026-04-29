@@ -1,0 +1,66 @@
+/* ── Design tokens ─────────────────────────────────────────────────────────── */
+:root {
+  --bg-base:       #0d0d14;
+  --bg-surface:    #13131f;
+  --bg-elevated:   #1c1c2e;
+  --bg-panel:      #16162a;
+
+  --border:        #2a2a42;
+  --border-focus:  #4a90d9;
+
+  --text-primary:  #e8e8f0;
+  --text-secondary:#9494b0;
+  --text-muted:    #5a5a78;
+
+  --accent:        #4a90d9;
+  --accent-hover:  #5aa0e9;
+  --accent-dim:    rgba(74, 144, 217, 0.15);
+
+  --success:       #4caf7d;
+  --warning:       #e6b44a;
+  --danger:        #e05252;
+
+  --radius-sm:     4px;
+  --radius:        6px;
+  --radius-lg:     10px;
+
+  --font-ui:       'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-mono:     'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+
+  --toolbar-h:     44px;
+  --sidebar-w:     280px;
+}
+
+/* ── Reset ─────────────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body, #root {
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Scrollbar ─────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar              { width: 6px; height: 6px; }
+::-webkit-scrollbar-track        { background: transparent; }
+::-webkit-scrollbar-thumb        { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover  { background: var(--text-muted); }
+
+/* ── Typography ────────────────────────────────────────────────────────────── */
+h1, h2, h3, h4 { font-weight: 600; letter-spacing: -0.01em; }
+code, pre       { font-family: var(--font-mono); }
+
+/* ── Utility ────────────────────────────────────────────────────────────────── */
+.flex        { display: flex; }
+.flex-col    { display: flex; flex-direction: column; }
+.flex-1      { flex: 1; }
+.overflow-auto { overflow: auto; }
+.overflow-hidden { overflow: hidden; }
+.gap-1       { gap: 4px; }
+.gap-2       { gap: 8px; }
+.gap-3       { gap: 12px; }

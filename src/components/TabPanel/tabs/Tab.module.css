@@ -1,0 +1,57 @@
+.tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.placeholder {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chart {
+  width: 100%;
+  height: 100%;
+}
+
+/* Losses / Thermal table */
+.lossGrid {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 0;
+  overflow-y: auto;
+}
+
+.lossRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 16px;
+  border-bottom: 1px solid rgba(42,42,66,0.5);
+}
+
+.lossRow:hover {
+  background: rgba(255,255,255,0.02);
+}
+
+.lossLabel {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.lossValue {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.note {
+  padding: 8px 16px;
+  font-size: 11px;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border);
+}
