@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react'
-import { useWorkbenchStore } from '../../store/workbenchStore'
+import { useDesignStore } from '../../store/design-store'
 import styles from './SchematicView.module.css'
 
 const TOPOLOGY_DESCRIPTIONS: Record<string, string> = {
@@ -11,7 +11,7 @@ const TOPOLOGY_DESCRIPTIONS: Record<string, string> = {
 }
 
 export function SchematicView(): React.ReactElement {
-  const { topology } = useWorkbenchStore()
+  const { topology } = useDesignStore()
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {

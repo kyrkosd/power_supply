@@ -1,5 +1,5 @@
 import React from 'react'
-import { useWorkbenchStore } from '../../../store/workbenchStore'
+import { useDesignStore } from '../../../store/design-store'
 import styles from './Tab.module.css'
 
 const LOSS_CATEGORIES = [
@@ -12,7 +12,7 @@ const LOSS_CATEGORIES = [
 ]
 
 export function LossesTab(): React.ReactElement {
-  const { results } = useWorkbenchStore()
+  const { result } = useDesignStore()
 
   return (
     <div className={styles.tab}>
@@ -25,7 +25,7 @@ export function LossesTab(): React.ReactElement {
         ))}
       </div>
       <div className={styles.note}>
-        {results.dutyCycle === null
+        {result?.dutyCycle == null
           ? 'Run simulation to compute loss breakdown.'
           : 'Loss engine not yet implemented.'}
       </div>

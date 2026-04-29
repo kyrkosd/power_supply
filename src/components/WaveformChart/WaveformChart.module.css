@@ -1,0 +1,28 @@
+.wrapper {
+  width: 100%;
+  height: 100%;
+  display: flex;
+}
+
+.svg {
+  width: 100%;
+  height: 100%;
+}
+
+.yAxis path,
+.xAxis path,
+.yAxis line,
+.xAxis line {
+  stroke: rgba(255,255,255,0.08);
+}
+
+.yAxis text,
+.xAxis text {
+  fill: var(--text-muted);
+  font-size: 11px;
+}
+
+.yAxis .domain,
+.xAxis .domain {
+  display: none;
+}

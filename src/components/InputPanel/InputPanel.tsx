@@ -1,9 +1,9 @@
 import React from 'react'
-import { useWorkbenchStore, DesignInputs } from '../../store/workbenchStore'
+import { useDesignStore, type DesignSpec } from '../../store/design-store'
 import styles from './InputPanel.module.css'
 
 interface FieldDef {
-  key: keyof DesignInputs
+  key: keyof DesignSpec
   label: string
   unit: string
   min: number
@@ -11,15 +11,25 @@ interface FieldDef {
   step: number
   decimals: number
   scale?: number
+  log?: boolean
 }
 
-const FIELDS: FieldDef[] = [
-  { key: 'vinMin',      label: 'Vin min',      unit: 'V',   min: 1,   max: 100, step: 0.5,   decimals: 1 },
-  { key: 'vinMax',      label: 'Vin max',      unit: 'V',   min: 1,   max: 100, step: 0.5,   decimals: 1 },
-  { key: 'vout',        label: 'Vout',         unit: 'V',   min: 0.5, max: 60,  step: 0.1,   decimals: 2 },
-  { key: 'iout',        label: 'Iout',         unit: 'A',   min: 0.1, max: 50,  step: 0.1,   decimals: 2 },
-  { key: 'fsw',         label: 'Fsw',          unit: 'kHz', min: 10,  max: 5000, step: 10,   decimals: 0, scale: 1000 },
-  { key: 'efficiency',  label: 'Efficiency',   unit: '%',   min: 50,  max: 100, step: 1,     decimals: 0, scale: 0.01 }
+const SPEC_FIELDS: FieldDef[] = [
+  { key: 'vinMin', label: 'Vin min', unit: 'V', min: 1, max: 60, step: 0.1, decimals: 1 },
+  { key: 'vinMax', label: 'Vin max', unit: 'V', min: 1, max: 60, step: 0.1, decimals: 1 },
+  { key: 'vout', label: 'Vout', unit: 'V', min: 0.5, max: 50, step: 0.1, decimals: 2 },
+  { key: 'iout', label: 'Iout', unit: 'A', min: 0.1, max: 30, step: 0.1, decimals: 2 },
+]
+
+const OPERATING_FIELDS: FieldDef[] = [
+  { key: 'fsw', label: 'Switching freq', unit: 'kHz', min: 10_000, max: 2_000_000, step: 1, decimals: 0, scale: 1000, log: true },
+  { key: 'rippleRatio', label: 'Ripple ratio', unit: '', min: 0.1, max: 0.5, step: 0.01, decimals: 2 },
+  { key: 'ambientTemp', label: 'Ambient temp', unit: '°C', min: 25, max: 85, step: 1, decimals: 0 },
+]
+
+const TARGET_FIELDS: FieldDef[] = [
+  { key: 'voutRippleMax', label: 'Vout ripple max', unit: 'mV', min: 0.001, max: 0.5, step: 0.001, decimals: 0, scale: 1000 },
+  { key: 'efficiency', label: 'Efficiency target', unit: '%', min: 0.8, max: 0.99, step: 0.01, decimals: 0, scale: 0.01 },
 ]
 
 function toDisplay(field: FieldDef, raw: number): number {
@@ -30,82 +40,109 @@ function toRaw(field: FieldDef, display: number): number {
   return field.scale ? display * field.scale : display
 }
 
+function sliderValue(field: FieldDef, raw: number): number {
+  return field.log ? Math.log10(raw) : toDisplay(field, raw)
+}
+
+function sliderMin(field: FieldDef): number {
+  return field.log ? Math.log10(field.min) : field.scale ? field.min / field.scale : field.min
+}
+
+function sliderMax(field: FieldDef): number {
+  return field.log ? Math.log10(field.max) : field.scale ? field.max / field.scale : field.max
+}
+
+function sliderStep(field: FieldDef): number {
+  return field.log ? 0.01 : field.step
+}
+
+function formatDisplay(value: number, decimals: number): string {
+  return Number.isFinite(value) ? value.toFixed(decimals) : '—'
+}
+
 export function InputPanel(): React.ReactElement {
-  const { inputs, results, setInput } = useWorkbenchStore()
+  const { spec, result, updateSpec } = useDesignStore()
+
+  const sections = [
+    { title: 'Specifications', fields: SPEC_FIELDS },
+    { title: 'Operating', fields: OPERATING_FIELDS },
+    { title: 'Targets', fields: TARGET_FIELDS },
+  ]
+
+  const onFieldChange = (field: FieldDef, value: number) => {
+    const normalized = field.log ? Math.pow(10, value) : value
+    const raw = field.log ? normalized : toRaw(field, normalized)
+    updateSpec({ [field.key]: raw } as Partial<DesignSpec>)
+  }
 
   return (
     <div className={styles.panel}>
-      <div className={styles.header}>Design Parameters</div>
+      <div className={styles.header}>Design Inputs</div>
 
-      <div className={styles.fields}>
-        {FIELDS.map((f) => {
-          const displayVal = toDisplay(f, inputs[f.key] as number)
-          return (
-            <div key={f.key} className={styles.field}>
-              <div className={styles.fieldHeader}>
-                <span className={styles.fieldLabel}>{f.label}</span>
-                <span className={styles.fieldValue}>
-                  {displayVal.toFixed(f.decimals)}&thinsp;
-                  <span className={styles.unit}>{f.unit}</span>
-                </span>
-              </div>
-              <input
-                type="range"
-                className={styles.slider}
-                min={f.min}
-                max={f.max}
-                step={f.step}
-                value={displayVal}
-                onChange={(e) => setInput(f.key, toRaw(f, parseFloat(e.target.value)))}
-              />
-              <div className={styles.rangeHints}>
-                <span>{f.min}</span>
-                <span>{f.max} {f.unit}</span>
-              </div>
+      <div className={styles.sections}>
+        {sections.map((section) => (
+          <details key={section.title} open className={styles.section}>
+            <summary className={styles.sectionTitle}>{section.title}</summary>
+            <div className={styles.sectionBody}>
+              {section.fields.map((field) => {
+                const rawValue = spec[field.key] as number
+                const displayValue = toDisplay(field, rawValue)
+                const minDisplay = toDisplay(field, field.min)
+                const maxDisplay = toDisplay(field, field.max)
+                const slider = sliderValue(field, rawValue)
+
+                return (
+                  <div key={field.key} className={styles.fieldRow}>
+                    <div className={styles.rowLabel}>
+                      <span>{field.label}</span>
+                      <span className={styles.rowUnit}>{field.unit}</span>
+                    </div>
+
+                    <input
+                      type="range"
+                      className={styles.slider}
+                      min={sliderMin(field)}
+                      max={sliderMax(field)}
+                      step={sliderStep(field)}
+                      value={slider}
+                      onChange={(event) => onFieldChange(field, Number(event.target.value))}
+                    />
+
+                    <div className={styles.rowControls}>
+                      <input
+                        type="number"
+                        className={styles.numberInput}
+                        value={displayValue}
+                        step={field.step}
+                        min={minDisplay}
+                        max={maxDisplay}
+                        onChange={(event) => onFieldChange(field, Number(event.target.value))}
+                      />
+                      <span className={styles.unitLabel}>{field.unit}</span>
+                    </div>
+
+                    <div className={styles.rangeHints}>
+                      <span>{formatDisplay(minDisplay, field.decimals)}</span>
+                      <span>{formatDisplay(maxDisplay, field.decimals)}</span>
+                    </div>
+                  </div>
+                )
+              })}
             </div>
-          )
-        })}
+          </details>
+        ))}
       </div>
 
-      <div className={styles.divider} />
-
-      <div className={styles.header}>Results</div>
-      <div className={styles.results}>
-        <ResultRow label="Duty Cycle" value={results.dutyCycle} unit="%" scale={100} decimals={1} />
-        <ResultRow label="Inductance" value={results.inductance} unit="µH" scale={1e6} decimals={2} />
-        <ResultRow label="Capacitance" value={results.capacitance} unit="µF" scale={1e6} decimals={2} />
-        <ResultRow label="Peak Current" value={results.peakCurrent} unit="A" decimals={2} />
+      <div className={styles.summaryPanel}>
+        <div className={styles.summaryRow}>
+          <span>Duty cycle</span>
+          <strong>{result ? `${(result.dutyCycle * 100).toFixed(1)}%` : '—'}</strong>
+        </div>
+        <div className={styles.summaryRow}>
+          <span>Efficiency</span>
+          <strong>{result ? `${(result.efficiency * 100).toFixed(1)}%` : '—'}</strong>
+        </div>
       </div>
-    </div>
-  )
-}
-
-function ResultRow({
-  label,
-  value,
-  unit,
-  scale = 1,
-  decimals
-}: {
-  label: string
-  value: number | null
-  unit: string
-  scale?: number
-  decimals: number
-}): React.ReactElement {
-  return (
-    <div className={styles.resultRow}>
-      <span className={styles.resultLabel}>{label}</span>
-      <span className={styles.resultValue}>
-        {value === null ? (
-          <span className={styles.placeholder}>—</span>
-        ) : (
-          <>
-            {(value * scale).toFixed(decimals)}&thinsp;
-            <span className={styles.unit}>{unit}</span>
-          </>
-        )}
-      </span>
     </div>
   )
 }

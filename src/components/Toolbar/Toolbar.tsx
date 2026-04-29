@@ -1,5 +1,5 @@
 import React from 'react'
-import { useWorkbenchStore, TopologyId } from '../../store/workbenchStore'
+import { useDesignStore, TopologyId } from '../../store/design-store'
 import styles from './Toolbar.module.css'
 
 const TOPOLOGIES: { id: TopologyId; label: string }[] = [
@@ -12,7 +12,7 @@ const TOPOLOGIES: { id: TopologyId; label: string }[] = [
 ]
 
 export function Toolbar(): React.ReactElement {
-  const { topology, setTopology } = useWorkbenchStore()
+  const { topology, setTopology } = useDesignStore()
 
   return (
     <header className={styles.toolbar}>
