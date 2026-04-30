@@ -36,6 +36,14 @@
   overflow: hidden;
 }
 
+.componentArea {
+  height: 200px;
+  flex-shrink: 0;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+  overflow: auto;
+}
+
 .tabArea {
   height: 280px;
   flex-shrink: 0;

@@ -12,7 +12,7 @@ const TOPOLOGIES: { id: TopologyId; label: string }[] = [
 ]
 
 export function Toolbar(): React.ReactElement {
-  const { topology, setTopology } = useDesignStore()
+  const { topology, setTopology, resetSpec, isComputing } = useDesignStore()
 
   return (
     <header className={styles.toolbar}>
@@ -37,13 +37,18 @@ export function Toolbar(): React.ReactElement {
             </option>
           ))}
         </select>
+        {isComputing && <span className={styles.spinner} title="Computing…" />}
       </div>
 
       <div className={styles.spacer} />
 
       <div className={styles.actions}>
-        <button className={styles.btn} disabled title="Run simulation (coming soon)">
-          ▶ Simulate
+        <button
+          className={styles.btn}
+          onClick={resetSpec}
+          title={`Reset ${topology} to default values`}
+        >
+          ↺ Reset
         </button>
         <button className={styles.btn} disabled title="Export report (coming soon)">
           ↓ Export

@@ -57,9 +57,9 @@ always go through the worker.
 | `buck`      | `topologies/buck.ts`          | CCM equations implemented |
 | `boost`     | `topologies/boost.ts`         | CCM equations implemented |
 | `buck-boost`| `topologies/buckBoost.ts`     | stub |
-| `flyback`   | `topologies/flyback.ts`       | stub |
+| `flyback`   | `topologies/flyback.ts`       | CCM equations implemented |
 | `forward`   | `topologies/forward.ts`       | stub |
-| `sepic`     | `topologies/sepic.ts`         | stub |
+| `sepic`     | `topologies/sepic.ts`       | CCM equations implemented |
 
 Each file exports a single `const xxxTopology: Topology` object.
 Register it in `src/engine/index.ts`.

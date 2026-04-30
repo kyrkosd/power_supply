@@ -1,5 +1,6 @@
 import { DesignSpec, DesignResult, Topology } from '../types'
 import type { WaveformSet } from '../topologies/types'
+import { analyzeBuckControlLoop } from '../control-loop'
 
 // Buck (step-down) converter steady-state design equations.
 // Assumes CCM (Continuous Conduction Mode) and ideal switch/diode.
@@ -19,8 +20,9 @@ export const buckTopology: Topology = {
     const capacitance = deltaIL / (8 * fsw * rippleVoltage)
 
     const peakCurrent = iout + deltaIL / 2
+    const loop = analyzeBuckControlLoop(spec, { dutyCycle, inductance, capacitance, peakCurrent, warnings: [] })
 
-    return { dutyCycle, inductance, capacitance, peakCurrent }
+    return { dutyCycle, inductance, capacitance, peakCurrent, warnings: loop.warnings }
   },
 
   generateWaveforms(spec: DesignSpec): WaveformSet {

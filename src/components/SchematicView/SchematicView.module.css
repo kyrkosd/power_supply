@@ -32,10 +32,19 @@
   letter-spacing: 0.04em;
 }
 
-.canvas {
+.diagramWrapper {
   flex: 1;
+  padding: 14px;
+}
+
+.diagram {
   width: 100%;
-  display: block;
+  height: 100%;
+  overflow: visible;
+  background: radial-gradient(circle at top left, rgba(79,70,229,0.08), transparent 28%),
+    radial-gradient(circle at bottom right, rgba(14,165,233,0.08), transparent 30%);
+  border: 1px solid var(--border);
+  border-radius: 20px;
 }
 
 .description {

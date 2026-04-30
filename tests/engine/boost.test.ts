@@ -7,29 +7,33 @@ const spec: DesignSpec = {
   vinMax: 8,
   vout: 12,
   iout: 1,
-  fsw: 100_000,
-  efficiency: 0.9
+  fsw: 300_000,
+  rippleRatio: 0.3,
+  voutRippleMax: 0.12,
+  ambientTemp: 25,
+  efficiency: 0.9,
 }
 
 describe('Boost topology', () => {
   const result = boostTopology.compute(spec)
 
-  it('duty cycle equals 1 - Vinmin/Vout', () => {
-    expect(result.dutyCycle).toBeCloseTo(1 - 5 / 12, 6)
+  it('computes duty cycle for 5V-to-12V at 90% efficiency', () => {
+    expect(result.dutyCycle).toBeCloseTo(0.625, 6)
   })
 
-  it('duty cycle is between 0 and 1', () => {
-    expect(result.dutyCycle).toBeGreaterThan(0)
-    expect(result.dutyCycle).toBeLessThan(1)
+  it('computes the correct inductance for the specified ripple and switching frequency', () => {
+    expect(result.inductance).toBeCloseTo(13.0208e-6, 6)
   })
 
-  it('inductance is positive', () => {
-    expect(result.inductance).toBeGreaterThan(0)
+  it('computes the correct output capacitance', () => {
+    expect(result.capacitance).toBeCloseTo(17.3611e-6, 6)
   })
 
-  it('peak current is greater than average input current', () => {
-    const D = result.dutyCycle
-    const avgInput = spec.iout / (1 - D)
-    expect(result.peakCurrent).toBeGreaterThan(avgInput)
+  it('computes the expected peak inductor current', () => {
+    expect(result.peakCurrent).toBeCloseTo(3.0667, 4)
+  })
+
+  it('raises a right-half-plane zero warning for a 300 kHz design', () => {
+    expect(result.warnings.some((message) => message.includes('Right-half-plane'))).toBe(true)
   })
 })

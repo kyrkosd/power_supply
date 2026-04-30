@@ -1,0 +1,322 @@
+[
+  {
+    "manufacturer": "Wurth Elektronik",
+    "part_number": "7447709151",
+    "inductance_uh": 150,
+    "dcr_mohm": 15.6,
+    "isat_a": 8.5,
+    "irms_a": 12.0,
+    "size_mm": "12.5x12.5x8.0",
+    "core_material": "Ferrite"
+  },
+  {
+    "manufacturer": "Wurth Elektronik",
+    "part_number": "7447709221",
+    "inductance_uh": 220,
+    "dcr_mohm": 22.0,
+    "isat_a": 6.8,
+    "irms_a": 9.5,
+    "size_mm": "12.5x12.5x8.0",
+    "core_material": "Ferrite"
+  },
+  {
+    "manufacturer": "Wurth Elektronik",
+    "part_number": "7447709331",
+    "inductance_uh": 330,
+    "dcr_mohm": 32.0,
+    "isat_a": 5.2,
+    "irms_a": 7.3,
+    "size_mm": "12.5x12.5x8.0",
+    "core_material": "Ferrite"
+  },
+  {
+    "manufacturer": "Coilcraft",
+    "part_number": "XAL4020-102MEB",
+    "inductance_uh": 1.0,
+    "dcr_mohm": 13.5,
+    "isat_a": 14.0,
+    "irms_a": 11.0,
+    "size_mm": "4.0x4.0x2.0",
+    "core_material": "Composite"
+  },
+  {
+    "manufacturer": "Coilcraft",
+    "part_number": "XAL4020-222MEB",
+    "inductance_uh": 2.2,
+    "dcr_mohm": 18.0,
+    "isat_a": 11.0,
+    "irms_a": 9.0,
+    "size_mm": "4.0x4.0x2.0",
+    "core_material": "Composite"
+  },
+  {
+    "manufacturer": "Coilcraft",
+    "part_number": "XAL4020-472MEB",
+    "inductance_uh": 4.7,
+    "dcr_mohm": 25.0,
+    "isat_a": 8.5,
+    "irms_a": 7.0,
+    "size_mm": "4.0x4.0x2.0",
+    "core_material": "Composite"
+  },
+  {
+    "manufacturer": "Coilcraft",
+    "part_number": "XAL5030-223MEB",
+    "inductance_uh": 22,
+    "dcr_mohm": 45.0,
+    "isat_a": 6.5,
+    "irms_a": 5.5,
+    "size_mm": "5.0x5.0x3.0",
+    "core_material": "Composite"
+  },
+  {
+    "manufacturer": "Coilcraft",
+    "part_number": "XAL5030-333MEB",
+    "inductance_uh": 33,
+    "dcr_mohm": 55.0,
+    "isat_a": 5.5,
+    "irms_a": 4.8,
+    "size_mm": "5.0x5.0x3.0",
+    "core_material": "Composite"
+  },
+  {
+    "manufacturer": "Coilcraft",
+    "part_number": "XAL5030-473MEB",
+    "inductance_uh": 47,
+    "dcr_mohm": 70.0,
+    "isat_a": 4.8,
+    "irms_a": 4.2,
+    "size_mm": "5.0x5.0x3.0",
+    "core_material": "Composite"
+  },
+  {
+    "manufacturer": "Coilcraft",
+    "part_number": "XGL4020-222MEC",
+    "inductance_uh": 2.2,
+    "dcr_mohm": 16.0,
+    "isat_a": 12.0,
+    "irms_a": 10.0,
+    "size_mm": "4.0x4.0x2.0",
+    "core_material": "Composite"
+  },
+  {
+    "manufacturer": "Coilcraft",
+    "part_number": "XGL4020-332MEC",
+    "inductance_uh": 3.3,
+    "dcr_mohm": 20.0,
+    "isat_a": 10.0,
+    "irms_a": 8.5,
+    "size_mm": "4.0x4.0x2.0",
+    "core_material": "Composite"
+  },
+  {
+    "manufacturer": "Coilcraft",
+    "part_number": "XGL4020-472MEC",
+    "inductance_uh": 4.7,
+    "dcr_mohm": 25.0,
+    "isat_a": 8.0,
+    "irms_a": 7.0,
+    "size_mm": "4.0x4.0x2.0",
+    "core_material": "Composite"
+  },
+  {
+    "manufacturer": "TDK",
+    "part_number": "CLF6045T-100M-D",
+    "inductance_uh": 10,
+    "dcr_mohm": 15.6,
+    "isat_a": 7.5,
+    "irms_a": 8.5,
+    "size_mm": "6.0x6.0x4.5",
+    "core_material": "Ferrite"
+  },
+  {
+    "manufacturer": "TDK",
+    "part_number": "CLF6045T-150M-D",
+    "inductance_uh": 15,
+    "dcr_mohm": 20.4,
+    "isat_a": 6.5,
+    "irms_a": 7.5,
+    "size_mm": "6.0x6.0x4.5",
+    "core_material": "Ferrite"
+  },
+  {
+    "manufacturer": "TDK",
+    "part_number": "CLF6045T-220M-D",
+    "inductance_uh": 22,
+    "dcr_mohm": 28.8,
+    "isat_a": 5.5,
+    "irms_a": 6.5,
+    "size_mm": "6.0x6.0x4.5",
+    "core_material": "Ferrite"
+  },
+  {
+    "manufacturer": "TDK",
+    "part_number": "CLF7045T-100M-D",
+    "inductance_uh": 10,
+    "dcr_mohm": 12.0,
+    "isat_a": 9.0,
+    "irms_a": 10.0,
+    "size_mm": "7.0x7.0x4.5",
+    "core_material": "Ferrite"
+  },
+  {
+    "manufacturer": "TDK",
+    "part_number": "CLF7045T-150M-D",
+    "inductance_uh": 15,
+    "dcr_mohm": 16.8,
+    "isat_a": 7.5,
+    "irms_a": 8.5,
+    "size_mm": "7.0x7.0x4.5",
+    "core_material": "Ferrite"
+  },
+  {
+    "manufacturer": "TDK",
+    "part_number": "CLF7045T-220M-D",
+    "inductance_uh": 22,
+    "dcr_mohm": 24.0,
+    "isat_a": 6.0,
+    "irms_a": 7.0,
+    "size_mm": "7.0x7.0x4.5",
+    "core_material": "Ferrite"
+  },
+  {
+    "manufacturer": "Wurth Elektronik",
+    "part_number": "74437368033",
+    "inductance_uh": 3.3,
+    "dcr_mohm": 8.5,
+    "isat_a": 18.0,
+    "irms_a": 20.0,
+    "size_mm": "7.3x6.6x3.2",
+    "core_material": "Ferrite"
+  },
+  {
+    "manufacturer": "Wurth Elektronik",
+    "part_number": "74437368047",
+    "inductance_uh": 4.7,
+    "dcr_mohm": 10.5,
+    "isat_a": 15.0,
+    "irms_a": 17.0,
+    "size_mm": "7.3x6.6x3.2",
+    "core_material": "Ferrite"
+  },
+  {
+    "manufacturer": "Wurth Elektronik",
+    "part_number": "74437368068",
+    "inductance_uh": 6.8,
+    "dcr_mohm": 13.2,
+    "isat_a": 12.0,
+    "irms_a": 14.0,
+    "size_mm": "7.3x6.6x3.2",
+    "core_material": "Ferrite"
+  },
+  {
+    "manufacturer": "Coilcraft",
+    "part_number": "XFL4020-102MEB",
+    "inductance_uh": 1.0,
+    "dcr_mohm": 11.0,
+    "isat_a": 16.0,
+    "irms_a": 13.0,
+    "size_mm": "4.0x4.0x2.0",
+    "core_material": "Composite"
+  },
+  {
+    "manufacturer": "Coilcraft",
+    "part_number": "XFL4020-222MEB",
+    "inductance_uh": 2.2,
+    "dcr_mohm": 15.0,
+    "isat_a": 13.0,
+    "irms_a": 11.0,
+    "size_mm": "4.0x4.0x2.0",
+    "core_material": "Composite"
+  },
+  {
+    "manufacturer": "Coilcraft",
+    "part_number": "XFL4020-332MEB",
+    "inductance_uh": 3.3,
+    "dcr_mohm": 18.0,
+    "isat_a": 11.0,
+    "irms_a": 9.5,
+    "size_mm": "4.0x4.0x2.0",
+    "core_material": "Composite"
+  },
+  {
+    "manufacturer": "TDK",
+    "part_number": "SLF12575T-100M3R5-PF",
+    "inductance_uh": 10,
+    "dcr_mohm": 8.4,
+    "isat_a": 12.0,
+    "irms_a": 13.5,
+    "size_mm": "12.5x12.5x7.5",
+    "core_material": "Ferrite"
+  },
+  {
+    "manufacturer": "TDK",
+    "part_number": "SLF12575T-150M3R2-PF",
+    "inductance_uh": 15,
+    "dcr_mohm": 11.5,
+    "isat_a": 9.5,
+    "irms_a": 11.0,
+    "size_mm": "12.5x12.5x7.5",
+    "core_material": "Ferrite"
+  },
+  {
+    "manufacturer": "TDK",
+    "part_number": "SLF12575T-220M2R7-PF",
+    "inductance_uh": 22,
+    "dcr_mohm": 16.8,
+    "isat_a": 7.5,
+    "irms_a": 9.0,
+    "size_mm": "12.5x12.5x7.5",
+    "core_material": "Ferrite"
+  },
+  {
+    "manufacturer": "Wurth Elektronik",
+    "part_number": "744373680010",
+    "inductance_uh": 1.0,
+    "dcr_mohm": 5.5,
+    "isat_a": 25.0,
+    "irms_a": 28.0,
+    "size_mm": "7.3x6.6x3.2",
+    "core_material": "Ferrite"
+  },
+  {
+    "manufacturer": "Wurth Elektronik",
+    "part_number": "744373680015",
+    "inductance_uh": 1.5,
+    "dcr_mohm": 6.8,
+    "isat_a": 22.0,
+    "irms_a": 25.0,
+    "size_mm": "7.3x6.6x3.2",
+    "core_material": "Ferrite"
+  },
+  {
+    "manufacturer": "Wurth Elektronik",
+    "part_number": "744373680022",
+    "inductance_uh": 2.2,
+    "dcr_mohm": 8.2,
+    "isat_a": 19.0,
+    "irms_a": 22.0,
+    "size_mm": "7.3x6.6x3.2",
+    "core_material": "Ferrite"
+  },
+  {
+    "manufacturer": "Coilcraft",
+    "part_number": "XAL6060-102MEB",
+    "inductance_uh": 1.0,
+    "dcr_mohm": 8.0,
+    "isat_a": 22.0,
+    "irms_a": 18.0,
+    "size_mm": "6.0x6.0x6.0",
+    "core_material": "Composite"
+  },
+  {
+    "manufacturer": "Coilcraft",
+    "part_number": "XAL6060-222MEB",
+    "inductance_uh": 2.2,
+    "dcr_mohm": 12.0,
+    "isat_a": 18.0,
+    "irms_a": 15.0,
+    "size_mm": "6.0x6.0x6.0",
+    "core_material": "Composite"
+  }
+]

@@ -1,25 +1,66 @@
 {
   "name": "power-supply-workbench",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Desktop app for designing switching power supplies",
-  "main": "./out/main/index.js",
+  "productName": "Power Supply Design Workbench",
+  "main": "./out/main/main.js",
   "author": "",
   "private": true,
   "scripts": {
     "dev": "electron-vite dev",
-    "build": "electron-vite build",
+    "build": "electron-vite build && electron-builder",
+    "build:vite": "electron-vite build",
+    "dist": "electron-vite build && electron-builder",
+    "dist:win": "electron-vite build && electron-builder --win",
+    "dist:mac": "electron-vite build && electron-builder --mac",
+    "dist:linux": "electron-vite build && electron-builder --linux",
     "preview": "electron-vite preview",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "make:icons": "node scripts/make-icons.mjs"
+  },
+  "build": {
+    "appId": "com.powerworkbench.app",
+    "productName": "Power Supply Design Workbench",
+    "icon": "resources/icon.png",
+    "files": [
+      "out/**/*",
+      "resources/**/*"
+    ],
+    "directories": {
+      "buildResources": "resources",
+      "output": "dist"
+    },
+    "win": {
+      "target": [{ "target": "nsis", "arch": ["x64"] }],
+      "icon": "resources/icon.png"
+    },
+    "mac": {
+      "target": [{ "target": "dmg", "arch": ["x64", "arm64"] }],
+      "icon": "resources/icon.png",
+      "category": "public.app-category.utilities"
+    },
+    "linux": {
+      "target": [{ "target": "AppImage", "arch": ["x64"] }],
+      "icon": "resources/icon.png",
+      "category": "Science"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "Power Supply Workbench"
+    }
   },
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.1",
     "@electron-toolkit/utils": "^3.0.0",
     "d3": "^7.9.0",
     "mathjs": "^13.2.0",
+    "recharts": "^2.9.0",
     "zustand": "^5.0.3"
   },
   "devDependencies": {

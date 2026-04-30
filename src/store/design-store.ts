@@ -16,21 +16,39 @@ export interface DesignStoreState {
 
   setTopology: (topology: TopologyId) => void
   updateSpec: (updates: Partial<DesignSpec>) => void
+  resetSpec: () => void
   setResult: (result: DesignResult | null, waveforms: WaveformSet | null) => void
   setActiveVizTab: (tab: ActiveVizTab) => void
 }
 
-const defaultSpec: DesignSpec = {
-  vinMin: 10,
-  vinMax: 15,
-  vout: 5,
-  iout: 2,
-  fsw: 500_000,
-  rippleRatio: 0.3,
-  ambientTemp: 25,
-  voutRippleMax: 0.01,
-  efficiency: 0.9,
+const TOPOLOGY_DEFAULTS: Record<TopologyId, DesignSpec> = {
+  buck: {
+    vinMin: 10, vinMax: 15, vout: 5, iout: 2,
+    fsw: 200_000, rippleRatio: 0.3, ambientTemp: 25, voutRippleMax: 0.01, efficiency: 0.9,
+  },
+  boost: {
+    vinMin: 5, vinMax: 8, vout: 12, iout: 1,
+    fsw: 200_000, rippleRatio: 0.3, ambientTemp: 25, voutRippleMax: 0.05, efficiency: 0.9,
+  },
+  'buck-boost': {
+    vinMin: 5, vinMax: 15, vout: 9, iout: 1,
+    fsw: 200_000, rippleRatio: 0.3, ambientTemp: 25, voutRippleMax: 0.05, efficiency: 0.85,
+  },
+  flyback: {
+    vinMin: 36, vinMax: 72, vout: 12, iout: 2,
+    fsw: 100_000, rippleRatio: 0.3, ambientTemp: 25, voutRippleMax: 0.1, efficiency: 0.85,
+  },
+  forward: {
+    vinMin: 36, vinMax: 72, vout: 12, iout: 3,
+    fsw: 100_000, rippleRatio: 0.3, ambientTemp: 25, voutRippleMax: 0.1, efficiency: 0.88,
+  },
+  sepic: {
+    vinMin: 6, vinMax: 14, vout: 9, iout: 1,
+    fsw: 200_000, rippleRatio: 0.3, ambientTemp: 25, voutRippleMax: 0.05, efficiency: 0.88,
+  },
 }
+
+const defaultSpec: DesignSpec = TOPOLOGY_DEFAULTS['buck']
 
 export const useDesignStore = create<DesignStoreState>((set) => ({
   topology: 'buck',
@@ -41,11 +59,19 @@ export const useDesignStore = create<DesignStoreState>((set) => ({
   isComputing: false,
 
   setTopology: (topology) =>
-    set({ topology, result: null, waveforms: null, isComputing: true }),
+    set({ topology, spec: TOPOLOGY_DEFAULTS[topology], result: null, waveforms: null, isComputing: true }),
 
   updateSpec: (updates) =>
     set((state) => ({
       spec: { ...state.spec, ...updates },
+      result: null,
+      waveforms: null,
+      isComputing: true,
+    })),
+
+  resetSpec: () =>
+    set((state) => ({
+      spec: TOPOLOGY_DEFAULTS[state.topology],
       result: null,
       waveforms: null,
       isComputing: true,

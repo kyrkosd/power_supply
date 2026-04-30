@@ -8,7 +8,10 @@ const spec: DesignSpec = {
   vout: 5,
   iout: 2,
   fsw: 200_000,
-  efficiency: 0.9
+  rippleRatio: 0.3,
+  ambientTemp: 25,
+  voutRippleMax: 0.01,
+  efficiency: 0.9,
 }
 
 describe('Buck topology', () => {

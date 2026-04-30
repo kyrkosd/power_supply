@@ -1,0 +1,322 @@
+[
+  {
+    "manufacturer": "Murata",
+    "part_number": "GRM31CR61A226KE15L",
+    "capacitance_uf": 22,
+    "voltage_v": 10,
+    "esr_mohm": 5,
+    "ripple_current_a": 2.5,
+    "type": "ceramic",
+    "size": "1206"
+  },
+  {
+    "manufacturer": "Murata",
+    "part_number": "GRM32ER61A476KE15L",
+    "capacitance_uf": 47,
+    "voltage_v": 10,
+    "esr_mohm": 3,
+    "ripple_current_a": 3.0,
+    "type": "ceramic",
+    "size": "1210"
+  },
+  {
+    "manufacturer": "Murata",
+    "part_number": "GRM55DR61A226KE01L",
+    "capacitance_uf": 22,
+    "voltage_v": 10,
+    "esr_mohm": 4,
+    "ripple_current_a": 2.8,
+    "type": "ceramic",
+    "size": "2220"
+  },
+  {
+    "manufacturer": "Samsung",
+    "part_number": "CL31A226KPHNNNE",
+    "capacitance_uf": 22,
+    "voltage_v": 10,
+    "esr_mohm": 6,
+    "ripple_current_a": 2.2,
+    "type": "ceramic",
+    "size": "1206"
+  },
+  {
+    "manufacturer": "Samsung",
+    "part_number": "CL32A476MQHNNNE",
+    "capacitance_uf": 47,
+    "voltage_v": 6.3,
+    "esr_mohm": 4,
+    "ripple_current_a": 2.8,
+    "type": "ceramic",
+    "size": "1210"
+  },
+  {
+    "manufacturer": "Samsung",
+    "part_number": "CL31B106KBHNNNE",
+    "capacitance_uf": 10,
+    "voltage_v": 50,
+    "esr_mohm": 8,
+    "ripple_current_a": 1.8,
+    "type": "ceramic",
+    "size": "1206"
+  },
+  {
+    "manufacturer": "Panasonic",
+    "part_number": "EEH-ZC1E101P",
+    "capacitance_uf": 100,
+    "voltage_v": 25,
+    "esr_mohm": 25,
+    "ripple_current_a": 1.5,
+    "type": "electrolytic",
+    "size": "8x10.5"
+  },
+  {
+    "manufacturer": "Panasonic",
+    "part_number": "EEH-ZC1E221P",
+    "capacitance_uf": 220,
+    "voltage_v": 25,
+    "esr_mohm": 18,
+    "ripple_current_a": 2.0,
+    "type": "electrolytic",
+    "size": "10x10.5"
+  },
+  {
+    "manufacturer": "Panasonic",
+    "part_number": "EEH-ZC1E471P",
+    "capacitance_uf": 470,
+    "voltage_v": 25,
+    "esr_mohm": 12,
+    "ripple_current_a": 2.8,
+    "type": "electrolytic",
+    "size": "12.5x13.5"
+  },
+  {
+    "manufacturer": "Murata",
+    "part_number": "GRM188R61A105KA61D",
+    "capacitance_uf": 1.0,
+    "voltage_v": 10,
+    "esr_mohm": 15,
+    "ripple_current_a": 1.0,
+    "type": "ceramic",
+    "size": "0603"
+  },
+  {
+    "manufacturer": "Murata",
+    "part_number": "GRM21BR61A106KE19L",
+    "capacitance_uf": 10,
+    "voltage_v": 10,
+    "esr_mohm": 8,
+    "ripple_current_a": 1.8,
+    "type": "ceramic",
+    "size": "0805"
+  },
+  {
+    "manufacturer": "Murata",
+    "part_number": "GRM31CR61A475KA12L",
+    "capacitance_uf": 4.7,
+    "voltage_v": 10,
+    "esr_mohm": 10,
+    "ripple_current_a": 1.5,
+    "type": "ceramic",
+    "size": "1206"
+  },
+  {
+    "manufacturer": "Samsung",
+    "part_number": "CL10A105KB8NNNC",
+    "capacitance_uf": 1.0,
+    "voltage_v": 50,
+    "esr_mohm": 20,
+    "ripple_current_a": 0.8,
+    "type": "ceramic",
+    "size": "0603"
+  },
+  {
+    "manufacturer": "Samsung",
+    "part_number": "CL21A106KAYNNNE",
+    "capacitance_uf": 10,
+    "voltage_v": 25,
+    "esr_mohm": 12,
+    "ripple_current_a": 1.5,
+    "type": "ceramic",
+    "size": "0805"
+  },
+  {
+    "manufacturer": "Samsung",
+    "part_number": "CL31A475KBHNNNE",
+    "capacitance_uf": 4.7,
+    "voltage_v": 50,
+    "esr_mohm": 15,
+    "ripple_current_a": 1.2,
+    "type": "ceramic",
+    "size": "1206"
+  },
+  {
+    "manufacturer": "Panasonic",
+    "part_number": "EEH-ZA1E101P",
+    "capacitance_uf": 100,
+    "voltage_v": 25,
+    "esr_mohm": 30,
+    "ripple_current_a": 1.2,
+    "type": "electrolytic",
+    "size": "8x10.5"
+  },
+  {
+    "manufacturer": "Panasonic",
+    "part_number": "EEH-ZA1E221P",
+    "capacitance_uf": 220,
+    "voltage_v": 25,
+    "esr_mohm": 22,
+    "ripple_current_a": 1.8,
+    "type": "electrolytic",
+    "size": "10x10.5"
+  },
+  {
+    "manufacturer": "Panasonic",
+    "part_number": "EEH-ZA1E471P",
+    "capacitance_uf": 470,
+    "voltage_v": 25,
+    "esr_mohm": 15,
+    "ripple_current_a": 2.5,
+    "type": "electrolytic",
+    "size": "12.5x13.5"
+  },
+  {
+    "manufacturer": "Murata",
+    "part_number": "GRM155R61A104KA01D",
+    "capacitance_uf": 0.1,
+    "voltage_v": 10,
+    "esr_mohm": 50,
+    "ripple_current_a": 0.5,
+    "type": "ceramic",
+    "size": "0402"
+  },
+  {
+    "manufacturer": "Murata",
+    "part_number": "GRM188R61A224KA01D",
+    "capacitance_uf": 0.22,
+    "voltage_v": 10,
+    "esr_mohm": 30,
+    "ripple_current_a": 0.7,
+    "type": "ceramic",
+    "size": "0603"
+  },
+  {
+    "manufacturer": "Murata",
+    "part_number": "GRM219R61A225KE15D",
+    "capacitance_uf": 2.2,
+    "voltage_v": 10,
+    "esr_mohm": 12,
+    "ripple_current_a": 1.2,
+    "type": "ceramic",
+    "size": "0805"
+  },
+  {
+    "manufacturer": "Samsung",
+    "part_number": "CL05A104KA5NNNC",
+    "capacitance_uf": 0.1,
+    "voltage_v": 25,
+    "esr_mohm": 60,
+    "ripple_current_a": 0.4,
+    "type": "ceramic",
+    "size": "0402"
+  },
+  {
+    "manufacturer": "Samsung",
+    "part_number": "CL10A224KA8NNNC",
+    "capacitance_uf": 0.22,
+    "voltage_v": 25,
+    "esr_mohm": 35,
+    "ripple_current_a": 0.6,
+    "type": "ceramic",
+    "size": "0603"
+  },
+  {
+    "manufacturer": "Samsung",
+    "part_number": "CL21A225KAFNNNE",
+    "capacitance_uf": 2.2,
+    "voltage_v": 25,
+    "esr_mohm": 15,
+    "ripple_current_a": 1.0,
+    "type": "ceramic",
+    "size": "0805"
+  },
+  {
+    "manufacturer": "Panasonic",
+    "part_number": "EEH-ZK1E101P",
+    "capacitance_uf": 100,
+    "voltage_v": 25,
+    "esr_mohm": 35,
+    "ripple_current_a": 1.0,
+    "type": "electrolytic",
+    "size": "8x10.5"
+  },
+  {
+    "manufacturer": "Panasonic",
+    "part_number": "EEH-ZK1E221P",
+    "capacitance_uf": 220,
+    "voltage_v": 25,
+    "esr_mohm": 25,
+    "ripple_current_a": 1.5,
+    "type": "electrolytic",
+    "size": "10x10.5"
+  },
+  {
+    "manufacturer": "Panasonic",
+    "part_number": "EEH-ZK1E471P",
+    "capacitance_uf": 470,
+    "voltage_v": 25,
+    "esr_mohm": 18,
+    "ripple_current_a": 2.2,
+    "type": "electrolytic",
+    "size": "12.5x13.5"
+  },
+  {
+    "manufacturer": "Murata",
+    "part_number": "GRM033R61A104KE84D",
+    "capacitance_uf": 0.1,
+    "voltage_v": 10,
+    "esr_mohm": 70,
+    "ripple_current_a": 0.3,
+    "type": "ceramic",
+    "size": "0201"
+  },
+  {
+    "manufacturer": "Murata",
+    "part_number": "GRM155R61A474KE15D",
+    "capacitance_uf": 0.47,
+    "voltage_v": 10,
+    "esr_mohm": 25,
+    "ripple_current_a": 0.8,
+    "type": "ceramic",
+    "size": "0402"
+  },
+  {
+    "manufacturer": "Murata",
+    "part_number": "GRM188R61A334KA01D",
+    "capacitance_uf": 0.33,
+    "voltage_v": 10,
+    "esr_mohm": 28,
+    "ripple_current_a": 0.9,
+    "type": "ceramic",
+    "size": "0603"
+  },
+  {
+    "manufacturer": "Samsung",
+    "part_number": "CL03A104KA3NNNC",
+    "capacitance_uf": 0.1,
+    "voltage_v": 25,
+    "esr_mohm": 80,
+    "ripple_current_a": 0.25,
+    "type": "ceramic",
+    "size": "0201"
+  },
+  {
+    "manufacturer": "Samsung",
+    "part_number": "CL05A474KA5NNNC",
+    "capacitance_uf": 0.47,
+    "voltage_v": 25,
+    "esr_mohm": 30,
+    "ripple_current_a": 0.7,
+    "type": "ceramic",
+    "size": "0402"
+  }
+]

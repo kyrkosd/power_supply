@@ -136,11 +136,33 @@ export function InputPanel(): React.ReactElement {
       <div className={styles.summaryPanel}>
         <div className={styles.summaryRow}>
           <span>Duty cycle</span>
-          <strong>{result ? `${(result.dutyCycle * 100).toFixed(1)}%` : '—'}</strong>
+          <strong title="Buck: D = Vout / Vin_max&#10;Boost: D = 1 − Vin_min/Vout&#10;Buck-boost: D = Vout/(Vin_min+Vout)">
+            {result ? `${(result.dutyCycle * 100).toFixed(1)} %` : '—'}
+          </strong>
+        </div>
+        <div className={styles.summaryRow}>
+          <span>Inductance</span>
+          <strong title="Buck: L = Vout·(1−D) / (ΔiL·fsw)&#10;Boost: L = Vin·D / (ΔiL·fsw)&#10;ΔiL = rippleRatio·Iout">
+            {result ? `${(result.inductance * 1e6).toFixed(2)} µH` : '—'}
+          </strong>
+        </div>
+        <div className={styles.summaryRow}>
+          <span>Capacitance</span>
+          <strong title="Buck: C = ΔiL / (8·fsw·ΔVout)&#10;Boost/BB: C = Iout·D / (fsw·ΔVout)">
+            {result ? `${(result.capacitance * 1e6).toFixed(1)} µF` : '—'}
+          </strong>
+        </div>
+        <div className={styles.summaryRow}>
+          <span>Peak current</span>
+          <strong title="Ipeak = Iout + ΔiL/2&#10;ΔiL = rippleRatio·Iout">
+            {result ? `${result.peakCurrent.toFixed(2)} A` : '—'}
+          </strong>
         </div>
         <div className={styles.summaryRow}>
           <span>Efficiency</span>
-          <strong>{result ? `${(result.efficiency * 100).toFixed(1)}%` : '—'}</strong>
+          <strong title="η = Pout / (Pout + Ploss)&#10;Pout = Vout·Iout">
+            {result?.efficiency != null ? `${(result.efficiency * 100).toFixed(1)} %` : '—'}
+          </strong>
         </div>
       </div>
     </div>

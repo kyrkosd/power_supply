@@ -1,24 +1,33 @@
-import React, { useRef } from 'react'
+import React from 'react'
+import { useDesignStore } from '../../../store/design-store'
+import { BodePlot } from '../../BodePlot/BodePlot'
 import styles from './Tab.module.css'
 
 export function BodeTab(): React.ReactElement {
-  const svgRef = useRef<SVGSVGElement>(null)
+  const spec = useDesignStore((state) => state.spec)
+  const result = useDesignStore((state) => state.result)
+  const topology = useDesignStore((state) => state.topology)
+
+  if (!result || topology !== 'buck') {
+    return (
+      <div className={styles.tab}>
+        <div className={styles.placeholder}>
+          <div>
+            <p style={{ color: 'var(--text-muted)', fontSize: 14, marginBottom: 8 }}>
+              Bode plot is available for the Buck topology once the design is computed.
+            </p>
+            <p style={{ color: 'var(--text-secondary)', fontSize: 12 }}>
+              Select Buck and enter design inputs, then check the Bode tab.
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className={styles.tab}>
-      <div className={styles.placeholder}>
-        <svg ref={svgRef} className={styles.chart}>
-          <text x="50%" y="42%" textAnchor="middle" fill="rgba(74,144,217,0.35)" fontSize="15" fontFamily="Segoe UI">
-            Gain (dB) · Phase (°) vs. Frequency
-          </text>
-          <text x="50%" y="55%" textAnchor="middle" fill="rgba(148,148,176,0.35)" fontSize="12" fontFamily="Segoe UI">
-            Phase margin · Gain margin · Crossover frequency
-          </text>
-          <text x="50%" y="65%" textAnchor="middle" fill="rgba(148,148,176,0.25)" fontSize="12" fontFamily="Segoe UI">
-            D3.js Bode plot — coming soon
-          </text>
-        </svg>
-      </div>
+      <BodePlot spec={spec} result={result} />
     </div>
   )
 }

@@ -1,0 +1,222 @@
+[
+  {
+    "manufacturer": "Infineon",
+    "part_number": "BSC028N06NS",
+    "vds_v": 60,
+    "rds_on_mohm": 2.8,
+    "qg_nc": 35,
+    "qgd_nc": 8,
+    "coss_pf": 650,
+    "id_max_a": 100,
+    "package": "SuperSO8"
+  },
+  {
+    "manufacturer": "Infineon",
+    "part_number": "BSC050N03LS",
+    "vds_v": 30,
+    "rds_on_mohm": 5.0,
+    "qg_nc": 20,
+    "qgd_nc": 5,
+    "coss_pf": 450,
+    "id_max_a": 50,
+    "package": "SuperSO8"
+  },
+  {
+    "manufacturer": "Infineon",
+    "part_number": "BSC010N04LS",
+    "vds_v": 40,
+    "rds_on_mohm": 1.0,
+    "qg_nc": 45,
+    "qgd_nc": 10,
+    "coss_pf": 800,
+    "id_max_a": 180,
+    "package": "SuperSO8"
+  },
+  {
+    "manufacturer": "TI",
+    "part_number": "CSD19531Q5A",
+    "vds_v": 100,
+    "rds_on_mohm": 4.2,
+    "qg_nc": 25,
+    "qgd_nc": 6,
+    "coss_pf": 380,
+    "id_max_a": 100,
+    "package": "SON5x6"
+  },
+  {
+    "manufacturer": "TI",
+    "part_number": "CSD19532Q5A",
+    "vds_v": 100,
+    "rds_on_mohm": 5.6,
+    "qg_nc": 20,
+    "qgd_nc": 5,
+    "coss_pf": 320,
+    "id_max_a": 100,
+    "package": "SON5x6"
+  },
+  {
+    "manufacturer": "TI",
+    "part_number": "CSD19533Q5A",
+    "vds_v": 100,
+    "rds_on_mohm": 7.8,
+    "qg_nc": 15,
+    "qgd_nc": 4,
+    "coss_pf": 280,
+    "id_max_a": 100,
+    "package": "SON5x6"
+  },
+  {
+    "manufacturer": "Vishay",
+    "part_number": "SiR626DP",
+    "vds_v": 60,
+    "rds_on_mohm": 2.6,
+    "qg_nc": 30,
+    "qgd_nc": 7,
+    "coss_pf": 600,
+    "id_max_a": 60,
+    "package": "PowerPAK SO-8"
+  },
+  {
+    "manufacturer": "Vishay",
+    "part_number": "SiR638DP",
+    "vds_v": 100,
+    "rds_on_mohm": 3.8,
+    "qg_nc": 25,
+    "qgd_nc": 6,
+    "coss_pf": 450,
+    "id_max_a": 60,
+    "package": "PowerPAK SO-8"
+  },
+  {
+    "manufacturer": "Vishay",
+    "part_number": "SiR660DP",
+    "vds_v": 60,
+    "rds_on_mohm": 6.0,
+    "qg_nc": 18,
+    "qgd_nc": 4,
+    "coss_pf": 350,
+    "id_max_a": 60,
+    "package": "PowerPAK SO-8"
+  },
+  {
+    "manufacturer": "Infineon",
+    "part_number": "BSC014N04LS",
+    "vds_v": 40,
+    "rds_on_mohm": 1.4,
+    "qg_nc": 40,
+    "qgd_nc": 9,
+    "coss_pf": 750,
+    "id_max_a": 160,
+    "package": "SuperSO8"
+  },
+  {
+    "manufacturer": "Infineon",
+    "part_number": "BSC022N03S",
+    "vds_v": 30,
+    "rds_on_mohm": 2.2,
+    "qg_nc": 28,
+    "qgd_nc": 6,
+    "coss_pf": 550,
+    "id_max_a": 80,
+    "package": "SuperSO8"
+  },
+  {
+    "manufacturer": "Infineon",
+    "part_number": "BSC035N04LS",
+    "vds_v": 40,
+    "rds_on_mohm": 3.5,
+    "qg_nc": 22,
+    "qgd_nc": 5,
+    "coss_pf": 500,
+    "id_max_a": 80,
+    "package": "SuperSO8"
+  },
+  {
+    "manufacturer": "TI",
+    "part_number": "CSD19534Q5A",
+    "vds_v": 100,
+    "rds_on_mohm": 9.8,
+    "qg_nc": 12,
+    "qgd_nc": 3,
+    "coss_pf": 240,
+    "id_max_a": 100,
+    "package": "SON5x6"
+  },
+  {
+    "manufacturer": "TI",
+    "part_number": "CSD19535Q5A",
+    "vds_v": 100,
+    "rds_on_mohm": 12.5,
+    "qg_nc": 10,
+    "qgd_nc": 2.5,
+    "coss_pf": 200,
+    "id_max_a": 100,
+    "package": "SON5x6"
+  },
+  {
+    "manufacturer": "TI",
+    "part_number": "CSD17501Q5A",
+    "vds_v": 30,
+    "rds_on_mohm": 4.0,
+    "qg_nc": 8,
+    "qgd_nc": 2,
+    "coss_pf": 180,
+    "id_max_a": 100,
+    "package": "SON5x6"
+  },
+  {
+    "manufacturer": "Vishay",
+    "part_number": "SiR642DP",
+    "vds_v": 40,
+    "rds_on_mohm": 4.2,
+    "qg_nc": 22,
+    "qgd_nc": 5,
+    "coss_pf": 400,
+    "id_max_a": 60,
+    "package": "PowerPAK SO-8"
+  },
+  {
+    "manufacturer": "Vishay",
+    "part_number": "SiR654DP",
+    "vds_v": 100,
+    "rds_on_mohm": 5.4,
+    "qg_nc": 20,
+    "qgd_nc": 5,
+    "coss_pf": 380,
+    "id_max_a": 60,
+    "package": "PowerPAK SO-8"
+  },
+  {
+    "manufacturer": "Vishay",
+    "part_number": "SiR672DP",
+    "vds_v": 30,
+    "rds_on_mohm": 7.2,
+    "qg_nc": 15,
+    "qgd_nc": 3.5,
+    "coss_pf": 300,
+    "id_max_a": 60,
+    "package": "PowerPAK SO-8"
+  },
+  {
+    "manufacturer": "Infineon",
+    "part_number": "BSC060N03LS",
+    "vds_v": 30,
+    "rds_on_mohm": 6.0,
+    "qg_nc": 16,
+    "qgd_nc": 4,
+    "coss_pf": 380,
+    "id_max_a": 60,
+    "package": "SuperSO8"
+  },
+  {
+    "manufacturer": "Infineon",
+    "part_number": "BSC075N03LD",
+    "vds_v": 30,
+    "rds_on_mohm": 7.5,
+    "qg_nc": 14,
+    "qgd_nc": 3.5,
+    "coss_pf": 340,
+    "id_max_a": 50,
+    "package": "SuperSO8"
+  }
+]
