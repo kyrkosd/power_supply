@@ -14,6 +14,7 @@ export const WarningCode = {
   VOUT_RIPPLE_EXCEEDED:     'VOUT_RIPPLE_EXCEEDED',    // computed ripple > vout_ripple_max
   PEAK_CURRENT_HIGH:        'PEAK_CURRENT_HIGH',       // peak iL > 3× iout_max
   EFFICIENCY_BELOW_TARGET:  'EFFICIENCY_BELOW_TARGET', // computed η < efficiency_target
+  CAPACITANCE_DERATED:      'CAPACITANCE_DERATED',     // effective cap < required
 } as const
 
 export type WarningCode = typeof WarningCode[keyof typeof WarningCode]
@@ -55,6 +56,8 @@ export interface OutputCapResult {
   value: number          // F — minimum capacitance to meet vout_ripple_max
   esr_max: number        // Ω — maximum ESR that still meets the ripple spec
   ripple_current: number // A — RMS ripple current the cap must handle
+  effective_value?: number // F — derated capacitance value at DC bias
+  derating_pct?: number    // % — percentage of nominal capacitance lost
 }
 
 export interface InputCapResult {

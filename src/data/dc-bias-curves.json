@@ -1,0 +1,184 @@
+[
+  {
+    "id": "X5R_6.3V_0402",
+    "dielectric": "X5R",
+    "voltage_rating": 6.3,
+    "package": "0402",
+    "curve": [
+      { "vdc_ratio": 0.0, "capacitance_ratio": 1.0 },
+      { "vdc_ratio": 0.2, "capacitance_ratio": 0.9 },
+      { "vdc_ratio": 0.4, "capacitance_ratio": 0.7 },
+      { "vdc_ratio": 0.6, "capacitance_ratio": 0.5 },
+      { "vdc_ratio": 0.8, "capacitance_ratio": 0.3 },
+      { "vdc_ratio": 1.0, "capacitance_ratio": 0.2 }
+    ]
+  },
+  {
+    "id": "X5R_6.3V_0603",
+    "dielectric": "X5R",
+    "voltage_rating": 6.3,
+    "package": "0603",
+    "curve": [
+      { "vdc_ratio": 0.0, "capacitance_ratio": 1.0 },
+      { "vdc_ratio": 0.2, "capacitance_ratio": 0.95 },
+      { "vdc_ratio": 0.4, "capacitance_ratio": 0.8 },
+      { "vdc_ratio": 0.6, "capacitance_ratio": 0.6 },
+      { "vdc_ratio": 0.8, "capacitance_ratio": 0.4 },
+      { "vdc_ratio": 1.0, "capacitance_ratio": 0.25 }
+    ]
+  },
+  {
+    "id": "X5R_6.3V_0805",
+    "dielectric": "X5R",
+    "voltage_rating": 6.3,
+    "package": "0805",
+    "curve": [
+      { "vdc_ratio": 0.0, "capacitance_ratio": 1.0 },
+      { "vdc_ratio": 0.2, "capacitance_ratio": 0.98 },
+      { "vdc_ratio": 0.4, "capacitance_ratio": 0.85 },
+      { "vdc_ratio": 0.6, "capacitance_ratio": 0.7 },
+      { "vdc_ratio": 0.8, "capacitance_ratio": 0.5 },
+      { "vdc_ratio": 1.0, "capacitance_ratio": 0.3 }
+    ]
+  },
+  {
+    "id": "X5R_10V_0402",
+    "dielectric": "X5R",
+    "voltage_rating": 10.0,
+    "package": "0402",
+    "curve": [
+      { "vdc_ratio": 0.0, "capacitance_ratio": 1.0 },
+      { "vdc_ratio": 0.2, "capacitance_ratio": 0.85 },
+      { "vdc_ratio": 0.4, "capacitance_ratio": 0.6 },
+      { "vdc_ratio": 0.6, "capacitance_ratio": 0.4 },
+      { "vdc_ratio": 0.8, "capacitance_ratio": 0.25 },
+      { "vdc_ratio": 1.0, "capacitance_ratio": 0.15 }
+    ]
+  },
+  {
+    "id": "X5R_10V_0603",
+    "dielectric": "X5R",
+    "voltage_rating": 10.0,
+    "package": "0603",
+    "curve": [
+      { "vdc_ratio": 0.0, "capacitance_ratio": 1.0 },
+      { "vdc_ratio": 0.2, "capacitance_ratio": 0.9 },
+      { "vdc_ratio": 0.4, "capacitance_ratio": 0.75 },
+      { "vdc_ratio": 0.6, "capacitance_ratio": 0.55 },
+      { "vdc_ratio": 0.8, "capacitance_ratio": 0.35 },
+      { "vdc_ratio": 1.0, "capacitance_ratio": 0.2 }
+    ]
+  },
+  {
+    "id": "X5R_10V_0805",
+    "dielectric": "X5R",
+    "voltage_rating": 10.0,
+    "package": "0805",
+    "curve": [
+      { "vdc_ratio": 0.0, "capacitance_ratio": 1.0 },
+      { "vdc_ratio": 0.2, "capacitance_ratio": 0.95 },
+      { "vdc_ratio": 0.4, "capacitance_ratio": 0.8 },
+      { "vdc_ratio": 0.6, "capacitance_ratio": 0.65 },
+      { "vdc_ratio": 0.8, "capacitance_ratio": 0.45 },
+      { "vdc_ratio": 1.0, "capacitance_ratio": 0.25 }
+    ]
+  },
+  {
+    "id": "X5R_16V_0603",
+    "dielectric": "X5R",
+    "voltage_rating": 16.0,
+    "package": "0603",
+    "curve": [
+      { "vdc_ratio": 0.0, "capacitance_ratio": 1.0 },
+      { "vdc_ratio": 0.2, "capacitance_ratio": 0.9 },
+      { "vdc_ratio": 0.4, "capacitance_ratio": 0.7 },
+      { "vdc_ratio": 0.6, "capacitance_ratio": 0.5 },
+      { "vdc_ratio": 0.8, "capacitance_ratio": 0.3 },
+      { "vdc_ratio": 1.0, "capacitance_ratio": 0.15 }
+    ]
+  },
+  {
+    "id": "X5R_16V_0805",
+    "dielectric": "X5R",
+    "voltage_rating": 16.0,
+    "package": "0805",
+    "curve": [
+      { "vdc_ratio": 0.0, "capacitance_ratio": 1.0 },
+      { "vdc_ratio": 0.2, "capacitance_ratio": 0.92 },
+      { "vdc_ratio": 0.4, "capacitance_ratio": 0.75 },
+      { "vdc_ratio": 0.6, "capacitance_ratio": 0.6 },
+      { "vdc_ratio": 0.8, "capacitance_ratio": 0.4 },
+      { "vdc_ratio": 1.0, "capacitance_ratio": 0.25 }
+    ]
+  },
+  {
+    "id": "X5R_16V_1206",
+    "dielectric": "X5R",
+    "voltage_rating": 16.0,
+    "package": "1206",
+    "curve": [
+      { "vdc_ratio": 0.0, "capacitance_ratio": 1.0 },
+      { "vdc_ratio": 0.2, "capacitance_ratio": 0.95 },
+      { "vdc_ratio": 0.4, "capacitance_ratio": 0.85 },
+      { "vdc_ratio": 0.6, "capacitance_ratio": 0.7 },
+      { "vdc_ratio": 0.8, "capacitance_ratio": 0.55 },
+      { "vdc_ratio": 1.0, "capacitance_ratio": 0.35 }
+    ]
+  },
+  {
+    "id": "X5R_25V_0805",
+    "dielectric": "X5R",
+    "voltage_rating": 25.0,
+    "package": "0805",
+    "curve": [
+      { "vdc_ratio": 0.0, "capacitance_ratio": 1.0 },
+      { "vdc_ratio": 0.2, "capacitance_ratio": 0.85 },
+      { "vdc_ratio": 0.4, "capacitance_ratio": 0.65 },
+      { "vdc_ratio": 0.6, "capacitance_ratio": 0.45 },
+      { "vdc_ratio": 0.8, "capacitance_ratio": 0.3 },
+      { "vdc_ratio": 1.0, "capacitance_ratio": 0.2 }
+    ]
+  },
+  {
+    "id": "X5R_25V_1206",
+    "dielectric": "X5R",
+    "voltage_rating": 25.0,
+    "package": "1206",
+    "curve": [
+      { "vdc_ratio": 0.0, "capacitance_ratio": 1.0 },
+      { "vdc_ratio": 0.2, "capacitance_ratio": 0.9 },
+      { "vdc_ratio": 0.4, "capacitance_ratio": 0.75 },
+      { "vdc_ratio": 0.6, "capacitance_ratio": 0.6 },
+      { "vdc_ratio": 0.8, "capacitance_ratio": 0.45 },
+      { "vdc_ratio": 1.0, "capacitance_ratio": 0.3 }
+    ]
+  },
+  {
+    "id": "X7R_25V_0805",
+    "dielectric": "X7R",
+    "voltage_rating": 25.0,
+    "package": "0805",
+    "curve": [
+      { "vdc_ratio": 0.0, "capacitance_ratio": 1.0 },
+      { "vdc_ratio": 0.2, "capacitance_ratio": 0.9 },
+      { "vdc_ratio": 0.4, "capacitance_ratio": 0.7 },
+      { "vdc_ratio": 0.6, "capacitance_ratio": 0.55 },
+      { "vdc_ratio": 0.8, "capacitance_ratio": 0.4 },
+      { "vdc_ratio": 1.0, "capacitance_ratio": 0.3 }
+    ]
+  },
+  {
+    "id": "X7R_50V_1206",
+    "dielectric": "X7R",
+    "voltage_rating": 50.0,
+    "package": "1206",
+    "curve": [
+      { "vdc_ratio": 0.0, "capacitance_ratio": 1.0 },
+      { "vdc_ratio": 0.2, "capacitance_ratio": 0.92 },
+      { "vdc_ratio": 0.4, "capacitance_ratio": 0.8 },
+      { "vdc_ratio": 0.6, "capacitance_ratio": 0.65 },
+      { "vdc_ratio": 0.8, "capacitance_ratio": 0.45 },
+      { "vdc_ratio": 1.0, "capacitance_ratio": 0.3 }
+    ]
+  }
+]

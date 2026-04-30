@@ -2,15 +2,17 @@ import { create } from 'zustand'
 import type { DesignSpec, DesignResult } from '../engine/types'
 import type { WaveformSet } from '../engine/topologies/types'
 import type { TopologyId } from './workbenchStore'
+import type { MonteCarloResult } from '../engine/monte-carlo'
 
 export type { TopologyId } from './workbenchStore'
-export type ActiveVizTab = 'waveforms' | 'bode' | 'losses' | 'thermal'
+export type ActiveVizTab = 'waveforms' | 'bode' | 'losses' | 'thermal' | 'monte-carlo'
 
 export interface DesignStoreState {
   topology: TopologyId
   spec: DesignSpec
   result: DesignResult | null
   waveforms: WaveformSet | null
+  mcResult: MonteCarloResult | null
   activeVizTab: ActiveVizTab
   isComputing: boolean
 
@@ -18,6 +20,7 @@ export interface DesignStoreState {
   updateSpec: (updates: Partial<DesignSpec>) => void
   resetSpec: () => void
   setResult: (result: DesignResult | null, waveforms: WaveformSet | null) => void
+  setMcResult: (mcResult: MonteCarloResult | null) => void
   setActiveVizTab: (tab: ActiveVizTab) => void
 }
 
@@ -55,17 +58,19 @@ export const useDesignStore = create<DesignStoreState>((set) => ({
   spec: defaultSpec,
   result: null,
   waveforms: null,
+  mcResult: null,
   activeVizTab: 'waveforms',
   isComputing: false,
 
   setTopology: (topology) =>
-    set({ topology, spec: TOPOLOGY_DEFAULTS[topology], result: null, waveforms: null, isComputing: true }),
+    set({ topology, spec: TOPOLOGY_DEFAULTS[topology], result: null, waveforms: null, mcResult: null, isComputing: true }),
 
   updateSpec: (updates) =>
     set((state) => ({
       spec: { ...state.spec, ...updates },
       result: null,
       waveforms: null,
+      mcResult: null,
       isComputing: true,
     })),
 
@@ -74,11 +79,15 @@ export const useDesignStore = create<DesignStoreState>((set) => ({
       spec: TOPOLOGY_DEFAULTS[state.topology],
       result: null,
       waveforms: null,
+      mcResult: null,
       isComputing: true,
     })),
 
   setResult: (result, waveforms) =>
     set({ result, waveforms, isComputing: false }),
+
+  setMcResult: (mcResult) =>
+    set({ mcResult, isComputing: false }),
 
   setActiveVizTab: (activeVizTab) => set({ activeVizTab }),
 }))

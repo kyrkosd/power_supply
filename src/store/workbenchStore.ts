@@ -2,7 +2,7 @@ import { create } from 'zustand'
 
 export type TopologyId = 'buck' | 'boost' | 'buck-boost' | 'flyback' | 'forward' | 'sepic'
 
-export type ActiveTab = 'waveforms' | 'bode' | 'losses' | 'thermal'
+export type ActiveTab = 'waveforms' | 'bode' | 'losses' | 'thermal' | 'monte-carlo'
 
 export interface DesignInputs {
   vinMin: number   // V
