@@ -11,7 +11,7 @@
  */
 
 import { flipFuses, FuseVersion, FuseV1Options } from '@electron/fuses'
-import { join, basename } from 'path'
+import { join, basename, resolve } from 'path'
 
 /**
  * Resolves the path to the packaged Electron executable so flipFuses can patch it.
@@ -34,13 +34,16 @@ function getElectronBinaryPath(context) {
       executableName = appName
   }
 
-  // Validate user input first before passing to path.join
+  // Normalise appOutDir to an absolute path — strips any embedded ".." segments
+  const safeOutDir = resolve(appOutDir)
+
+  // Validate executableName before passing to path.join
   if (executableName.includes('/') || executableName.includes('\\') || executableName.includes('..')) {
     throw new Error('Invalid executable name: possible path traversal detected')
   }
 
-  const binaryPath = join(appOutDir, executableName)
-  if (!binaryPath.startsWith(appOutDir)) {
+  const binaryPath = join(safeOutDir, executableName)
+  if (!binaryPath.startsWith(safeOutDir)) {
     throw new Error('Path traversal vulnerability detected')
   }
   return binaryPath
