@@ -119,7 +119,7 @@ export function LossBreakdown(): React.ReactElement {
 
   const hasLossBreakdown = useMemo(() => {
     if (!result?.losses) return false
-    return LOSS_SEGMENTS.every((segment) => typeof (result.losses as any)[segment.key] === 'number')
+    return LOSS_SEGMENTS.every((segment) => typeof (result.losses as Record<string, unknown>)[segment.key] === 'number')
   }, [result])
 
   const lossData = useMemo(() => {

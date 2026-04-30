@@ -2,7 +2,7 @@ import { ipcMain, dialog } from 'electron';
 import * as fs from 'fs';
 import * as os from 'os';
 import { spawn } from 'child_process';
-import { join, dirname, parse } from 'path';
+import { join, dirname, parse, basename } from 'path';
 import { promises as fsp } from 'fs';
 
 export function detectLTspicePath(): string | null {
@@ -56,8 +56,15 @@ export async function runSimulation(asc_path: string): Promise<{ rawPath: string
       }
 
       const { dir, name } = parse(asc_path);
-      const rawPath = join(dir, `${name}.raw`);
-      const logPath = join(dir, `${name}.log`);
+      
+      // Validate and sanitize to prevent path traversal
+      if (asc_path.includes('..') || asc_path.indexOf('\0') !== -1) {
+        return reject(new Error('Invalid path: Directory traversal detected.'));
+      }
+
+      const safeName = basename(name);
+      const rawPath = join(dir, `${safeName}.raw`);
+      const logPath = join(dir, `${safeName}.log`);
 
       if (!fs.existsSync(rawPath) || !fs.existsSync(logPath)) {
         return reject(new Error('LTspice did not produce expected .raw and .log output files.'));
@@ -85,8 +92,8 @@ export function setupLTspiceIPC() {
     try {
       exportNetlist(asc_content, filePath);
       return { success: true, filePath };
-    } catch (err: any) {
-      return { success: false, error: err.message };
+    } catch (err: unknown) {
+      return { success: false, error: err instanceof Error ? err.message : String(err) };
     }
   });
 
@@ -111,11 +118,11 @@ export function setupLTspiceIPC() {
       ]);
 
       return { success: true, rawContent, logContent };
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (fs.existsSync(tempAscPath)) {
         await fsp.unlink(tempAscPath).catch(() => {});
       }
-      return { success: false, error: err.message };
+      return { success: false, error: err instanceof Error ? err.message : String(err) };
     }
   });
 }

@@ -56,7 +56,7 @@ export function runTransientSimulation(
   let integral = 0;
   const Kp = 0.02;
   const Ki = 2000;
-  let current_duty = mode === 'startup' ? 0 : (result as any).dutyCycle || 0.5;
+  let current_duty = mode === 'startup' ? 0 : ((result as DesignResult & { dutyCycle?: number }).dutyCycle || result.duty_cycle || 0.5);
   let peak_inrush = 0;
 
   for (let step = 0; step < totalSteps; step++) {

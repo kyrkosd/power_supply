@@ -2,8 +2,9 @@ import React, { useRef, useEffect } from 'react';
 import * as d3 from 'd3';
 import { useDesignStore } from '../../store/design-store';
 import { estimateEMI } from '../../engine/emi';
+import type { EMIResult, EMIHarmonic } from '../../engine/topologies/types';
 
-const EMISpectrumChart: React.FC<{ data: any }> = ({ data }) => {
+const EMISpectrumChart: React.FC<{ data: EMIResult }> = ({ data }) => {
   const svgRef = useRef<SVGSVGElement>(null);
 
   useEffect(() => {
@@ -55,11 +56,11 @@ const EMISpectrumChart: React.FC<{ data: any }> = ({ data }) => {
       .data(data.harmonics)
       .enter()
       .append('line')
-      .attr('x1', (d: any) => x(d.frequency))
-      .attr('x2', (d: any) => x(d.frequency))
+      .attr('x1', (d: EMIHarmonic) => x(d.frequency))
+      .attr('x2', (d: EMIHarmonic) => x(d.frequency))
       .attr('y1', y(0))
-      .attr('y2', (d: any) => y(Math.max(0, d.amplitude_dbuv)))
-      .attr('stroke', (d: any) => d.margin_db < 0 ? '#ef4444' : '#22d3ee') // Red if fail, Cyan if pass
+      .attr('y2', (d: EMIHarmonic) => y(Math.max(0, d.amplitude_dbuv)))
+      .attr('stroke', (d: EMIHarmonic) => d.margin_db < 0 ? '#ef4444' : '#22d3ee') // Red if fail, Cyan if pass
       .attr('stroke-width', 2);
 
     // Draw limits last so they appear on top

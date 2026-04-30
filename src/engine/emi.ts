@@ -9,7 +9,14 @@ function getClassBLimit(f: number) {
   return 60;
 }
 
-export function estimateEMI(topology: string, spec: DesignSpec, result: any): EMIResult {
+interface EMIDesignResult {
+  dutyCycle?: number;
+  duty_cycle?: number;
+  peakCurrent?: number;
+  inductor?: { peak_current: number };
+}
+
+export function estimateEMI(topology: string, spec: DesignSpec, result: EMIDesignResult): EMIResult {
   const fsw = spec.fsw || 200000;
   const D = result.dutyCycle || result.duty_cycle || 0.5;
   const Ipeak = result.peakCurrent || result.inductor?.peak_current || spec.iout_max || 1;

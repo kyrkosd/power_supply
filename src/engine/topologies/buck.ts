@@ -79,8 +79,9 @@ export const buckTopology: Topology = {
   },
 
   getStateSpaceModel(spec: DesignSpec, result: DesignResult, current_vin: number, current_iout: number): StateSpaceModel {
-    const L = (result as any).inductance || (result as any).inductor?.value || 10e-6;
-    const C = (result as any).capacitance || (result as any).output_cap?.value || 10e-6;
+    const res = result as DesignResult & { inductance?: number; capacitance?: number; inductor?: { value: number }; output_cap?: { value: number } };
+    const L = res.inductance || res.inductor?.value || 10e-6;
+    const C = res.capacitance || res.output_cap?.value || 10e-6;
     const DCR = 0.01;
     const Vd = 0.5;
     const R = current_iout > 0.001 ? spec.vout / current_iout : 10000;

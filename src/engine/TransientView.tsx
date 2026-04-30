@@ -59,7 +59,7 @@ export const TransientView: React.FC = () => {
     if (!buckTopology.getStateSpaceModel) return;
     
     // Math block execution is 1-5ms, unnoticeable frame drop without explicit workers.
-    const res = runTransientSimulation(spec, result as any, mode, buckTopology.getStateSpaceModel);
+    const res = runTransientSimulation(spec, result, mode, buckTopology.getStateSpaceModel);
     setTransientResult(res);
   };
 

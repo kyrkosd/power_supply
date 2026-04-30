@@ -92,8 +92,8 @@ export const ComparisonView: React.FC = () => {
       const comparison = compareWaveforms(result, waveforms, simulatedWf, simulatedMetrics);
       setComparisonResult(comparison);
       setStatus('complete');
-    } catch (e: any) {
-      setError(e.message);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : String(e));
       setStatus('error');
     }
   };
