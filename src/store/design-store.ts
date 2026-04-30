@@ -3,9 +3,11 @@ import type { DesignSpec, DesignResult } from '../engine/types'
 import type { WaveformSet } from '../engine/topologies/types'
 import type { TopologyId } from './workbenchStore'
 import type { MonteCarloResult } from '../engine/monte-carlo'
+import type { TransientResult } from '../engine/topologies/types'
+import type { EMIResult } from '../engine/topologies/types'
 
 export type { TopologyId } from './workbenchStore'
-export type ActiveVizTab = 'waveforms' | 'bode' | 'losses' | 'thermal' | 'monte-carlo'
+export type ActiveVizTab = 'waveforms' | 'bode' | 'losses' | 'thermal' | 'monte-carlo' | 'ltspice-comparison' | 'transient' | 'emi'
 
 export interface DesignStoreState {
   topology: TopologyId
@@ -13,6 +15,8 @@ export interface DesignStoreState {
   result: DesignResult | null
   waveforms: WaveformSet | null
   mcResult: MonteCarloResult | null
+  transientResult: TransientResult | null
+  emiResult: EMIResult | null
   activeVizTab: ActiveVizTab
   isComputing: boolean
 
@@ -21,6 +25,8 @@ export interface DesignStoreState {
   resetSpec: () => void
   setResult: (result: DesignResult | null, waveforms: WaveformSet | null) => void
   setMcResult: (mcResult: MonteCarloResult | null) => void
+  setTransientResult: (res: TransientResult | null) => void
+  setEmiResult: (res: EMIResult | null) => void
   setActiveVizTab: (tab: ActiveVizTab) => void
 }
 
@@ -59,11 +65,13 @@ export const useDesignStore = create<DesignStoreState>((set) => ({
   result: null,
   waveforms: null,
   mcResult: null,
+  transientResult: null,
+  emiResult: null,
   activeVizTab: 'waveforms',
   isComputing: false,
 
   setTopology: (topology) =>
-    set({ topology, spec: TOPOLOGY_DEFAULTS[topology], result: null, waveforms: null, mcResult: null, isComputing: true }),
+    set({ topology, spec: TOPOLOGY_DEFAULTS[topology], result: null, waveforms: null, mcResult: null, transientResult: null, emiResult: null, isComputing: true }),
 
   updateSpec: (updates) =>
     set((state) => ({
@@ -71,6 +79,8 @@ export const useDesignStore = create<DesignStoreState>((set) => ({
       result: null,
       waveforms: null,
       mcResult: null,
+      transientResult: null,
+      emiResult: null,
       isComputing: true,
     })),
 
@@ -80,6 +90,8 @@ export const useDesignStore = create<DesignStoreState>((set) => ({
       result: null,
       waveforms: null,
       mcResult: null,
+      transientResult: null,
+      emiResult: null,
       isComputing: true,
     })),
 
@@ -88,6 +100,12 @@ export const useDesignStore = create<DesignStoreState>((set) => ({
 
   setMcResult: (mcResult) =>
     set({ mcResult, isComputing: false }),
+
+  setTransientResult: (transientResult) =>
+    set({ transientResult }),
+
+  setEmiResult: (emiResult) =>
+    set({ emiResult }),
 
   setActiveVizTab: (activeVizTab) => set({ activeVizTab }),
 }))

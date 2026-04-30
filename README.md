@@ -16,6 +16,11 @@ Built with **Electron + React + TypeScript**.
 - **Thermal analysis** — junction temperature bars (green/yellow/red) with heatsink recommendations
 - **Component suggestions** — matched inductors, capacitors, and MOSFETs from a curated database
 - **Keyboard shortcuts** — `Ctrl+1/2/3/4` to switch visualisation tabs
+- **Monte Carlo Tolerance Analysis** — Runs hundreds of iterations varying component tolerances to generate yield histograms and worst-case margins. Helps ensure designs meet efficiency and ripple specs across mass production variances.
+- **Ceramic DC Bias Derating** — Automatically derates MLCC capacitance based on DC voltage using empirical curves (e.g., X5R/X7R) to warn about effective capacitance loss. Prevent unexpected instability or high ripple caused by undersized output capacitors.
+- **LTspice Bridge** — Generates `.asc` netlists, runs simulations in batch mode, and parses `.raw` files to overlay analytical vs. simulated waveforms. Identifies discrepancies in RMS currents or peak ripples. *(Note: LTspice comparison requires LTspice to be installed locally).*
+- **Startup/Transient Simulation** — Solves state-space models using an RK4 integrator to visualize startup inrush, load steps, and line steps directly in the app. Evaluates control loop settling time and voltage overshoot without requiring an external SPICE engine.
+- **EMI Pre-Compliance** — Estimates conducted EMI spectrum from input ripple and compares against CISPR 32 Class A/B limits. Highlights failing harmonics and automatically suggests a required LC input filter.
 - **Per-topology Reset** — one-click restore to sensible default values
 - **Worker thread** — all computation runs off the main thread; UI stays at 60 fps
 

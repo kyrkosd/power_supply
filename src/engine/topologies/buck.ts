@@ -1,6 +1,7 @@
 import { DesignSpec, DesignResult, Topology } from '../types'
 import type { WaveformSet } from '../topologies/types'
 import { analyzeBuckControlLoop } from '../control-loop'
+import type { StateSpaceModel } from './types'
 
 // Buck (step-down) converter steady-state design equations.
 // Assumes CCM (Continuous Conduction Mode) and ideal switch/diode.
@@ -76,4 +77,25 @@ export const buckTopology: Topology = {
       diode_current,
     }
   },
+
+  getStateSpaceModel(spec: DesignSpec, result: DesignResult, current_vin: number, current_iout: number): StateSpaceModel {
+    const L = (result as any).inductance || (result as any).inductor?.value || 10e-6;
+    const C = (result as any).capacitance || (result as any).output_cap?.value || 10e-6;
+    const DCR = 0.01;
+    const Vd = 0.5;
+    const R = current_iout > 0.001 ? spec.vout / current_iout : 10000;
+
+    return {
+      A1: [
+        [-DCR / L, -1 / L],
+        [1 / C, -1 / (C * R)]
+      ],
+      B1: [[current_vin / L], [0]],
+      A2: [
+        [-DCR / L, -1 / L],
+        [1 / C, -1 / (C * R)]
+      ],
+      B2: [[-Vd / L], [0]]
+    };
+  }
 }

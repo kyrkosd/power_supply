@@ -1,0 +1,15 @@
+{
+  "description": "CISPR 32 Conducted Emission Limits (Quasi-Peak, 150kHz - 30MHz)",
+  "class_b": [
+    { "freq_hz": 150000, "limit_dbuv": 66 },
+    { "freq_hz": 500000, "limit_dbuv": 56 },
+    { "freq_hz": 5000000, "limit_dbuv": 56 },
+    { "freq_hz": 30000000, "limit_dbuv": 60 }
+  ],
+  "class_a": [
+    { "freq_hz": 150000, "limit_dbuv": 79 },
+    { "freq_hz": 500000, "limit_dbuv": 79 },
+    { "freq_hz": 5000000, "limit_dbuv": 73 },
+    { "freq_hz": 30000000, "limit_dbuv": 73 }
+  ]
+}

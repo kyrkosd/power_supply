@@ -143,6 +143,47 @@ export interface WaveformParams {
   points_per_cycle?: number // time-domain resolution per cycle (default: 200)
 }
 
+// ── Transient Simulation ──────────────────────────────────────────────────────
+
+export type TransientMode = 'startup' | 'load-step' | 'line-step'
+
+export interface TransientMetrics {
+  settling_time_ms: number;
+  overshoot_pct: number;
+  peak_inrush_A: number;
+}
+
+export interface TransientResult {
+  time: Float64Array;
+  vout: Float64Array;
+  iL: Float64Array;
+  duty: Float64Array;
+  metrics: TransientMetrics;
+}
+
+export interface StateSpaceModel {
+  A1: [[number, number], [number, number]];
+  B1: [[number], [number]];
+  A2: [[number, number], [number, number]];
+  B2: [[number], [number]];
+}
+
+// ── EMI Spectrum ──────────────────────────────────────────────────────────────
+
+export interface EMIHarmonic {
+  frequency: number;
+  amplitude_dbuv: number;
+  limit_dbuv: number;
+  margin_db: number;
+}
+
+export interface EMIResult {
+  harmonics: EMIHarmonic[];
+  worst_margin_db: number;
+  first_failing_harmonic: number | null;
+  suggested_filter: { Lf_uH: number; Cf_uF: number } | null;
+}
+
 // ── Topology engine ───────────────────────────────────────────────────────────
 
 export interface TopologyEngine {
@@ -159,4 +200,7 @@ export interface TopologyEngine {
   // Time-domain waveforms for one or more switching cycles.
   // Returns Transferable Float64Arrays — post to worker, transfer ownership.
   generateWaveforms(params: WaveformParams): WaveformSet
+
+  // Transient State-Space model matrices
+  getStateSpaceModel?(spec: DesignSpec, result: DesignResult, current_vin: number, current_iout: number): StateSpaceModel;
 }

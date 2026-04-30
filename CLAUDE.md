@@ -32,6 +32,13 @@ Heavy computation always runs in the worker to keep UI at 60 fps.
 Never call topology `compute()` directly from a component or store action;
 always go through the worker.
 
+### Advanced Analysis Integrations
+- **Monte Carlo**: `src/engine/monte-carlo.ts` leverages the existing topology `compute()` engines to run randomized parameter sweeps. Results are stored in Zustand and rendered via D3.
+- **DC Bias Derating**: `src/engine/dc-bias.ts` hooks into the component sizing phase of the topology calculations, utilizing `src/data/dc-bias-curves.json` to calculate `effective_value`.
+- **LTspice Bridge**: `electron/ltspice-bridge.ts` executes LTspice natively via Electron's `child_process`. `src/engine/ltspice/` contains the netlist generators and `.raw`/`.log` parsers which integrate with `ComparisonView` to overlay data.
+- **Startup/Transient Simulation**: `src/engine/transient.ts` uses an RK4 state-space solver. Integrates by requiring Topologies to optionally implement `getStateSpaceModel()` returning A/B matrices.
+- **EMI Pre-Compliance**: `src/engine/emi.ts` takes the steady-state `DesignResult` and spec, computes the Fourier spectrum, and evaluates against limits from `src/data/emi-limits.json`.
+
 ---
 
 ## Engine layer rules
