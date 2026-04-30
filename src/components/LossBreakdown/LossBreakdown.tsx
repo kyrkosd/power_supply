@@ -114,18 +114,21 @@ function createEfficiencyCurve(spec: DesignSpec, result: DesignResult) {
 export function LossBreakdown(): React.ReactElement {
   const spec = useDesignStore((state) => state.spec)
   const result = useDesignStore((state) => state.result)
+  const setActiveVizTab = useDesignStore((state) => state.setActiveVizTab)
   const svgRef = useRef<SVGSVGElement>(null)
 
+  const hasLossBreakdown = useMemo(() => {
+    if (!result?.losses) return false
+    return LOSS_SEGMENTS.every((segment) => typeof (result.losses as any)[segment.key] === 'number')
+  }, [result])
+
   const lossData = useMemo(() => {
-    if (!result) return []
-    // Use the loss breakdown from the engine, which is correct for the
-    // currently selected topology. The previous implementation was hardcoded
-    // for the buck topology and caused a crash for others.
+    if (!result || !hasLossBreakdown) return []
     return [{
       name: 'losses',
-      ...result.losses,
+      ...(result.losses as Record<string, number>),
     }]
-  }, [result])
+  }, [result, hasLossBreakdown])
 
   const efficiencyCurve = useMemo(() => {
     if (!result) return []
@@ -216,10 +219,27 @@ export function LossBreakdown(): React.ReactElement {
       .text('Efficiency vs Load')
   }, [efficiencyCurve, operatingPoint, result])
 
-  if (!result || !lossData.length) {
+  if (!result) {
     return (
       <div className={styles.placeholder}>
         Run simulation to compute loss breakdown.
+      </div>
+    )
+  }
+
+  if (!hasLossBreakdown) {
+    return (
+      <div className={styles.placeholder}>
+        <div className={styles.fallbackMessage}>
+          <div>No loss data is available for this topology yet.</div>
+          <button
+            type="button"
+            className={styles.backButton}
+            onClick={() => setActiveVizTab('waveforms')}
+          >
+            Back to main deck
+          </button>
+        </div>
       </div>
     )
   }

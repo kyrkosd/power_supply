@@ -101,6 +101,29 @@
   font-size: 13px;
 }
 
+.fallbackMessage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+  max-width: 360px;
+}
+
+.backButton {
+  padding: 10px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-primary);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.backButton:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
 .xAxis path,
 .yAxis path,
 .xAxis line,
