@@ -25,7 +25,7 @@ export const forwardTopology: Topology = {
   name: 'Forward',
 
   compute(spec: DesignSpec): DesignResult {
-    const { vinMin, vinMax, vout, iout, fsw, rippleRatio, voutRippleMax, efficiency } = spec
+    const { vinMin, vout, iout, fsw, rippleRatio, voutRippleMax, efficiency } = spec
 
     // 1. Reset mechanism: RCD clamp, D_max limited by reset
     const vReset = 15 // V, typical reset winding voltage
@@ -65,7 +65,6 @@ export const forwardTopology: Topology = {
     const secondaryTurns = Math.ceil(primaryTurns / turnsRatio)
 
     // 8. MOSFET Vds_max = Vin_max + Vreset
-    const mosfetVdsMax = vinMax + vReset
 
     // 9. Losses
     const primaryCopperLoss = primaryCurrentAvg ** 2 * 0.05 // Ω
@@ -87,11 +86,24 @@ export const forwardTopology: Topology = {
       warnings.push('Turns ratio less than 1 - consider different topology')
     }
 
+    const IL_rms = Math.sqrt(iout * iout + (deltaIL * deltaIL) / 12)
+    const I_cout_rms = deltaIL / (2 * Math.sqrt(3))
+
     return {
       dutyCycle,
       inductance: outputInductance, // This is Lo, the output inductor
       capacitance,
       peakCurrent,
+      inductor: {
+        value: outputInductance,
+        peak_current: peakCurrent,
+        rms_current: IL_rms,
+      },
+      output_cap: {
+        value: capacitance,
+        esr_max: 0.05,
+        ripple_current: I_cout_rms,
+      },
       efficiency: pout / (pout + totalLoss),
       warnings,
       turnsRatio,

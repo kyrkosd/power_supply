@@ -1,4 +1,6 @@
-import type { WaveformSet } from './topologies/types'
+import type { WaveformSet, TransferFunction } from './topologies/types'
+
+export type { TransferFunction }
 
 export interface DesignSpec {
   vinMin: number        // V — minimum input voltage
@@ -13,6 +15,8 @@ export interface DesignSpec {
 }
 
 export interface DesignResult {
+  output_cap: any
+  inductor: any
   dutyCycle: number      // 0–1
   inductance: number     // H
   capacitance: number    // F

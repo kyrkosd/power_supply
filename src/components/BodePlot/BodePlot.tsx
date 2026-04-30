@@ -71,12 +71,12 @@ export function BodePlot({ spec, result }: BodePlotProps): React.ReactElement {
     const xGrid = axisBottom(xScale)
       .tickValues(decadeTicks)
       .tickSize(-chartHeight)
-      .tickFormat('' as any)
+      .tickFormat(() => '')
 
     const yGrid = axisLeft(yMagScale)
       .ticks(6)
       .tickSize(-chartWidth)
-      .tickFormat('' as any)
+      .tickFormat(() => '')
 
     root.append('g').attr('class', styles.grid).attr('transform', `translate(0,${chartHeight})`).call(xGrid)
     root.append('g').attr('class', styles.grid).call(yGrid)

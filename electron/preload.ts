@@ -9,6 +9,6 @@ if (process.contextIsolated) {
     console.error(error)
   }
 } else {
-  // @ts-ignore (define in dts)
+  // @ts-expect-error -- window.electron is declared in env.d.ts
   window.electron = electronAPI
 }

@@ -499,7 +499,7 @@ function createBuckBoostSchematic(spec: DesignSpec, result: DesignResult | null)
     { id: 'wire4', points: [nodes[3], { x: 610, y: 102 }, nodes[4]] },
     { id: 'wire5', points: [nodes[2], { x: 330, y: 166 }, nodes[3]] },
     { id: 'wire6', points: [nodes[2], { x: 330, y: 266 }, nodes[5]] },
-    { id: 'wire7', points: [nodes[4], { x: 650, y: 210 }, nodes[7]] },
+    { id: 'wire7', points: [nodes[4], { x: 650, y: 210 }, nodes[6]] },
     { id: 'wire8', points: [{ x: 130, y: 18 }, { x: 130, y: 132 }, { x: 90, y: 132 }] },
     { id: 'wire9', points: [{ x: 230, y: 58 }, { x: 230, y: 18 }, { x: 130, y: 18 }] },
   ]

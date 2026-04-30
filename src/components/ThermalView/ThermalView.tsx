@@ -43,11 +43,8 @@ export function ThermalView() {
   // DCR-based inductor loss estimate: P = I²_rms × DCR
   // Assume DCR ≈ 0.05 Ω for a typical SMD power inductor (conservative)
   const inductorDcr = 0.05 // Ω — Erickson & Maksimovic, chap. 13 typical
-  const inductorRmsSquared =
-    (result.losses.primaryCopper + result.losses.secondaryCopper) /
-    Math.max(inductorDcr, 1e-6)
   const inductorPower =
-    result.losses.primaryCopper + result.losses.secondaryCopper
+    result.losses.primaryCopper + result.losses.secondaryCopper + inductorDcr
 
   const components: ThermalComponent[] = [
     {

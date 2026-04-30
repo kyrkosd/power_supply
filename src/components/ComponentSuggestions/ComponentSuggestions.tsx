@@ -1,6 +1,6 @@
 import React from 'react'
 import { useDesignStore } from '../../store/design-store'
-import { suggestInductors, suggestCapacitors, suggestMosfets, InductorData, CapacitorData, MosfetData } from '../../engine/component-selector'
+import { suggestInductors, suggestCapacitors, suggestMosfets } from '../../engine/component-selector'
 import styles from './ComponentSuggestions.module.css'
 
 export function ComponentSuggestions() {
@@ -12,21 +12,21 @@ export function ComponentSuggestions() {
   const suggestedCapacitors = suggestCapacitors(result.capacitance * 1e6, spec.vout * 1.5)
   const suggestedMosfets = suggestMosfets(spec.vinMax * 1.5)
 
-  const handleInductorSelect = (inductor: InductorData) => {
+  const handleInductorSelect = () => {
     // Update spec with selected inductor parameters
     updateSpec({
       // Could add inductor-specific fields to spec if needed
     })
   }
 
-  const handleCapacitorSelect = (capacitor: CapacitorData) => {
+  const handleCapacitorSelect = () => {
     // Update spec with selected capacitor parameters
     updateSpec({
       // Could add capacitor-specific fields to spec if needed
     })
   }
 
-  const handleMosfetSelect = (mosfet: MosfetData) => {
+  const handleMosfetSelect = () => {
     // Update spec with selected MOSFET parameters
     updateSpec({
       // Could add MOSFET-specific fields to spec if needed

@@ -56,21 +56,6 @@ function normalizePhase(phase: number) {
   return (((phase + 180) % 360 + 360) % 360) - 180
 }
 
-function findCrossing(data: BodePoint[], target: number, field: 'magnitude_db' | 'phase_deg') {
-  for (let i = 1; i < data.length; i += 1) {
-    const prev = data[i - 1][field]
-    const next = data[i][field]
-    if ((prev >= target && next <= target) || (prev <= target && next >= target)) {
-      const freq = interpolate(data[i - 1].freq_hz, prev, data[i].freq_hz, next, target)
-      return {
-        freq,
-        value: target,
-        index: i,
-      }
-    }
-  }
-  return null
-}
 
 function findCrossoverPoint(loop: BodePoint[], preferredFreq?: number) {
   const crossings: Array<{ freq: number; phase: number }> = []

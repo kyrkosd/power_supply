@@ -5,7 +5,7 @@ export const sepicTopology: Topology = {
   name: 'SEPIC',
 
   compute(spec: DesignSpec): DesignResult {
-    const { vinMin, vinMax, vout, iout, fsw, rippleRatio, voutRippleMax, efficiency } = spec
+    const { vinMin, vinMax, vout, iout, fsw, voutRippleMax, efficiency } = spec
 
     // 1. Duty cycle: D = Vout / (Vin + Vout) (same as flyback)
     const vinNom = (vinMin + vinMax) / 2
@@ -36,7 +36,6 @@ export const sepicTopology: Topology = {
 
     // 6. Peak currents
     const peakInputCurrent = inputCurrentAvg + deltaIL1 / 2
-    const peakOutputCurrent = iout // SEPIC has continuous output current
 
     // 7. Component stresses
     const mosfetVdsMax = vinMax + vout // Vds_max = Vin + Vout

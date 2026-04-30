@@ -4,7 +4,7 @@ import { select } from 'd3-selection'
 import { axisBottom, axisLeft } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
 import { line, curveMonotoneX } from 'd3-shape'
-import { extent, max, min } from 'd3-array'
+import { max, min } from 'd3-array'
 import { useDesignStore } from '../../store/design-store'
 import styles from './LossBreakdown.module.css'
 import type { DesignSpec, DesignResult } from '../../engine/types'
@@ -63,69 +63,52 @@ function formatPercent(value: number): string {
   return `${value.toFixed(0)}%`
 }
 
-function computeBuckLosses(spec: DesignSpec, result: DesignResult, loadCurrent: number): LossBreakdownValues {
-  const D = Math.min(Math.max(spec.vout / spec.vinMax, 0.01), 0.99)
-  const L = result.inductance
-  const fsw = spec.fsw
-  const deltaIL = Math.abs((spec.vout * (1 - D)) / (L * fsw))
-  const IL_peak = loadCurrent + deltaIL / 2
-  const IL_rms = Math.sqrt(loadCurrent * loadCurrent + (deltaIL * deltaIL) / 12)
-  const Ic_rms = deltaIL / (2 * Math.sqrt(3))
-
-  const mosfet_conduction = loadCurrent * loadCurrent * DEVICE_ASSUMPTIONS.rdsOn * D
-  const mosfet_switching = 0.5 * spec.vinMax * IL_peak * (DEVICE_ASSUMPTIONS.trise + DEVICE_ASSUMPTIONS.tfall) * fsw
-  const mosfet_gate = DEVICE_ASSUMPTIONS.qg * spec.vinMax * fsw
-  const inductor_copper = IL_rms * IL_rms * DEVICE_ASSUMPTIONS.dcr
-  const inductor_core = DEVICE_ASSUMPTIONS.coreFactor * loadCurrent * deltaIL
-  const diode_conduction = DEVICE_ASSUMPTIONS.vf * loadCurrent * (1 - D)
-  const capacitor_esr = Ic_rms * Ic_rms * DEVICE_ASSUMPTIONS.esr
-
-  const total =
-    mosfet_conduction +
-    mosfet_switching +
-    mosfet_gate +
-    inductor_copper +
-    inductor_core +
-    diode_conduction +
-    capacitor_esr
-
-  const pout = spec.vout * loadCurrent
-  const efficiency = pout <= 0 ? 0 : pout / (pout + total)
-
-  return {
-    mosfet_conduction,
-    mosfet_switching,
-    mosfet_gate,
-    inductor_copper,
-    inductor_core,
-    diode_conduction,
-    capacitor_esr,
-    total,
-    efficiency,
-  }
-}
-
 function createEfficiencyCurve(spec: DesignSpec, result: DesignResult) {
+  // The efficiency curve calculation is currently only implemented for the
+  // buck topology. Return an empty array for others to prevent a crash.
+  if (spec.topology !== 'buck') {
+    return []
+  }
+  // This calculation is only valid for a buck converter.
+  function computeBuckLosses(loadCurrent: number): LossBreakdownValues {
+    const D = Math.min(Math.max(spec.vout / spec.vinMax, 0.01), 0.99)
+    const L = result.inductance
+    const fsw = spec.fsw
+    const deltaIL = Math.abs((spec.vout * (1 - D)) / (L * fsw))
+    const IL_peak = loadCurrent + deltaIL / 2
+    const IL_rms = Math.sqrt(loadCurrent * loadCurrent + (deltaIL * deltaIL) / 12)
+    const Ic_rms = deltaIL / (2 * Math.sqrt(3))
+
+    const mosfet_conduction = loadCurrent * loadCurrent * DEVICE_ASSUMPTIONS.rdsOn * D
+    const mosfet_switching = 0.5 * spec.vinMax * IL_peak * (DEVICE_ASSUMPTIONS.trise + DEVICE_ASSUMPTIONS.tfall) * fsw
+    const mosfet_gate = DEVICE_ASSUMPTIONS.qg * spec.vinMax * fsw
+    const inductor_copper = IL_rms * IL_rms * DEVICE_ASSUMPTIONS.dcr
+    const inductor_core = DEVICE_ASSUMPTIONS.coreFactor * loadCurrent * deltaIL
+    const diode_conduction = DEVICE_ASSUMPTIONS.vf * loadCurrent * (1 - D)
+    const capacitor_esr = Ic_rms * Ic_rms * DEVICE_ASSUMPTIONS.esr
+
+    const total =
+      mosfet_conduction + mosfet_switching + mosfet_gate +
+      inductor_copper + inductor_core + diode_conduction + capacitor_esr
+
+    const pout = spec.vout * loadCurrent
+    const efficiency = pout <= 0 ? 0 : pout / (pout + total)
+
+    return {
+      mosfet_conduction, mosfet_switching, mosfet_gate, inductor_copper,
+      inductor_core, diode_conduction, capacitor_esr, total, efficiency,
+    }
+  }
+
   return Array.from({ length: 10 }, (_, index) => {
     const ratio = 0.1 + index * 0.1
     const current = spec.iout * ratio
-    const losses = computeBuckLosses(spec, result, current)
+    const losses = computeBuckLosses(current)
     return {
       loadCurrent: current,
       efficiency: losses.efficiency * 100,
     }
   })
-}
-
-function renderBarLabel(entry: { value: number; width: number; total: number }): React.ReactNode {
-  const { value, width, total } = entry
-  if (!Number.isFinite(value) || value <= 0 || width < 54) return null
-  const percent = total > 0 ? (value / total) * 100 : 0
-  return (
-    <tspan>
-      {`${value.toFixed(2)} W · ${percent.toFixed(0)}%`}
-    </tspan>
-  )
 }
 
 export function LossBreakdown(): React.ReactElement {
@@ -135,12 +118,14 @@ export function LossBreakdown(): React.ReactElement {
 
   const lossData = useMemo(() => {
     if (!result) return []
-    const fullLoad = computeBuckLosses(spec, result, spec.iout)
+    // Use the loss breakdown from the engine, which is correct for the
+    // currently selected topology. The previous implementation was hardcoded
+    // for the buck topology and caused a crash for others.
     return [{
       name: 'losses',
-      ...fullLoad,
+      ...result.losses,
     }]
-  }, [spec, result])
+  }, [result])
 
   const efficiencyCurve = useMemo(() => {
     if (!result) return []
