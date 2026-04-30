@@ -2,22 +2,33 @@ import { compute, generateWaveforms } from './index'
 import type { DesignSpec, DesignResult } from './types'
 import type { WaveformSet } from './topologies/types'
 import type { TopologyId } from '../store/workbenchStore'
+import { runMonteCarlo, type MonteCarloConfig, type MonteCarloResult } from './monte-carlo'
 
 interface ComputePayload {
   topology: TopologyId
   spec: DesignSpec
 }
 
-type WorkerRequest = { type: 'COMPUTE'; payload: ComputePayload }
+interface MCComputePayload {
+  topology: TopologyId
+  spec: DesignSpec
+  mcConfig: MonteCarloConfig
+}
+
+type WorkerRequest = { type: 'COMPUTE'; payload: ComputePayload } | { type: 'MC_COMPUTE'; payload: MCComputePayload } | { type: 'MC_CANCEL' }
 type ResultResponse = {
   type: 'RESULT'
   payload: { result: DesignResult; waveforms: WaveformSet | null; timing_ms: number }
 }
 type ErrorResponse = { type: 'ERROR'; payload: { message: string } }
+type MCProgressResponse = { type: 'MC_PROGRESS'; payload: { completed: number; total: number } }
+type MCResultResponse = { type: 'MC_RESULT'; payload: MonteCarloResult }
 
 const DEBOUNCE_MS = 8
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
 let latestPayload: ComputePayload | null = null
+
+let mcCancelFlag = false
 
 function scheduleCompute(payload: ComputePayload): void {
   latestPayload = payload
