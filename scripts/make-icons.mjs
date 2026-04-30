@@ -3,7 +3,7 @@
 // and resources/icon.svg.
 // Usage: node scripts/make-icons.mjs
 
-/* global Uint8Array, Int32Array, Buffer, console */
+/* eslint-env node, es2022 */
 
 import { deflateSync } from 'zlib'
 import { writeFileSync, mkdirSync } from 'fs'

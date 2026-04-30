@@ -34,8 +34,12 @@ function getElectronBinaryPath(context) {
       executableName = appName
   }
 
-  // Sanitize the final executable name and validate the bounds of the joined path
-  const binaryPath = join(appOutDir, basename(executableName))
+  // Validate user input first before passing to path.join
+  if (executableName.includes('/') || executableName.includes('\\') || executableName.includes('..')) {
+    throw new Error('Invalid executable name: possible path traversal detected')
+  }
+
+  const binaryPath = join(appOutDir, executableName)
   if (!binaryPath.startsWith(appOutDir)) {
     throw new Error('Path traversal vulnerability detected')
   }
