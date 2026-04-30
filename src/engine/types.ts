@@ -14,9 +14,21 @@ export interface DesignSpec {
   efficiency: number    // 0–1 target efficiency
 }
 
+export interface InductorResult {
+  value: number        // H
+  peak_current: number // A
+  rms_current: number  // A
+}
+
+export interface OutputCapResult {
+  value: number        // F
+  esr_max: number      // Ω
+  ripple_current: number // A rms
+}
+
 export interface DesignResult {
-  output_cap: any
-  inductor: any
+  output_cap: OutputCapResult
+  inductor: InductorResult
   dutyCycle: number      // 0–1
   inductance: number     // H
   capacitance: number    // F

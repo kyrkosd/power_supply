@@ -3,7 +3,6 @@ import type {
   TopologyEngine,
   DesignSpec,
   DesignResult,
-  TransferFunctionParams,
   TransferFunction,
   WaveformParams,
   WaveformSet,
@@ -77,10 +76,10 @@ function createStubEngine(id: string, name: string): TopologyEngine {
   return {
     id,
     name,
-    compute(_spec: DesignSpec): DesignResult {
+    compute(): DesignResult {
       return notImplementedResult(id)
     },
-    getTransferFunction(_params: TransferFunctionParams): TransferFunction {
+    getTransferFunction(): TransferFunction {
       return notImplementedTransferFn()
     },
     generateWaveforms(params: WaveformParams): WaveformSet {
