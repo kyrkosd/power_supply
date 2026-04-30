@@ -117,7 +117,7 @@ function createEfficiencyCurve(spec: DesignSpec, result: DesignResult) {
   })
 }
 
-function renderBarLabel(entry: any): React.ReactNode {
+function renderBarLabel(entry: { value: number; width: number; total: number }): React.ReactNode {
   const { value, width, total } = entry
   if (!Number.isFinite(value) || value <= 0 || width < 54) return null
   const percent = total > 0 ? (value / total) * 100 : 0
@@ -271,13 +271,13 @@ export function LossBreakdown(): React.ReactElement {
                       dataKey={segment.key}
                       position="insideCenter"
                       content={(props) => {
-                        const { value, width } = props as any
+                        const { value, width, x, y, height } = props as { value: number; width: number; x: number; y: number; height: number }
                         if (!Number.isFinite(value) || value <= 0 || width < 54) return null
                         const percent = totals.total > 0 ? (value / totals.total) * 100 : 0
                         return (
                           <text
-                            x={props.x + width / 2}
-                            y={props.y + props.height / 2 + 4}
+                            x={x + width / 2}
+                            y={y + height / 2 + 4}
                             fill="#ffffff"
                             fontSize={10}
                             textAnchor="middle"

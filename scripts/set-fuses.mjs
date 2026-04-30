@@ -11,7 +11,7 @@
  */
 
 import { flipFuses, FuseVersion, FuseV1Options } from '@electron/fuses'
-import { join } from 'path'
+import { join, basename } from 'path'
 
 /**
  * Resolves the path to the packaged Electron executable so flipFuses can patch it.
@@ -19,16 +19,27 @@ import { join } from 'path'
  */
 function getElectronBinaryPath(context) {
   const { appOutDir, packager } = context
-  const appName = packager.appInfo.productName
+  // Sanitize the product name to prevent path traversal vulnerabilities
+  const appName = basename(packager.appInfo.productName)
 
+  let executableName
   switch (packager.platform.nodeName) {
     case 'darwin':
-      return join(appOutDir, `${appName}.app`)
+      executableName = `${appName}.app`
+      break
     case 'win32':
-      return join(appOutDir, `${appName}.exe`)
+      executableName = `${appName}.exe`
+      break
     default: // linux
-      return join(appOutDir, appName)
+      executableName = appName
   }
+
+  // Sanitize the final executable name and validate the bounds of the joined path
+  const binaryPath = join(appOutDir, basename(executableName))
+  if (!binaryPath.startsWith(appOutDir)) {
+    throw new Error('Path traversal vulnerability detected')
+  }
+  return binaryPath
 }
 
 export default async function afterPack(context) {

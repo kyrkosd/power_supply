@@ -3,6 +3,8 @@
 // and resources/icon.svg.
 // Usage: node scripts/make-icons.mjs
 
+/* global Uint8Array, Int32Array, Buffer, console */
+
 import { deflateSync } from 'zlib'
 import { writeFileSync, mkdirSync } from 'fs'
 import { fileURLToPath } from 'url'
@@ -24,12 +26,6 @@ console.log('✓  resources/icon.svg')
 // ── PNG ───────────────────────────────────────────────────────────────────
 const SIZE = 512
 const rgb = new Uint8Array(SIZE * SIZE * 3)
-
-function setPixel(x, y, r, g, b) {
-  if (x < 0 || x >= SIZE || y < 0 || y >= SIZE) return
-  const i = (y * SIZE + x) * 3
-  rgb[i] = r; rgb[i + 1] = g; rgb[i + 2] = b
-}
 
 // Background: #0f1928
 for (let i = 0; i < SIZE * SIZE; i++) {

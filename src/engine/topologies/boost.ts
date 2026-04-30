@@ -49,17 +49,10 @@ export const boostTopology: Topology = {
     const deltaIL = rippleFactor * inputCurrent
     const inductance = (vinMin * dutyCycle) / (fsw * deltaIL)
     const peakCurrent = inputCurrent + deltaIL / 2
-    const rmsCurrent = Math.sqrt(inputCurrent ** 2 + deltaIL ** 2 / 12)
 
     // 3. Output capacitor: pulsed current requires higher cap and ESR control
     const deltaVout = Math.max(voutRippleMax, 0.01 * vout)
     const capacitance = (iout * dutyCycle) / (fsw * deltaVout)
-    const esrMax = deltaVout / Math.max(peakCurrent, 1e-6)
-    const capRippleCurrent = iout * Math.sqrt(dutyCycle / (1 - dutyCycle))
-
-    // 4. Input capacitor estimate for continuous input current
-    const inputCapValue = (inputCurrent * dutyCycle) / (fsw * Math.max(0.03 * vinMin, 1e-3))
-    const inputCapRms = inputCurrent / Math.sqrt(12)
 
     const warnings: string[] = []
     if (dutyCycle >= 0.9) {
