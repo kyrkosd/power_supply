@@ -26,6 +26,8 @@
     "appId": "com.powerworkbench.app",
     "productName": "Power Supply Design Workbench",
     "icon": "resources/icon.png",
+    "asar": true,
+    "afterPack": "./scripts/set-fuses.mjs",
     "files": [
       "out/**/*",
       "resources/**/*"
@@ -35,16 +37,38 @@
       "output": "dist"
     },
     "win": {
-      "target": [{ "target": "nsis", "arch": ["x64"] }],
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
       "icon": "resources/icon.png"
     },
     "mac": {
-      "target": [{ "target": "dmg", "arch": ["x64", "arm64"] }],
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
       "icon": "resources/icon.png",
       "category": "public.app-category.utilities"
     },
     "linux": {
-      "target": [{ "target": "AppImage", "arch": ["x64"] }],
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
       "icon": "resources/icon.png",
       "category": "Science"
     },
@@ -67,6 +91,7 @@
     "@electron-toolkit/eslint-config-prettier": "^2.0.0",
     "@electron-toolkit/eslint-config-ts": "^2.0.0",
     "@electron-toolkit/tsconfig": "^1.0.1",
+    "@electron/fuses": "^2.1.1",
     "@types/d3": "^7.4.3",
     "@types/node": "^20.17.0",
     "@types/react": "^18.3.12",
