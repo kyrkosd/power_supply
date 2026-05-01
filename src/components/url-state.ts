@@ -5,7 +5,7 @@ import type { DesignSpec } from '../engine/types';
  * Basic schema validation to ensure the hydrated state is structurally sound.
  * Prevents crashes if a user loads a severely outdated or malformed link.
  */
-export function isValidDesignSpec(data: any): data is DesignSpec {
+export function isValidDesignSpec(data: unknown): data is DesignSpec {
   return (
     data &&
     typeof data === 'object' &&

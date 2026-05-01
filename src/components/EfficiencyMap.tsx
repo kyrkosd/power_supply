@@ -1,9 +1,11 @@
 import React, { useMemo, useState } from 'react';
 import { flybackTopology } from '../engine/topologies/flyback';
+import type { DesignSpec } from '../engine/types';
+import type { OutputSpec } from './MultiOutputTable';
 
 interface EfficiencyMapProps {
-  spec: any; // Using any or your DesignSpec type
-  componentSelection?: any;
+  spec: DesignSpec;
+  componentSelection?: unknown;
 }
 
 interface HeatmapPoint {
@@ -65,7 +67,7 @@ export const EfficiencyMap: React.FC<EfficiencyMapProps> = ({ spec, componentSel
         // Build temp spec for this point computation
         const tempSpec = { ...spec, vinMin: vin, vinMax: vin, iout: iout };
         if (tempSpec.outputs && tempSpec.outputs.length > 0) {
-          tempSpec.outputs = tempSpec.outputs.map((out: any, idx: number) =>
+          tempSpec.outputs = tempSpec.outputs.map((out: OutputSpec, idx: number) =>
             idx === 0 ? { ...out, iOut: iout } : out
           );
         }

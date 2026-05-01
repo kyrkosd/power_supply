@@ -7,10 +7,15 @@ export interface OutputSpec {
   tolerance: number;
 }
 
+export interface CrossRegAnalysisResult extends OutputSpec {
+  estimatedVout10: number;
+  estimatedVout100: number;
+}
+
 interface MultiOutputTableProps {
   outputs: OutputSpec[];
   onChange: (outputs: OutputSpec[]) => void;
-  crossRegAnalysis?: any[];
+  crossRegAnalysis?: CrossRegAnalysisResult[];
 }
 
 export const MultiOutputTable: React.FC<MultiOutputTableProps> = ({ outputs, onChange, crossRegAnalysis }) => {
