@@ -4,13 +4,15 @@ import { WaveformsTab } from './tabs/WaveformsTab'
 import { BodeTab } from './tabs/BodeTab'
 import { LossesTab } from './tabs/LossesTab'
 import { ThermalTab } from './tabs/ThermalTab'
+import { MonteCarloTab } from './tabs/MonteCarloTab'
 import styles from './TabPanel.module.css'
 
 const TABS: { id: ActiveVizTab; label: string }[] = [
-  { id: 'waveforms', label: 'Waveforms' },
-  { id: 'bode',      label: 'Bode Plot' },
-  { id: 'losses',    label: 'Losses' },
-  { id: 'thermal',   label: 'Thermal' }
+  { id: 'waveforms',   label: 'Waveforms' },
+  { id: 'bode',        label: 'Bode Plot' },
+  { id: 'losses',      label: 'Losses' },
+  { id: 'thermal',     label: 'Thermal' },
+  { id: 'monte-carlo', label: 'Monte Carlo' },
 ]
 
 export function TabPanel(): React.ReactElement {
@@ -34,7 +36,8 @@ export function TabPanel(): React.ReactElement {
         {activeVizTab === 'waveforms' && <WaveformsTab />}
         {activeVizTab === 'bode'      && <BodeTab />}
         {activeVizTab === 'losses'    && <LossesTab />}
-        {activeVizTab === 'thermal'   && <ThermalTab />}
+        {activeVizTab === 'thermal'      && <ThermalTab />}
+        {activeVizTab === 'monte-carlo' && <MonteCarloTab />}
       </div>
     </div>
   )

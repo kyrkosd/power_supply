@@ -1,100 +1,117 @@
-.container {
-  padding: 1rem;
-  background: #f8f9fa;
-  border-radius: 8px;
-  margin: 1rem 0;
-}
-
-.container h3 {
-  margin: 0 0 1rem 0;
-  color: #2c3e50;
-  font-size: 1.2rem;
-}
-
-.section {
-  margin-bottom: 1.5rem;
-}
-
-.section h4 {
-  margin: 0 0 0.5rem 0;
-  color: #34495e;
-  font-size: 1rem;
-  font-weight: 600;
-}
-
-.componentList {
+.panel {
   display: flex;
-  gap: 1rem;
-  flex-wrap: wrap;
+  flex-direction: column;
+  height: 100%;
+  background: var(--bg-surface);
 }
 
-.componentCard {
-  background: white;
-  border: 1px solid #e1e8ed;
-  border-radius: 6px;
-  padding: 1rem;
-  min-width: 200px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  transition: box-shadow 0.2s ease;
+.header {
+  padding: 7px 12px 6px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
 }
 
-.componentCard:hover {
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+.empty {
+  padding: 16px 12px;
+  font-size: 12px;
+  color: var(--text-muted);
 }
 
-.componentHeader {
+/* Each component section (inductor / capacitor) */
+.section {
+  border-bottom: 1px solid var(--border);
+  padding: 8px 12px 10px;
+}
+
+.sectionTitle {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 7px 10px 8px;
+}
+
+.cardHeader {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 0.5rem;
+  gap: 7px;
+  margin-bottom: 5px;
 }
 
 .rank {
-  background: #3498db;
-  color: white;
-  padding: 0.2rem 0.4rem;
-  border-radius: 12px;
-  font-size: 0.8rem;
-  font-weight: bold;
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--accent);
+  background: var(--accent-dim);
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-family: var(--font-mono);
 }
 
 .partNumber {
+  font-size: 11px;
   font-weight: 600;
-  color: #2c3e50;
-  font-size: 0.9rem;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.manufacturer {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-bottom: 5px;
 }
 
 .specs {
-  margin-bottom: 0.75rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px 8px;
+  margin-bottom: 7px;
 }
 
-.specs div {
-  font-size: 0.85rem;
-  color: #7f8c8d;
-  margin-bottom: 0.25rem;
+.spec {
+  font-size: 10px;
+  color: var(--text-secondary);
+  white-space: nowrap;
 }
 
-.specs div:last-child {
-  margin-bottom: 0;
+.spec strong {
+  color: var(--text-primary);
+  font-family: var(--font-mono);
 }
 
 .selectButton {
-  background: #27ae60;
-  color: white;
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.85rem;
-  font-weight: 500;
   width: 100%;
-  transition: background-color 0.2s ease;
+  padding: 5px 0;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  font-family: var(--font-ui);
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
 }
 
 .selectButton:hover {
-  background: #229954;
-}
-
-.selectButton:active {
-  background: #1e8449;
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-dim);
 }

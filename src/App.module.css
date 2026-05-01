@@ -9,6 +9,7 @@
 .workspace {
   display: flex;
   flex: 1;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -27,6 +28,7 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  min-width: 0;
 }
 
 .schematicArea {
@@ -36,17 +38,25 @@
   overflow: hidden;
 }
 
-.componentArea {
-  height: 200px;
+/* Bottom row: ComponentSuggestions left, TabPanel right */
+.bottomRow {
+  height: 290px;
   flex-shrink: 0;
+  display: flex;
+  overflow: hidden;
+}
+
+.componentPanel {
+  width: 230px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--border);
   background: var(--bg-surface);
-  border-bottom: 1px solid var(--border);
-  overflow: auto;
+  overflow-y: auto;
 }
 
 .tabArea {
-  height: 280px;
-  flex-shrink: 0;
+  flex: 1;
+  min-width: 0;
   background: var(--bg-surface);
   overflow: hidden;
 }

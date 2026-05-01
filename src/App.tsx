@@ -11,6 +11,9 @@ export default function App(): React.ReactElement {
   const topology = useDesignStore((state) => state.topology)
   const spec = useDesignStore((state) => state.spec)
   const setResult = useDesignStore((state) => state.setResult)
+  const setMcResult = useDesignStore((state) => state.setMcResult)
+  const mcRunRequest = useDesignStore((state) => state.mcRunRequest)
+  const clearMcRunRequest = useDesignStore((state) => state.clearMcRunRequest)
   const setActiveVizTab = useDesignStore((state) => state.setActiveVizTab)
   const workerRef = useRef<Worker | null>(null)
 
@@ -57,6 +60,8 @@ export default function App(): React.ReactElement {
       const message = event.data
       if (message?.type === 'RESULT' && message.payload) {
         setResult(message.payload.result, message.payload.waveforms)
+      } else if (message?.type === 'MC_RESULT' && message.payload) {
+        setMcResult(message.payload)
       } else if (message?.type === 'ERROR' && message.payload) {
         console.error('Engine worker error:', message.payload.message)
       }
@@ -70,13 +75,25 @@ export default function App(): React.ReactElement {
       worker.terminate()
       workerRef.current = null
     }
-  }, [setResult])
+  }, [setResult, setMcResult])
 
   useEffect(() => {
     const worker = workerRef.current
     if (!worker) return
     worker.postMessage({ type: 'COMPUTE', payload: { topology, spec } })
   }, [topology, spec])
+
+  useEffect(() => {
+    if (!mcRunRequest) return
+    const worker = workerRef.current
+    if (!worker) return
+    const { iterations, seed, computePhaseMargin } = mcRunRequest
+    worker.postMessage({
+      type: 'MC_COMPUTE',
+      payload: { topology, spec, mcConfig: { iterations, seed, computePhaseMargin } },
+    })
+    clearMcRunRequest()
+  }, [mcRunRequest, topology, spec, clearMcRunRequest])
 
   return (
     <div className={styles.shell}>
@@ -92,11 +109,13 @@ export default function App(): React.ReactElement {
           <div className={styles.schematicArea}>
             <SchematicView />
           </div>
-          <div className={styles.componentArea}>
-            <ComponentSuggestions />
-          </div>
-          <div className={styles.tabArea}>
-            <TabPanel />
+          <div className={styles.bottomRow}>
+            <div className={styles.componentPanel}>
+              <ComponentSuggestions />
+            </div>
+            <div className={styles.tabArea}>
+              <TabPanel />
+            </div>
           </div>
         </div>
       </div>

@@ -23,6 +23,12 @@ export function compute(topologyId: TopologyId, spec: DesignSpec): DesignResult 
   return topology.compute(spec)
 }
 
+export function getTopology(topologyId: TopologyId): Topology {
+  const topology = registry[topologyId]
+  if (!topology) throw new Error(`Unknown topology: ${topologyId}`)
+  return topology
+}
+
 export function generateWaveforms(topologyId: TopologyId, spec: DesignSpec): WaveformSet | null {
   const topology = registry[topologyId]
   if (!topology) throw new Error(`Unknown topology: ${topologyId}`)

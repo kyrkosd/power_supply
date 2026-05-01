@@ -9,12 +9,19 @@ import type { EMIResult } from '../engine/topologies/types'
 export type { TopologyId } from './workbenchStore'
 export type ActiveVizTab = 'waveforms' | 'bode' | 'losses' | 'thermal' | 'monte-carlo' | 'ltspice-comparison' | 'transient' | 'emi'
 
+export interface MCRunRequest {
+  iterations: number
+  seed: number
+  computePhaseMargin: boolean
+}
+
 export interface DesignStoreState {
   topology: TopologyId
   spec: DesignSpec
   result: DesignResult | null
   waveforms: WaveformSet | null
   mcResult: MonteCarloResult | null
+  mcRunRequest: MCRunRequest | null
   transientResult: TransientResult | null
   emiResult: EMIResult | null
   activeVizTab: ActiveVizTab
@@ -25,6 +32,8 @@ export interface DesignStoreState {
   resetSpec: () => void
   setResult: (result: DesignResult | null, waveforms: WaveformSet | null) => void
   setMcResult: (mcResult: MonteCarloResult | null) => void
+  requestMcRun: (req: MCRunRequest) => void
+  clearMcRunRequest: () => void
   setTransientResult: (res: TransientResult | null) => void
   setEmiResult: (res: EMIResult | null) => void
   setActiveVizTab: (tab: ActiveVizTab) => void
@@ -65,6 +74,7 @@ export const useDesignStore = create<DesignStoreState>((set) => ({
   result: null,
   waveforms: null,
   mcResult: null,
+  mcRunRequest: null,
   transientResult: null,
   emiResult: null,
   activeVizTab: 'waveforms',
@@ -100,6 +110,9 @@ export const useDesignStore = create<DesignStoreState>((set) => ({
 
   setMcResult: (mcResult) =>
     set({ mcResult, isComputing: false }),
+
+  requestMcRun: (req) => set({ mcRunRequest: req }),
+  clearMcRunRequest: () => set({ mcRunRequest: null }),
 
   setTransientResult: (transientResult) =>
     set({ transientResult }),
