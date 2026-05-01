@@ -26,11 +26,12 @@ export interface DesignStoreState {
   emiResult: EMIResult | null
   activeVizTab: ActiveVizTab
   isComputing: boolean
+  computeTimeMs: number | null
 
   setTopology: (topology: TopologyId) => void
   updateSpec: (updates: Partial<DesignSpec>) => void
   resetSpec: () => void
-  setResult: (result: DesignResult | null, waveforms: WaveformSet | null) => void
+  setResult: (result: DesignResult | null, waveforms: WaveformSet | null, computeTimeMs?: number) => void
   setMcResult: (mcResult: MonteCarloResult | null) => void
   requestMcRun: (req: MCRunRequest) => void
   clearMcRunRequest: () => void

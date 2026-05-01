@@ -4,6 +4,8 @@ import { InputPanel } from './components/InputPanel/InputPanel'
 import { SchematicView } from './components/SchematicView/SchematicView'
 import { TabPanel } from './components/TabPanel/TabPanel'
 import { ComponentSuggestions } from './components/ComponentSuggestions/ComponentSuggestions'
+import { FirstRunWelcome } from './components/FirstRunWelcome/FirstRunWelcome'
+import { StatusBar } from './components/StatusBar/StatusBar'
 import { useDesignStore } from './store/design-store'
 import styles from './App.module.css'
 
@@ -97,6 +99,7 @@ export default function App(): React.ReactElement {
 
   return (
     <div className={styles.shell}>
+      <FirstRunWelcome />
       <Toolbar />
       <div className={styles.workspace}>
         {/* Left sidebar */}
@@ -119,6 +122,7 @@ export default function App(): React.ReactElement {
           </div>
         </div>
       </div>
+      <StatusBar />
     </div>
   )
 }

@@ -1,5 +1,6 @@
 import React from 'react'
 import { useDesignStore, TopologyId } from '../../store/design-store'
+import { HelpPanel } from '../HelpPanel/HelpPanel'
 import styles from './Toolbar.module.css'
 
 const TOPOLOGIES: { id: TopologyId; label: string }[] = [
@@ -53,6 +54,7 @@ export function Toolbar(): React.ReactElement {
         <button className={styles.btn} disabled title="Export report (coming soon)">
           ↓ Export
         </button>
+        <HelpPanel />
       </div>
     </header>
   )

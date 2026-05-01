@@ -1,6 +1,7 @@
 import React from 'react'
 import { useDesignStore } from '../../store/design-store'
 import { suggestInductors, suggestCapacitors } from '../../engine/component-selector'
+import { Tooltip } from '../Tooltip/Tooltip'
 import styles from './ComponentSuggestions.module.css'
 
 export function ComponentSuggestions() {
@@ -18,13 +19,44 @@ export function ComponentSuggestions() {
   const inductor  = suggestInductors(result.inductance * 1e6, result.peakCurrent)[0]
   const capacitor = suggestCapacitors(result.capacitance * 1e6, spec.vout * 1.5)[0]
 
+  const inductanceTooltip = (
+    <div>
+      <strong>Inductance</strong><br />
+      Calculated value: {(result.inductance * 1e6).toFixed(2)} µH<br />
+      <code style={{ fontSize: '10px' }}>L = ΔIL / (fsw × Iout)</code><br />
+      <small style={{ color: 'var(--text-secondary)' }}>Larger L = smoother current, smaller ripple</small>
+    </div>
+  )
+
+  const capacitanceTooltip = (
+    <div>
+      <strong>Capacitance</strong><br />
+      Calculated value: {(result.capacitance * 1e6).toFixed(1)} µF<br />
+      <code style={{ fontSize: '10px' }}>C ≥ ΔIL / (fsw × ΔVout)</code><br />
+      <small style={{ color: 'var(--text-secondary)' }}>Larger C = lower ripple voltage</small>
+    </div>
+  )
+
+  const peakCurrentTooltip = (
+    <div>
+      <strong>Peak Inductor Current</strong><br />
+      Value: {result.peakCurrent.toFixed(2)} A<br />
+      <small style={{ color: 'var(--text-secondary)' }}>Must choose inductor with Isat rating higher than this</small>
+    </div>
+  )
+
   return (
     <div className={styles.panel}>
       <div className={styles.header}>Components</div>
 
       {inductor && (
         <div className={styles.section}>
-          <div className={styles.sectionTitle}>Inductor</div>
+          <div className={styles.sectionTitle}>
+            Inductor
+            <Tooltip content={inductanceTooltip} side="right">
+              <span className={styles.infoIcon}>ⓘ</span>
+            </Tooltip>
+          </div>
           <div className={styles.card}>
             <div className={styles.cardHeader}>
               <span className={styles.rank}>#1</span>
@@ -34,7 +66,11 @@ export function ComponentSuggestions() {
             <div className={styles.specs}>
               <span className={styles.spec}><strong>{inductor.inductance_uh}</strong> µH</span>
               <span className={styles.spec}>DCR <strong>{inductor.dcr_mohm}</strong> mΩ</span>
-              <span className={styles.spec}>Isat <strong>{inductor.isat_a}</strong> A</span>
+              <span className={styles.spec}>
+                Isat <Tooltip content={peakCurrentTooltip} side="top">
+                  <strong>{inductor.isat_a}</strong>
+                </Tooltip> A
+              </span>
               <span className={styles.spec}>Irms <strong>{inductor.irms_a}</strong> A</span>
             </div>
             <button className={styles.selectButton}>Select</button>
@@ -44,7 +80,12 @@ export function ComponentSuggestions() {
 
       {capacitor && (
         <div className={styles.section}>
-          <div className={styles.sectionTitle}>Output Cap</div>
+          <div className={styles.sectionTitle}>
+            Output Cap
+            <Tooltip content={capacitanceTooltip} side="right">
+              <span className={styles.infoIcon}>ⓘ</span>
+            </Tooltip>
+          </div>
           <div className={styles.card}>
             <div className={styles.cardHeader}>
               <span className={styles.rank}>#1</span>

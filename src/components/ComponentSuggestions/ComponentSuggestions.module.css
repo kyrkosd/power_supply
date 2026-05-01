@@ -35,6 +35,26 @@
   text-transform: uppercase;
   color: var(--text-secondary);
   margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.infoIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 12px;
+  height: 12px;
+  font-size: 9px;
+  color: var(--text-muted);
+  cursor: help;
+  flex-shrink: 0;
+  transition: color 0.2s;
+}
+
+.infoIcon:hover {
+  color: var(--accent);
 }
 
 .card {

@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { useDesignStore, type DesignSpec } from '../../store/design-store'
+import { Tooltip } from '../Tooltip/Tooltip'
 import styles from './InputPanel.module.css'
 
 interface FieldDef {
@@ -12,24 +13,34 @@ interface FieldDef {
   decimals: number
   scale?: number
   log?: boolean
+  tooltip?: string
 }
 
 const SPEC_FIELDS: FieldDef[] = [
-  { key: 'vinMin', label: 'Vin min', unit: 'V', min: 1, max: 60, step: 0.1, decimals: 1 },
-  { key: 'vinMax', label: 'Vin max', unit: 'V', min: 1, max: 60, step: 0.1, decimals: 1 },
-  { key: 'vout',   label: 'Vout',    unit: 'V', min: 0.5, max: 50, step: 0.1, decimals: 2 },
-  { key: 'iout',   label: 'Iout',    unit: 'A', min: 0.1, max: 30, step: 0.1, decimals: 2 },
+  { key: 'vinMin', label: 'Vin min', unit: 'V', min: 1, max: 60, step: 0.1, decimals: 1, 
+    tooltip: 'Minimum input voltage. Lower voltage = smaller inductor but higher current stress.' },
+  { key: 'vinMax', label: 'Vin max', unit: 'V', min: 1, max: 60, step: 0.1, decimals: 1,
+    tooltip: 'Maximum input voltage. Higher voltage = larger MOSFET voltage rating required.' },
+  { key: 'vout',   label: 'Vout',    unit: 'V', min: 0.5, max: 50, step: 0.1, decimals: 2,
+    tooltip: 'Output voltage setpoint. The tool will calculate duty cycle and component values to achieve this.' },
+  { key: 'iout',   label: 'Iout',    unit: 'A', min: 0.1, max: 30, step: 0.1, decimals: 2,
+    tooltip: 'Output current. Higher current = larger inductor and capacitor ripple current ratings.' },
 ]
 
 const OPERATING_FIELDS: FieldDef[] = [
-  { key: 'fsw',        label: 'Switching freq', unit: 'kHz', min: 10_000, max: 2_000_000, step: 1, decimals: 0, scale: 1000, log: true },
-  { key: 'rippleRatio', label: 'Ripple ratio',  unit: '',    min: 0.1,   max: 0.5,       step: 0.01, decimals: 2 },
-  { key: 'ambientTemp', label: 'Ambient temp',  unit: '°C',  min: 25,    max: 85,        step: 1,    decimals: 0 },
+  { key: 'fsw',        label: 'Switching freq', unit: 'kHz', min: 10_000, max: 2_000_000, step: 1, decimals: 0, scale: 1000, log: true,
+    tooltip: 'Switching frequency. Higher = smaller L/C but higher switching losses & EMI. Typical: 100kHz–2MHz.' },
+  { key: 'rippleRatio', label: 'Ripple ratio',  unit: '',    min: 0.1,   max: 0.5,       step: 0.01, decimals: 2,
+    tooltip: 'Inductor current ripple as fraction of Iout. Higher = smaller L but larger ripple. Typical: 0.2–0.4.' },
+  { key: 'ambientTemp', label: 'Ambient temp',  unit: '°C',  min: 25,    max: 85,        step: 1,    decimals: 0,
+    tooltip: 'Ambient temperature. Used to calculate junction temperature and thermal margins.' },
 ]
 
 const TARGET_FIELDS: FieldDef[] = [
-  { key: 'voutRippleMax', label: 'Vout ripple max',   unit: 'mV', min: 0.001, max: 0.5,  step: 0.001, decimals: 0, scale: 1000 },
-  { key: 'efficiency',    label: 'Efficiency target',  unit: '%',  min: 0.8,   max: 0.99, step: 0.01,  decimals: 0, scale: 0.01 },
+  { key: 'voutRippleMax', label: 'Vout ripple max',   unit: 'mV', min: 0.001, max: 0.5,  step: 0.001, decimals: 0, scale: 1000,
+    tooltip: 'Maximum allowed output voltage ripple (peak-to-peak). Larger Cout reduces ripple but increases size/cost.' },
+  { key: 'efficiency',    label: 'Efficiency target',  unit: '%',  min: 0.8,   max: 0.99, step: 0.01,  decimals: 0, scale: 0.01,
+    tooltip: 'Target efficiency. Tool uses this to size components for optimal performance. Typical: 85–95%.' },
 ]
 
 function toDisplay(field: FieldDef, raw: number): number {
@@ -93,6 +104,13 @@ export function InputPanel(): React.ReactElement {
                     <div key={field.key} className={styles.fieldRow}>
                       <div className={styles.rowLabel}>
                         <span>{field.label}</span>
+                        {field.tooltip && (
+                          <Tooltip content={field.tooltip} side="right">
+                            <span className={styles.infoIcon} title={field.tooltip}>
+                              ⓘ
+                            </span>
+                          </Tooltip>
+                        )}
                         <span className={styles.rowUnit}>{field.unit}</span>
                       </div>
                       <input

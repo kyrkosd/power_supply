@@ -104,3 +104,99 @@ npm run type-check   # tsc --noEmit across all sources
 - D3 is imported per-module (`import { scaleLinear } from 'd3-scale'`) to keep
   the renderer bundle lean. Never `import * as d3 from 'd3'`.
 - mathjs is used in the engine layer only, never in components.
+
+---
+
+## In-App Help System
+
+The application includes comprehensive in-app documentation tailored for electrical engineers.
+
+### HelpPanel Component
+**File:** `src/components/HelpPanel/HelpPanel.tsx`
+
+A collapsible help panel accessed via the `?` button in the top-right toolbar. Contains five tabs:
+
+1. **Quick Start**: Step-by-step workflow, unit conventions, and UI layout guide.
+2. **How to Read Results**: Interpretation of component values, duty cycle, efficiency, and warnings.
+3. **Interpreting Charts**: Detailed guides for waveforms, Bode plot, loss breakdown, thermal analysis, and optional tabs (Monte Carlo, Transient, EMI, LTspice).
+4. **Topology Guide**: Decision tree for topology selection, detailed pros/cons per topology, and common pitfalls.
+5. **Keyboard Shortcuts**: Quick reference for Ctrl+1–4, Escape, and "?" key.
+
+**Keyboard interaction:**
+- `?` key toggles the help panel
+- `Escape` closes the panel
+- Panel also closes on outside click
+
+### FirstRunWelcome Overlay
+**File:** `src/components/FirstRunWelcome/FirstRunWelcome.tsx`
+
+A modal shown on first app launch (checked via `localStorage.psd-welcome-seen`). Includes:
+- Welcome message with app icon
+- 4 numbered callouts pointing to key UI regions (topology selector, input panel, schematic, visualization tabs)
+- Quick tips on keyboard shortcuts and help access
+- "Don't show again" checkbox
+- Dismissible with "Got it" button
+
+### StatusBar Component
+**File:** `src/components/StatusBar/StatusBar.tsx`
+
+Thin footer bar showing:
+- Current topology name
+- Key results summary: D (duty cycle %), L (µH), C (µF), η (efficiency %)
+- Warning badge with count (click-able for future expansion)
+
+### Tooltip Component
+**File:** `src/components/Tooltip/Tooltip.tsx`
+
+Reusable tooltip UI component. Props:
+- `content`: React node (HTML allowed; can include formulas, strong text, etc.)
+- `side`: 'top' | 'bottom' | 'left' | 'right' (default: 'top')
+- `delay`: milliseconds before showing (default: 200ms)
+
+**Usage:**
+```jsx
+<Tooltip content="Your help text here" side="right">
+  <span className={styles.infoIcon}>ⓘ</span>
+</Tooltip>
+```
+
+### Input Slider Tooltips
+Each input field in `InputPanel` has an info icon (ⓘ) that explains:
+- What the parameter controls
+- Typical range for common designs
+- Effect of increasing/decreasing the value
+
+Example tooltip for `fsw` (switching frequency):
+> "Switching frequency. Higher = smaller L/C but higher switching losses & EMI. Typical: 100kHz–2MHz."
+
+### Result Value Tooltips
+Computed results in `ComponentSuggestions` include tooltips showing:
+- The calculated formula (e.g., `L = ΔIL / (fsw × Iout)`)
+- The substituted values in the formula
+- Interpretation guidance
+
+Example for inductance:
+```
+Inductance
+Calculated value: 6.50 µH
+L = ΔIL / (fsw × Iout)
+Larger L = smoother current, smaller ripple
+```
+
+### Tooltip Styling Conventions
+- **Font:** 11px, monospace for formulas/code
+- **Color scheme:** Matches the app's dark theme (var(--accent) for emphasized text)
+- **Animation:** Fade-in with 150ms ease-in
+- **Max width:** 280px with text wrapping
+
+---
+
+## Documentation Best Practices
+
+When adding new features or analysis modes:
+
+1. **Add help content to HelpPanel** if it's a major feature (e.g., a new analysis tab).
+2. **Add input tooltips** for any new parameters in InputPanel.
+3. **Add result tooltips** for any new computed values shown in the UI.
+4. **Cite sources:** Every formula reference should link back to a textbook or app note (include in tooltip or help text).
+5. **Use plain language:** Assume the user knows power electronics but may be unfamiliar with this specific tool.
