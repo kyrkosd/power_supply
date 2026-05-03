@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { useDesignStore, TopologyId } from '../../store/design-store'
 import { HelpPanel } from '../HelpPanel/HelpPanel'
 import styles from './Toolbar.module.css'
@@ -13,14 +13,57 @@ const TOPOLOGIES: { id: TopologyId; label: string }[] = [
 ]
 
 export function Toolbar(): React.ReactElement {
-  const { topology, setTopology, resetSpec, isComputing } = useDesignStore()
+  const {
+    topology, setTopology, resetSpec, isComputing,
+    currentProjectPath, isModified,
+    newProject, openProject, saveProject, saveProjectAs,
+  } = useDesignStore()
+
+  // Keep the native window title bar in sync
+  useEffect(() => {
+    window.projectAPI?.setTitle(currentProjectPath, isModified)
+  }, [currentProjectPath, isModified])
+
+  const projectName = currentProjectPath
+    ? currentProjectPath.replace(/.*[\\/]/, '')
+    : null
 
   return (
     <header className={styles.toolbar}>
       <div className={styles.brand}>
         <span className={styles.logo}>⚡</span>
         <span className={styles.title}>Power Supply Workbench</span>
+        {projectName ? (
+          <span className={styles.projectName}>
+            — {projectName}{isModified ? ' •' : ''}
+          </span>
+        ) : isModified ? (
+          <span className={styles.unsaved}> •</span>
+        ) : null}
       </div>
+
+      <div className={styles.divider} />
+
+      <div className={styles.fileActions}>
+        <button className={styles.btn} onClick={newProject} title="New project (Ctrl+N)">
+          New
+        </button>
+        <button className={styles.btn} onClick={openProject} title="Open project (Ctrl+O)">
+          Open
+        </button>
+        <button
+          className={styles.btn}
+          onClick={saveProject}
+          title={`Save${currentProjectPath ? '' : ' as'} (Ctrl+S)`}
+        >
+          Save
+        </button>
+        <button className={styles.btn} onClick={saveProjectAs} title="Save as (Ctrl+Shift+S)">
+          Save As
+        </button>
+      </div>
+
+      <div className={styles.divider} />
 
       <div className={styles.controls}>
         <label className={styles.label} htmlFor="topology-select">

@@ -2,6 +2,7 @@ import { app, shell, BrowserWindow } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { setupLTspiceIPC } from './ltspice-bridge'
+import { setupProjectIPC } from './file-handlers'
 
 function createWindow(): void {
   const win = new BrowserWindow({
@@ -44,6 +45,7 @@ app.whenReady().then(() => {
   })
 
   setupLTspiceIPC()
+  setupProjectIPC()
 
   createWindow()
 

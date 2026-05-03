@@ -72,7 +72,7 @@ const SECTIONS = [
 ]
 
 export function InputPanel(): React.ReactElement {
-  const { spec, result, updateSpec, requestMcRun, setActiveVizTab } = useDesignStore()
+  const { spec, result, updateSpec, requestMcRun, setActiveVizTab, notes, setNotes } = useDesignStore()
   const [mcIterations, setMcIterations] = useState(1000)
   const [mcSeed, setMcSeed]             = useState(42)
 
@@ -168,6 +168,18 @@ export function InputPanel(): React.ReactElement {
             <strong>{result?.efficiency != null ? `${(result.efficiency * 100).toFixed(1)} %` : '—'}</strong>
           </div>
         </div>
+
+        <details className={styles.notesSection}>
+          <summary className={styles.notesSectionTitle}>Notes</summary>
+          <textarea
+            className={styles.notesTextarea}
+            placeholder="Type design notes here…"
+            value={notes}
+            rows={4}
+            onChange={(e) => setNotes(e.target.value)}
+          />
+        </details>
+
       </div>
 
       {/* ── Monte Carlo footer — always visible ── */}

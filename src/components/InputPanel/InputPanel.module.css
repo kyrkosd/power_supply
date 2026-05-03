@@ -262,3 +262,50 @@
   font-family: var(--font-mono);
   font-size: 13px;
 }
+
+.notesSection {
+  margin: 10px 14px 0;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.notesSectionTitle {
+  display: block;
+  padding: 10px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text-primary);
+  cursor: pointer;
+  user-select: none;
+}
+
+.notesSectionTitle::-webkit-details-marker {
+  display: none;
+}
+
+.notesTextarea {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 14px;
+  background: var(--bg-elevated);
+  border: none;
+  border-top: 1px solid var(--border);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.notesTextarea:focus {
+  outline: none;
+  border-top-color: var(--border-focus);
+}
+
+.notesTextarea::placeholder {
+  color: var(--text-muted);
+}

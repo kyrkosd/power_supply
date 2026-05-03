@@ -17,17 +17,43 @@ export default function App(): React.ReactElement {
   const mcRunRequest = useDesignStore((state) => state.mcRunRequest)
   const clearMcRunRequest = useDesignStore((state) => state.clearMcRunRequest)
   const setActiveVizTab = useDesignStore((state) => state.setActiveVizTab)
+  const newProject = useDesignStore((state) => state.newProject)
+  const openProject = useDesignStore((state) => state.openProject)
+  const saveProject = useDesignStore((state) => state.saveProject)
+  const saveProjectAs = useDesignStore((state) => state.saveProjectAs)
   const workerRef = useRef<Worker | null>(null)
 
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      // Only handle shortcuts when not typing in inputs
+      const ctrl = event.ctrlKey || event.metaKey
+
+      // File operations work even when focus is in an input/textarea
+      if (ctrl) {
+        if (event.key === 'n' && !event.shiftKey) {
+          event.preventDefault()
+          newProject()
+          return
+        }
+        if (event.key === 'o' && !event.shiftKey) {
+          event.preventDefault()
+          openProject()
+          return
+        }
+        if (event.key === 's') {
+          event.preventDefault()
+          if (event.shiftKey) saveProjectAs()
+          else saveProject()
+          return
+        }
+      }
+
+      // Tab switching: skip when focus is in a text field
       if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
         return
       }
 
-      if (event.ctrlKey || event.metaKey) {
+      if (ctrl) {
         switch (event.key) {
           case '1':
             event.preventDefault()
@@ -51,7 +77,7 @@ export default function App(): React.ReactElement {
 
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [setActiveVizTab])
+  }, [setActiveVizTab, newProject, openProject, saveProject, saveProjectAs])
 
   useEffect(() => {
     const worker = new Worker(new URL('./engine/worker.ts', import.meta.url), {
