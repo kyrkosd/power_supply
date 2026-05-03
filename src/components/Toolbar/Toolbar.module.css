@@ -69,6 +69,17 @@
   gap: 4px;
 }
 
+.undoActions {
+  display: flex;
+  gap: 2px;
+}
+
+.undoActions .btn {
+  padding: 5px 9px;
+  font-size: 14px;
+  line-height: 1;
+}
+
 .projectName {
   font-size: 13px;
   color: var(--text-secondary);

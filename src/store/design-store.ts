@@ -6,6 +6,7 @@ import type { MonteCarloResult } from '../engine/monte-carlo'
 import type { TransientResult } from '../engine/topologies/types'
 import type { EMIResult } from '../engine/topologies/types'
 import type { ProjectFile } from '../types/project'
+import { undoMiddleware } from './undo-middleware'
 
 export type { TopologyId } from './workbenchStore'
 export type ActiveVizTab = 'waveforms' | 'bode' | 'losses' | 'thermal' | 'monte-carlo' | 'ltspice-comparison' | 'transient' | 'emi'
@@ -33,7 +34,13 @@ export interface DesignStoreState {
   currentProjectPath: string | null
   isModified: boolean
   notes: string
-  projectCreated: string | null  // ISO date of first save; null until saved
+  projectCreated: string | null
+
+  // Undo / redo (managed by undoMiddleware)
+  canUndo: boolean
+  canRedo: boolean
+  undo: () => void
+  redo: () => void
 
   setTopology: (topology: TopologyId) => void
   updateSpec: (updates: Partial<DesignSpec>) => void
@@ -104,116 +111,125 @@ const COMPUTE_RESET = {
   isComputing: true,
 } as const
 
-export const useDesignStore = create<DesignStoreState>((set, get) => ({
-  topology: 'buck',
-  spec: defaultSpec,
-  result: null,
-  waveforms: null,
-  mcResult: null,
-  mcRunRequest: null,
-  transientResult: null,
-  emiResult: null,
-  activeVizTab: 'waveforms',
-  isComputing: false,
-  computeTimeMs: null,
-  currentProjectPath: null,
-  isModified: false,
-  notes: '',
-  projectCreated: null,
+export const useDesignStore = create<DesignStoreState>(
+  // undoMiddleware wraps set() to intercept spec/topology changes and maintain
+  // debounced undo history.  It also replaces the undo/redo stubs below.
+  undoMiddleware((set, get) => ({
+    topology: 'buck',
+    spec: defaultSpec,
+    result: null,
+    waveforms: null,
+    mcResult: null,
+    mcRunRequest: null,
+    transientResult: null,
+    emiResult: null,
+    activeVizTab: 'waveforms',
+    isComputing: false,
+    computeTimeMs: null,
+    currentProjectPath: null,
+    isModified: false,
+    notes: '',
+    projectCreated: null,
 
-  setTopology: (topology) =>
-    set({ topology, spec: TOPOLOGY_DEFAULTS[topology], isModified: true, ...COMPUTE_RESET }),
+    // Stubs — overridden by undoMiddleware before the store is returned
+    canUndo: false,
+    canRedo: false,
+    undo: () => {},
+    redo: () => {},
 
-  updateSpec: (updates) =>
-    set((state) => ({
-      spec: { ...state.spec, ...updates },
-      isModified: true,
-      ...COMPUTE_RESET,
-    })),
+    setTopology: (topology) =>
+      set({ topology, spec: TOPOLOGY_DEFAULTS[topology], isModified: true, ...COMPUTE_RESET }),
 
-  resetSpec: () =>
-    set((state) => ({
-      spec: TOPOLOGY_DEFAULTS[state.topology],
-      isModified: true,
-      ...COMPUTE_RESET,
-    })),
+    updateSpec: (updates) =>
+      set((state) => ({
+        spec: { ...state.spec, ...updates },
+        isModified: true,
+        ...COMPUTE_RESET,
+      })),
 
-  setResult: (result, waveforms) =>
-    set({ result, waveforms, isComputing: false }),
+    resetSpec: () =>
+      set((state) => ({
+        spec: TOPOLOGY_DEFAULTS[state.topology],
+        isModified: true,
+        ...COMPUTE_RESET,
+      })),
 
-  setMcResult: (mcResult) =>
-    set({ mcResult, isComputing: false }),
+    setResult: (result, waveforms) =>
+      set({ result, waveforms, isComputing: false }),
 
-  requestMcRun: (req) => set({ mcRunRequest: req }),
-  clearMcRunRequest: () => set({ mcRunRequest: null }),
+    setMcResult: (mcResult) =>
+      set({ mcResult, isComputing: false }),
 
-  setTransientResult: (transientResult) =>
-    set({ transientResult }),
+    requestMcRun: (req) => set({ mcRunRequest: req }),
+    clearMcRunRequest: () => set({ mcRunRequest: null }),
 
-  setEmiResult: (emiResult) =>
-    set({ emiResult }),
+    setTransientResult: (transientResult) =>
+      set({ transientResult }),
 
-  setActiveVizTab: (activeVizTab) => set({ activeVizTab }),
+    setEmiResult: (emiResult) =>
+      set({ emiResult }),
 
-  setNotes: (notes) => set({ notes, isModified: true }),
+    setActiveVizTab: (activeVizTab) => set({ activeVizTab }),
 
-  newProject: () =>
-    set((state) => ({
-      spec: TOPOLOGY_DEFAULTS[state.topology],
-      notes: '',
-      currentProjectPath: null,
-      isModified: false,
-      projectCreated: null,
-      ...COMPUTE_RESET,
-    })),
+    setNotes: (notes) => set({ notes, isModified: true }),
 
-  openProject: async () => {
-    const api = window.projectAPI
-    if (!api) return
-    const res = await api.open()
-    if (!res.success || !res.project) return
-    const project = res.project
-    set({
-      topology: project.topology,
-      spec: project.spec,
-      notes: project.notes,
-      currentProjectPath: res.filePath ?? null,
-      isModified: false,
-      projectCreated: project.created,
-      ...COMPUTE_RESET,
-    })
-  },
+    newProject: () =>
+      set((state) => ({
+        spec: TOPOLOGY_DEFAULTS[state.topology],
+        notes: '',
+        currentProjectPath: null,
+        isModified: false,
+        projectCreated: null,
+        ...COMPUTE_RESET,
+      })),
 
-  saveProject: async () => {
-    const api = window.projectAPI
-    if (!api) return
-    const state = get()
-    const now = new Date().toISOString()
-    const project = buildProjectFile(state, now)
-    const content = JSON.stringify(project, null, 2)
+    openProject: async () => {
+      const api = window.projectAPI
+      if (!api) return
+      const res = await api.open()
+      if (!res.success || !res.project) return
+      const project = res.project
+      set({
+        topology: project.topology,
+        spec: project.spec,
+        notes: project.notes,
+        currentProjectPath: res.filePath ?? null,
+        isModified: false,
+        projectCreated: project.created,
+        ...COMPUTE_RESET,
+      })
+    },
 
-    if (state.currentProjectPath) {
-      const res = await api.save(state.currentProjectPath, content)
-      if (res.success) set({ isModified: false, projectCreated: project.created })
-    } else {
-      // No path yet — delegate to save-as dialog
+    saveProject: async () => {
+      const api = window.projectAPI
+      if (!api) return
+      const state = get()
+      const now = new Date().toISOString()
+      const project = buildProjectFile(state, now)
+      const content = JSON.stringify(project, null, 2)
+
+      if (state.currentProjectPath) {
+        const res = await api.save(state.currentProjectPath, content)
+        if (res.success) set({ isModified: false, projectCreated: project.created })
+      } else {
+        const res = await api.saveAs(content)
+        if (res.success && res.filePath) {
+          set({ currentProjectPath: res.filePath, isModified: false, projectCreated: project.created })
+        }
+      }
+    },
+
+    saveProjectAs: async () => {
+      const api = window.projectAPI
+      if (!api) return
+      const state = get()
+      const now = new Date().toISOString()
+      const project = buildProjectFile(state, now)
+      const content = JSON.stringify(project, null, 2)
       const res = await api.saveAs(content)
       if (res.success && res.filePath) {
         set({ currentProjectPath: res.filePath, isModified: false, projectCreated: project.created })
       }
-    }
-  },
-
-  saveProjectAs: async () => {
-    const api = window.projectAPI
-    if (!api) return
-    const state = get()
-    const now = new Date().toISOString()
-    const project = buildProjectFile(state, now)
-    const content = JSON.stringify(project, null, 2)
-    const res = await api.saveAs(content)
-    if (res.success && res.filePath) {
-      set({ currentProjectPath: res.filePath, isModified: false, projectCreated: project.created })
-    }
-  },
-}))
+    },
+  }))
+)

@@ -17,6 +17,7 @@ export function Toolbar(): React.ReactElement {
     topology, setTopology, resetSpec, isComputing,
     currentProjectPath, isModified,
     newProject, openProject, saveProject, saveProjectAs,
+    undo, redo, canUndo, canRedo,
   } = useDesignStore()
 
   // Keep the native window title bar in sync
@@ -60,6 +61,29 @@ export function Toolbar(): React.ReactElement {
         </button>
         <button className={styles.btn} onClick={saveProjectAs} title="Save as (Ctrl+Shift+S)">
           Save As
+        </button>
+      </div>
+
+      <div className={styles.divider} />
+
+      <div className={styles.undoActions}>
+        <button
+          className={styles.btn}
+          onClick={undo}
+          disabled={!canUndo}
+          title="Undo (Ctrl+Z)"
+          aria-label="Undo"
+        >
+          ←
+        </button>
+        <button
+          className={styles.btn}
+          onClick={redo}
+          disabled={!canRedo}
+          title="Redo (Ctrl+Shift+Z)"
+          aria-label="Redo"
+        >
+          →
         </button>
       </div>
 

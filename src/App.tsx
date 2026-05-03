@@ -21,6 +21,8 @@ export default function App(): React.ReactElement {
   const openProject = useDesignStore((state) => state.openProject)
   const saveProject = useDesignStore((state) => state.saveProject)
   const saveProjectAs = useDesignStore((state) => state.saveProjectAs)
+  const undo = useDesignStore((state) => state.undo)
+  const redo = useDesignStore((state) => state.redo)
   const workerRef = useRef<Worker | null>(null)
 
   // Keyboard shortcuts
@@ -48,13 +50,23 @@ export default function App(): React.ReactElement {
         }
       }
 
-      // Tab switching: skip when focus is in a text field
+      // Undo/redo and tab switching: skip when focus is in a text field
+      // (let the browser handle Ctrl+Z for text-field editing)
       if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
         return
       }
 
       if (ctrl) {
         switch (event.key) {
+          case 'z':
+            event.preventDefault()
+            if (event.shiftKey) redo()
+            else undo()
+            break
+          case 'y':
+            event.preventDefault()
+            redo()
+            break
           case '1':
             event.preventDefault()
             setActiveVizTab('waveforms')
@@ -77,7 +89,7 @@ export default function App(): React.ReactElement {
 
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [setActiveVizTab, newProject, openProject, saveProject, saveProjectAs])
+  }, [setActiveVizTab, newProject, openProject, saveProject, saveProjectAs, undo, redo])
 
   useEffect(() => {
     const worker = new Worker(new URL('./engine/worker.ts', import.meta.url), {
