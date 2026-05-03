@@ -54,7 +54,23 @@ export const boostTopology: Topology = {
     const deltaVout = Math.max(voutRippleMax, 0.01 * vout)
     const capacitance = (iout * dutyCycle) / (fsw * deltaVout)
 
+    // CCM/DCM boundary detection
+    // For boost: Iout_crit = ΔIL × (1-D) / 2
+    const ccm_dcm_boundary = deltaIL * (1 - dutyCycle) / 2
+    let operating_mode: 'CCM' | 'DCM' | 'boundary' = 'CCM'
+    
     const warnings: string[] = []
+    
+    if (iout > 1.2 * ccm_dcm_boundary) {
+      operating_mode = 'CCM'
+    } else if (iout < ccm_dcm_boundary) {
+      operating_mode = 'DCM'
+      warnings.push('Operating in DCM. Equations assume CCM — results may be inaccurate. Increase inductance or load current to enter CCM.')
+    } else {
+      operating_mode = 'boundary'
+      warnings.push('Near CCM/DCM boundary. Performance may be unpredictable at light loads.')
+    }
+    
     if (dutyCycle >= 0.9) {
       warnings.push('Boost duty cycle exceeds 90% and may reduce efficiency and control margin.')
     }
@@ -77,6 +93,8 @@ export const boostTopology: Topology = {
       inductance,
       capacitance,
       peakCurrent,
+      ccm_dcm_boundary,
+      operating_mode,
       warnings,
     }
   },

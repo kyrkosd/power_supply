@@ -35,6 +35,8 @@ export interface DesignResult {
   peakCurrent: number    // A
   efficiency?: number    // 0–1  Pout / (Pout + total_losses); undefined when losses unavailable
   warnings: string[]     // stability and runtime advisories
+  ccm_dcm_boundary?: number     // A — critical load current below which converter enters DCM
+  operating_mode?: 'CCM' | 'DCM' | 'boundary'  // Conduction mode indicator
   // Flyback-specific fields
   turnsRatio?: number  // Np/Ns
   primaryTurns?: number

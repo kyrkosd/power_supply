@@ -16,6 +16,19 @@ export function StatusBar(): React.ReactElement {
     sepic: 'SEPIC',
   }
 
+  const getModeColor = (mode?: string): string => {
+    switch (mode) {
+      case 'CCM':
+        return '#4ade80' // green
+      case 'boundary':
+        return '#fbbf24' // amber
+      case 'DCM':
+        return '#f87171' // red
+      default:
+        return 'var(--text-secondary)'
+    }
+  }
+
   return (
     <div className={styles.statusBar}>
       {/* Left: topology name */}
@@ -44,6 +57,18 @@ export function StatusBar(): React.ReactElement {
               <span className={styles.resultItem}>
                 <span className={styles.resultLabel}>η</span>
                 <span className={styles.resultValue}>{(result.efficiency * 100).toFixed(1)}%</span>
+              </span>
+            )}
+            {result.operating_mode && (
+              <span className={styles.resultItem}>
+                <span className={styles.resultLabel}>Mode</span>
+                <span
+                  className={styles.resultValue}
+                  style={{ color: getModeColor(result.operating_mode) }}
+                  title={`CCM/DCM boundary: ${(result.ccm_dcm_boundary ?? 0).toFixed(3)} A`}
+                >
+                  {result.operating_mode}
+                </span>
               </span>
             )}
           </>

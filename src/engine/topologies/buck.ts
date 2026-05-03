@@ -21,9 +21,34 @@ export const buckTopology: Topology = {
     const capacitance = deltaIL / (8 * fsw * rippleVoltage)
 
     const peakCurrent = iout + deltaIL / 2
+    
+    // CCM/DCM boundary detection
+    // For buck: Iout_crit = ΔIL / 2 = (Vout × (1 - D)) / (2 × L × fsw)
+    const ccm_dcm_boundary = deltaIL / 2
+    let operating_mode: 'CCM' | 'DCM' | 'boundary' = 'CCM'
+    const dcm_warnings: string[] = []
+    
+    if (iout > 1.2 * ccm_dcm_boundary) {
+      operating_mode = 'CCM'
+    } else if (iout < ccm_dcm_boundary) {
+      operating_mode = 'DCM'
+      dcm_warnings.push('Operating in DCM. Equations assume CCM — results may be inaccurate. Increase inductance or load current to enter CCM.')
+    } else {
+      operating_mode = 'boundary'
+      dcm_warnings.push('Near CCM/DCM boundary. Performance may be unpredictable at light loads.')
+    }
+
     const loop = analyzeBuckControlLoop(spec, { dutyCycle, inductance, capacitance, peakCurrent, warnings: [] })
 
-    return { dutyCycle, inductance, capacitance, peakCurrent, warnings: loop.warnings }
+    return { 
+      dutyCycle, 
+      inductance, 
+      capacitance, 
+      peakCurrent, 
+      ccm_dcm_boundary,
+      operating_mode,
+      warnings: [...dcm_warnings, ...loop.warnings]
+    }
   },
 
   generateWaveforms(spec: DesignSpec): WaveformSet {

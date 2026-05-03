@@ -51,7 +51,23 @@ export const sepicTopology: Topology = {
     const totalLoss = inputInductorLoss + outputInductorLoss + couplingCapEsrLoss +
                       outputCapEsrLoss + mosfetLoss + diodeLoss
 
+    // CCM/DCM boundary detection
+    // For SEPIC: Iout_crit = ΔIL1 × (1-D) / 2
+    const ccm_dcm_boundary = deltaIL1 * (1 - dutyCycle) / 2
+    let operating_mode: 'CCM' | 'DCM' | 'boundary' = 'CCM'
+
     const warnings: string[] = []
+    
+    if (iout > 1.2 * ccm_dcm_boundary) {
+      operating_mode = 'CCM'
+    } else if (iout < ccm_dcm_boundary) {
+      operating_mode = 'DCM'
+      warnings.push('Operating in DCM. Equations assume CCM — results may be inaccurate. Increase inductance or load current to enter CCM.')
+    } else {
+      operating_mode = 'boundary'
+      warnings.push('Near CCM/DCM boundary. Performance may be unpredictable at light loads.')
+    }
+    
     if (dutyCycle > 0.8) {
       warnings.push('SEPIC duty cycle >80% - consider boost topology instead')
     }
@@ -67,6 +83,8 @@ export const sepicTopology: Topology = {
       inductance: inputInductance, // L1
       capacitance: outputCapacitance, // Cout
       peakCurrent: peakInputCurrent,
+      ccm_dcm_boundary,
+      operating_mode,
       efficiency: pout / (pout + totalLoss),
       warnings,
       // SEPIC-specific fields

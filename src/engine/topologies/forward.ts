@@ -195,6 +195,21 @@ export const forwardTopology: Topology = {
 
     // 12. Warnings
     const warnings: string[] = []
+    
+    // CCM/DCM boundary detection
+    // For forward: Iout_crit = ΔIL × (1-D) / 2 (same as buck, from output inductor)
+    const ccm_dcm_boundary = deltaIL * (1 - dutyCycle) / 2
+    let operating_mode: 'CCM' | 'DCM' | 'boundary' = 'CCM'
+    
+    if (iout > 1.2 * ccm_dcm_boundary) {
+      operating_mode = 'CCM'
+    } else if (iout < ccm_dcm_boundary) {
+      operating_mode = 'DCM'
+      warnings.push('Operating in DCM. Equations assume CCM — results may be inaccurate. Increase inductance or load current to enter CCM.')
+    } else {
+      operating_mode = 'boundary'
+      warnings.push('Near CCM/DCM boundary. Performance may be unpredictable at light loads.')
+    }
 
     if (dutyCycle > 0.4) {
       warnings.push(
@@ -236,6 +251,8 @@ export const forwardTopology: Topology = {
       inductance: outputInductance,  // Lo — the main energy-storage inductor
       capacitance,
       peakCurrent: IL_peak,          // output inductor peak current
+      ccm_dcm_boundary,
+      operating_mode,
       inductor: {
         value: outputInductance,
         peak_current: IL_peak,

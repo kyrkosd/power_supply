@@ -124,6 +124,21 @@ export const buckBoostTopology: Topology = {
 
     // 7. Design rule checks
     const warnings: string[] = []
+    
+    // CCM/DCM boundary detection
+    // For buck-boost: Iout_crit = ΔIL × (1-D) / 2
+    const ccm_dcm_boundary = deltaIL * (1 - dutyCycle) / 2
+    let operating_mode: 'CCM' | 'DCM' | 'boundary' = 'CCM'
+    
+    if (iout > 1.2 * ccm_dcm_boundary) {
+      operating_mode = 'CCM'
+    } else if (iout < ccm_dcm_boundary) {
+      operating_mode = 'DCM'
+      warnings.push('Operating in DCM. Equations assume CCM — results may be inaccurate. Increase inductance or load current to enter CCM.')
+    } else {
+      operating_mode = 'boundary'
+      warnings.push('Near CCM/DCM boundary. Performance may be unpredictable at light loads.')
+    }
 
     if (dutyCycle >= 0.9) {
       warnings.push('Buck-boost duty cycle exceeds 90% and may reduce control margin and efficiency.')
@@ -163,6 +178,8 @@ export const buckBoostTopology: Topology = {
       inductance,
       capacitance,
       peakCurrent: IL_peak,
+      ccm_dcm_boundary,
+      operating_mode,
       inductor: {
         value: inductance,
         peak_current: IL_peak,

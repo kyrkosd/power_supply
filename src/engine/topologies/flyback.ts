@@ -116,7 +116,23 @@ export const flybackTopology: Topology = {
     const clampLoss = 0.5 // W, placeholder
     const totalLoss = primaryCopperLoss + secondaryCopperLoss + coreLoss + mosfetLoss + diodeLoss + clampLoss
 
+    // CCM/DCM boundary detection
+    // For flyback: Iout_crit = ΔIm × N × (1-D) / 2
+    const ccm_dcm_boundary = deltaIm * turnsRatio * (1 - dMax) / 2
+    let operating_mode: 'CCM' | 'DCM' | 'boundary' = 'CCM'
+
     const warnings: string[] = []
+    
+    if (iout > 1.2 * ccm_dcm_boundary) {
+      operating_mode = 'CCM'
+    } else if (iout < ccm_dcm_boundary) {
+      operating_mode = 'DCM'
+      warnings.push('Operating in DCM. Equations assume CCM — results may be inaccurate. Increase inductance or load current to enter CCM.')
+    } else {
+      operating_mode = 'boundary'
+      warnings.push('Near CCM/DCM boundary. Performance may be unpredictable at light loads.')
+    }
+    
     if (dMax > 0.45) {
       warnings.push('Duty cycle exceeds 45% - consider DCM or different topology')
     }
@@ -132,6 +148,8 @@ export const flybackTopology: Topology = {
       inductance: magnetizingInductance,
       capacitance,
       peakCurrent: primaryPeakCurrent,
+      ccm_dcm_boundary,
+      operating_mode,
       efficiency: pout / (pout + totalLoss),
       warnings,
       turnsRatio,
