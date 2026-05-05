@@ -18,16 +18,15 @@ function createWindow(): void {
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
-      contextIsolation: true
-    }
+      contextIsolation: true,
+    },
   })
 
-  win.on('ready-to-show', () => {
-    win.show()
-  })
+  win.on('ready-to-show', () => win.show())
 
-  win.webContents.setWindowOpenHandler((details) => {
-    shell.openExternal(details.url)
+  // Open all target="_blank" links in the system browser, not a new Electron window
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    shell.openExternal(url)
     return { action: 'deny' }
   })
 
@@ -41,10 +40,9 @@ function createWindow(): void {
 app.whenReady().then(() => {
   electronApp.setAppUserModelId('com.power-supply-workbench')
 
-  app.on('browser-window-created', (_, window) => {
-    optimizer.watchWindowShortcuts(window)
-  })
+  app.on('browser-window-created', (_, window) => optimizer.watchWindowShortcuts(window))
 
+  // Register all IPC channels before the window is created
   setupLTspiceIPC()
   setupProjectIPC()
   setupExportIPC()

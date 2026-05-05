@@ -9,126 +9,115 @@ import { StatusBar } from './components/StatusBar/StatusBar'
 import { useDesignStore } from './store/design-store'
 import styles from './App.module.css'
 
+// ── Keyboard shortcut handlers ────────────────────────────────────────────────
+
+type FileHandlers = {
+  newProject: () => void
+  openProject: () => void
+  saveProject: () => void
+  saveProjectAs: () => void
+}
+
+type EditHandlers = {
+  undo: () => void
+  redo: () => void
+  setActiveVizTab: (tab: string) => void
+}
+
+function handleFileShortcut(event: KeyboardEvent, handlers: FileHandlers): boolean {
+  if (!event.ctrlKey && !event.metaKey) return false
+  if (event.key === 'n' && !event.shiftKey) { event.preventDefault(); handlers.newProject();    return true }
+  if (event.key === 'o' && !event.shiftKey) { event.preventDefault(); handlers.openProject();   return true }
+  if (event.key === 's') {
+    event.preventDefault()
+    event.shiftKey ? handlers.saveProjectAs() : handlers.saveProject()
+    return true
+  }
+  return false
+}
+
+function handleEditShortcut(event: KeyboardEvent, handlers: EditHandlers): void {
+  if (!event.ctrlKey && !event.metaKey) return
+  switch (event.key) {
+    case 'z': event.preventDefault(); event.shiftKey ? handlers.redo() : handlers.undo(); break
+    case 'y': event.preventDefault(); handlers.redo(); break
+    case '1': event.preventDefault(); handlers.setActiveVizTab('waveforms'); break
+    case '2': event.preventDefault(); handlers.setActiveVizTab('bode'); break
+    case '3': event.preventDefault(); handlers.setActiveVizTab('losses'); break
+    case '4': event.preventDefault(); handlers.setActiveVizTab('thermal'); break
+  }
+}
+
+// ── Component ─────────────────────────────────────────────────────────────────
+
 export default function App(): React.ReactElement {
-  const topology = useDesignStore((state) => state.topology)
-  const spec = useDesignStore((state) => state.spec)
-  const setResult = useDesignStore((state) => state.setResult)
-  const setMcResult = useDesignStore((state) => state.setMcResult)
-  const mcRunRequest = useDesignStore((state) => state.mcRunRequest)
-  const clearMcRunRequest = useDesignStore((state) => state.clearMcRunRequest)
-  const setActiveVizTab = useDesignStore((state) => state.setActiveVizTab)
-  const newProject = useDesignStore((state) => state.newProject)
-  const openProject = useDesignStore((state) => state.openProject)
-  const saveProject = useDesignStore((state) => state.saveProject)
-  const saveProjectAs = useDesignStore((state) => state.saveProjectAs)
-  const undo = useDesignStore((state) => state.undo)
-  const redo = useDesignStore((state) => state.redo)
+  const topology        = useDesignStore((s) => s.topology)
+  const spec            = useDesignStore((s) => s.spec)
+  const setResult       = useDesignStore((s) => s.setResult)
+  const setMcResult     = useDesignStore((s) => s.setMcResult)
+  const mcRunRequest    = useDesignStore((s) => s.mcRunRequest)
+  const clearMcRunRequest = useDesignStore((s) => s.clearMcRunRequest)
+  const setActiveVizTab = useDesignStore((s) => s.setActiveVizTab)
+  const newProject      = useDesignStore((s) => s.newProject)
+  const openProject     = useDesignStore((s) => s.openProject)
+  const saveProject     = useDesignStore((s) => s.saveProject)
+  const saveProjectAs   = useDesignStore((s) => s.saveProjectAs)
+  const undo            = useDesignStore((s) => s.undo)
+  const redo            = useDesignStore((s) => s.redo)
+
   const workerRef = useRef<Worker | null>(null)
 
   // Keyboard shortcuts
   useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      const ctrl = event.ctrlKey || event.metaKey
+    const fileHandlers: FileHandlers = { newProject, openProject, saveProject, saveProjectAs }
+    const editHandlers: EditHandlers = { undo, redo, setActiveVizTab }
 
-      // File operations work even when focus is in an input/textarea
-      if (ctrl) {
-        if (event.key === 'n' && !event.shiftKey) {
-          event.preventDefault()
-          newProject()
-          return
-        }
-        if (event.key === 'o' && !event.shiftKey) {
-          event.preventDefault()
-          openProject()
-          return
-        }
-        if (event.key === 's') {
-          event.preventDefault()
-          if (event.shiftKey) saveProjectAs()
-          else saveProject()
-          return
-        }
-      }
-
-      // Undo/redo and tab switching: skip when focus is in a text field
-      // (let the browser handle Ctrl+Z for text-field editing)
-      if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
-        return
-      }
-
-      if (ctrl) {
-        switch (event.key) {
-          case 'z':
-            event.preventDefault()
-            if (event.shiftKey) redo()
-            else undo()
-            break
-          case 'y':
-            event.preventDefault()
-            redo()
-            break
-          case '1':
-            event.preventDefault()
-            setActiveVizTab('waveforms')
-            break
-          case '2':
-            event.preventDefault()
-            setActiveVizTab('bode')
-            break
-          case '3':
-            event.preventDefault()
-            setActiveVizTab('losses')
-            break
-          case '4':
-            event.preventDefault()
-            setActiveVizTab('thermal')
-            break
-        }
-      }
+    function onKeyDown(event: KeyboardEvent): void {
+      // File shortcuts work even when focus is inside a text field
+      if (handleFileShortcut(event, fileHandlers)) return
+      // Undo/redo and tab shortcuts skip text fields to avoid conflicting with native editing
+      if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return
+      handleEditShortcut(event, editHandlers)
     }
 
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
   }, [setActiveVizTab, newProject, openProject, saveProject, saveProjectAs, undo, redo])
 
+  // Engine worker — lifecycle
   useEffect(() => {
-    const worker = new Worker(new URL('./engine/worker.ts', import.meta.url), {
-      type: 'module',
-    })
+    const worker = new Worker(new URL('./engine/worker.ts', import.meta.url), { type: 'module' })
 
-    const handleMessage = (event: MessageEvent) => {
-      const message = event.data
-      if (message?.type === 'RESULT' && message.payload) {
-        setResult(message.payload.result, message.payload.waveforms)
-      } else if (message?.type === 'MC_RESULT' && message.payload) {
-        setMcResult(message.payload)
-      } else if (message?.type === 'ERROR' && message.payload) {
-        console.error('Engine worker error:', message.payload.message)
+    function onWorkerMessage(event: MessageEvent): void {
+      const msg = event.data
+      if (msg?.type === 'RESULT' && msg.payload) {
+        setResult(msg.payload.result, msg.payload.waveforms)
+      } else if (msg?.type === 'MC_RESULT' && msg.payload) {
+        setMcResult(msg.payload)
+      } else if (msg?.type === 'ERROR' && msg.payload) {
+        console.error('Engine worker error:', msg.payload.message)
       }
     }
 
-    worker.addEventListener('message', handleMessage)
+    worker.addEventListener('message', onWorkerMessage)
     workerRef.current = worker
-
     return () => {
-      worker.removeEventListener('message', handleMessage)
+      worker.removeEventListener('message', onWorkerMessage)
       worker.terminate()
       workerRef.current = null
     }
   }, [setResult, setMcResult])
 
+  // Engine worker — dispatch design computation on spec/topology change
   useEffect(() => {
-    const worker = workerRef.current
-    if (!worker) return
-    worker.postMessage({ type: 'COMPUTE', payload: { topology, spec } })
+    workerRef.current?.postMessage({ type: 'COMPUTE', payload: { topology, spec } })
   }, [topology, spec])
 
+  // Engine worker — dispatch Monte Carlo run when requested
   useEffect(() => {
     if (!mcRunRequest) return
-    const worker = workerRef.current
-    if (!worker) return
     const { iterations, seed, computePhaseMargin } = mcRunRequest
-    worker.postMessage({
+    workerRef.current?.postMessage({
       type: 'MC_COMPUTE',
       payload: { topology, spec, mcConfig: { iterations, seed, computePhaseMargin } },
     })
@@ -140,12 +129,9 @@ export default function App(): React.ReactElement {
       <FirstRunWelcome />
       <Toolbar />
       <div className={styles.workspace}>
-        {/* Left sidebar */}
         <aside className={styles.sidebar}>
           <InputPanel />
         </aside>
-
-        {/* Right content area */}
         <div className={styles.content}>
           <div className={styles.schematicArea}>
             <SchematicView />
