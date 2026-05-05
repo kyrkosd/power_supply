@@ -17,6 +17,8 @@ const projectAPI = {
 const exportAPI = {
   savePdf: (buffer: ArrayBuffer, defaultName: string) =>
     ipcRenderer.invoke('export:save-pdf', { buffer, defaultName }),
+  saveCsv: (content: string, defaultName: string) =>
+    ipcRenderer.invoke('export:save-csv', { content, defaultName }),
 }
 
 if (process.contextIsolated) {

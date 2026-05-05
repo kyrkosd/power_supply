@@ -22,4 +22,25 @@ export function setupExportIPC(): void {
       return { success: false, error: err instanceof Error ? err.message : String(err) }
     }
   })
+
+  ipcMain.handle('export:save-csv', async (event, payload: { content: string; defaultName: string }) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    const { canceled, filePath } = await dialog.showSaveDialog(win!, {
+      title: 'Export Bill of Materials',
+      defaultPath: payload.defaultName,
+      filters: [
+        { name: 'CSV File',  extensions: ['csv'] },
+        { name: 'All Files', extensions: ['*'] },
+      ],
+    })
+
+    if (canceled || !filePath) return { success: false, error: 'Cancelled' }
+
+    try {
+      await fsp.writeFile(filePath, payload.content, 'utf-8')
+      return { success: true, filePath }
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : String(err) }
+    }
+  })
 }

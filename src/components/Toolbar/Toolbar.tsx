@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react'
 import { useDesignStore, TopologyId } from '../../store/design-store'
 import { HelpPanel } from '../HelpPanel/HelpPanel'
 import { generateReport } from '../../export/pdf-report'
+import { generateBOM } from '../../export/bom-export'
 import styles from './Toolbar.module.css'
 
 const TOPOLOGIES: { id: TopologyId; label: string }[] = [
@@ -21,9 +22,11 @@ export function Toolbar(): React.ReactElement {
     undo, redo, canUndo, canRedo,
     spec, result, notes,
     activeVizTab, setActiveVizTab,
+    selectedComponents,
   } = useDesignStore()
 
   const [isExporting, setIsExporting] = useState(false)
+  const [isExportingBOM, setIsExportingBOM] = useState(false)
 
   // Keep the native window title bar in sync
   useEffect(() => {
@@ -55,6 +58,20 @@ export function Toolbar(): React.ReactElement {
       setIsExporting(false)
     }
   }, [result, isExporting, topology, spec, notes, setActiveVizTab, activeVizTab])
+
+  const handleExportBOM = useCallback(async () => {
+    if (!result || isExportingBOM) return
+    setIsExportingBOM(true)
+    try {
+      const csv = generateBOM(topology, spec, result, selectedComponents)
+      const defaultName = `${topology}_bom.csv`
+      await window.exportAPI?.saveCsv(csv, defaultName)
+    } catch (err) {
+      console.error('BOM export failed:', err)
+    } finally {
+      setIsExportingBOM(false)
+    }
+  }, [result, isExportingBOM, topology, spec, selectedComponents])
 
   return (
     <header className={styles.toolbar}>
@@ -151,7 +168,15 @@ export function Toolbar(): React.ReactElement {
           disabled={!result || isExporting}
           title={result ? 'Export PDF report' : 'Run simulation first to enable export'}
         >
-          {isExporting ? '⏳ Generating…' : '↓ Export PDF'}
+          {isExporting ? '⏳ PDF…' : '↓ PDF'}
+        </button>
+        <button
+          className={styles.btn}
+          onClick={handleExportBOM}
+          disabled={!result || isExportingBOM}
+          title={result ? 'Export Bill of Materials (CSV)' : 'Run simulation first to enable export'}
+        >
+          {isExportingBOM ? '⏳ BOM…' : '↓ BOM'}
         </button>
         <HelpPanel />
       </div>

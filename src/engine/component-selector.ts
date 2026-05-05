@@ -61,3 +61,9 @@ export function suggestMosfets(requiredVds: number): MosfetData[] {
     .sort((a, b) => (a.rds_on_mohm * a.qg_nc) - (b.rds_on_mohm * b.qg_nc))
     .slice(0, 3)
 }
+
+export interface SelectedComponents {
+  inductor: InductorData | null
+  capacitor: CapacitorData | null
+  mosfet: MosfetData | null
+}

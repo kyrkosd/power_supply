@@ -30,5 +30,6 @@ interface Window {
   }
   exportAPI?: {
     savePdf: (buffer: ArrayBuffer, defaultName: string) => Promise<ExportSaveResult>
+    saveCsv: (content: string, defaultName: string) => Promise<ExportSaveResult>
   }
 }

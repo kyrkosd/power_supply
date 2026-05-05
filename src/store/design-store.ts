@@ -7,6 +7,9 @@ import type { TransientResult } from '../engine/topologies/types'
 import type { EMIResult } from '../engine/topologies/types'
 import type { ProjectFile } from '../types/project'
 import { undoMiddleware } from './undo-middleware'
+import type { SelectedComponents } from '../engine/component-selector'
+
+export type { SelectedComponents } from '../engine/component-selector'
 
 export type { TopologyId } from './workbenchStore'
 export type ActiveVizTab = 'waveforms' | 'bode' | 'losses' | 'thermal' | 'monte-carlo' | 'ltspice-comparison' | 'transient' | 'emi'
@@ -52,6 +55,9 @@ export interface DesignStoreState {
   setTransientResult: (res: TransientResult | null) => void
   setEmiResult: (res: EMIResult | null) => void
   setActiveVizTab: (tab: ActiveVizTab) => void
+
+  selectedComponents: SelectedComponents
+  setSelectedComponent: <K extends keyof SelectedComponents>(key: K, value: SelectedComponents[K]) => void
 
   // Project actions
   setNotes: (notes: string) => void
@@ -111,6 +117,8 @@ const COMPUTE_RESET = {
   isComputing: true,
 } as const
 
+const EMPTY_SELECTION: SelectedComponents = { inductor: null, capacitor: null, mosfet: null }
+
 export const useDesignStore = create<DesignStoreState>(
   // undoMiddleware wraps set() to intercept spec/topology changes and maintain
   // debounced undo history.  It also replaces the undo/redo stubs below.
@@ -130,6 +138,7 @@ export const useDesignStore = create<DesignStoreState>(
     isModified: false,
     notes: '',
     projectCreated: null,
+    selectedComponents: EMPTY_SELECTION,
 
     // Stubs — overridden by undoMiddleware before the store is returned
     canUndo: false,
@@ -137,8 +146,11 @@ export const useDesignStore = create<DesignStoreState>(
     undo: () => {},
     redo: () => {},
 
+    setSelectedComponent: (key, value) =>
+      set((state) => ({ selectedComponents: { ...state.selectedComponents, [key]: value } })),
+
     setTopology: (topology) =>
-      set({ topology, spec: TOPOLOGY_DEFAULTS[topology], isModified: true, ...COMPUTE_RESET }),
+      set({ topology, spec: TOPOLOGY_DEFAULTS[topology], isModified: true, selectedComponents: EMPTY_SELECTION, ...COMPUTE_RESET }),
 
     updateSpec: (updates) =>
       set((state) => ({
@@ -180,6 +192,7 @@ export const useDesignStore = create<DesignStoreState>(
         currentProjectPath: null,
         isModified: false,
         projectCreated: null,
+        selectedComponents: EMPTY_SELECTION,
         ...COMPUTE_RESET,
       })),
 
@@ -196,6 +209,7 @@ export const useDesignStore = create<DesignStoreState>(
         currentProjectPath: res.filePath ?? null,
         isModified: false,
         projectCreated: project.created,
+        selectedComponents: EMPTY_SELECTION,
         ...COMPUTE_RESET,
       })
     },
