@@ -12,7 +12,7 @@ import type { SelectedComponents } from '../engine/component-selector'
 export type { SelectedComponents } from '../engine/component-selector'
 
 export type { TopologyId } from './workbenchStore'
-export type ActiveVizTab = 'waveforms' | 'bode' | 'losses' | 'thermal' | 'monte-carlo' | 'ltspice-comparison' | 'transient' | 'emi' | 'efficiency-map'
+export type ActiveVizTab = 'waveforms' | 'bode' | 'losses' | 'thermal' | 'monte-carlo' | 'ltspice-comparison' | 'transient' | 'emi' | 'efficiency-map' | 'layout'
 
 export interface MCRunRequest {
   iterations: number

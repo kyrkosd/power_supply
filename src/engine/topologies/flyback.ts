@@ -1,6 +1,11 @@
 import { complex, abs, arg, add, multiply, divide } from 'mathjs'
-import { DesignSpec, DesignResult, Topology, TransferFunction } from '../types'
+import {
+  DesignSpec, DesignResult, Topology, TransferFunction,
+  SecondaryOutput, SecondaryOutputResult,
+} from '../types'
 import coresData from '../../data/cores.json'
+
+// ── Core database ─────────────────────────────────────────────────────────────
 
 interface CoreData {
   type: string
@@ -14,13 +19,84 @@ interface CoreData {
 const cores: CoreData[] = coresData as CoreData[]
 
 function selectCore(areaProduct: number): CoreData | null {
-  // Find the smallest core that meets the area product requirement
   const suitable = cores.filter(core => core.Ae * core.Aw >= areaProduct)
   if (suitable.length === 0) return null
-  return suitable.reduce((min, core) => 
+  return suitable.reduce((min, core) =>
     (core.Ae * core.Aw < min.Ae * min.Aw) ? core : min
   )
 }
+
+// ── Magnetics helpers ─────────────────────────────────────────────────────────
+
+// Erickson & Maksimovic eq. 13.6 — limits to 0.45 for safe operating margin
+function computeDutyCycle(vinNom: number, vout: number): number {
+  return Math.min(0.45, vout / (vinNom + vout))
+}
+
+// Turns ratio Np/Ns from volt-seconds balance at nominal operating point
+// Mohan, Undeland, Robbins "Power Electronics" 3rd ed., eq. 10.3
+function computeTurnsRatio(vinNom: number, D: number, vout: number): number {
+  return (vinNom * D) / vout
+}
+
+// TI SLUA117B eq. 3 — minimum magnetizing inductance for CCM boundary
+function computeMagnetizingInductance(vinMin: number, D: number, pTotal: number, fsw: number): number {
+  return (vinMin * D) ** 2 / (2 * pTotal * fsw)
+}
+
+// Secondary turns for winding k — from volt-seconds balance including diode drop
+// Ns_k = Np × (Vout_k + Vf_k) / (Vin_nom × D)
+// Mohan, Undeland, Robbins "Power Electronics" 3rd ed., eq. 10.3
+function computeSecondaryTurns(Np: number, D: number, vinNom: number, vout_k: number, vf_k: number): number {
+  return Math.ceil(Np * (vout_k + vf_k) / (vinNom * D))
+}
+
+// Reverse voltage the secondary rectifier must block: Vr = Vout_k + (Ns/Np)×Vin_max
+// Kazimierczuk "High-Frequency Magnetic Components" 2nd ed., eq. 3.12
+function computeDiodeVr(ns: number, np: number, vinMax: number, vout_k: number): number {
+  return vout_k + (ns / np) * vinMax
+}
+
+// Cout ≥ Iout_k × D / (fsw × ΔVout_k); use 2 % of Vout as ripple budget
+function computeSecondaryCapacitance(iout_k: number, D: number, fsw: number, vout_k: number): number {
+  return (iout_k * D) / (fsw * vout_k * 0.02)
+}
+
+// Cross-regulation estimate under ±50 % primary load variation.
+// D shifts ≈ ±12 % of its nominal value for a well-designed CCM flyback.
+// Mohan, Undeland, Robbins "Power Electronics" 3rd ed., Fig. 10-8
+function estimateCrossRegPct(ns: number, np: number, vinNom: number, D: number, vout_k: number): number {
+  const dVariation = D * 0.12
+  return ((ns / np) * vinNom * dVariation / vout_k) * 100
+}
+
+// ── Secondary output results ──────────────────────────────────────────────────
+
+function computeSecondaryResultsWithFsw(
+  secondaries: SecondaryOutput[],
+  primaryTurns: number,
+  D: number,
+  vinNom: number,
+  vinMax: number,
+  fsw: number,
+): SecondaryOutputResult[] {
+  return secondaries.map((s, i) => {
+    const ns           = computeSecondaryTurns(primaryTurns, D, vinNom, s.vout, s.diode_vf)
+    const diode_vr_max = computeDiodeVr(ns, primaryTurns, vinMax, s.vout)
+    const capacitance  = computeSecondaryCapacitance(s.iout, D, fsw, s.vout)
+    const crossRegPct  = s.is_regulated ? 0 : estimateCrossRegPct(ns, primaryTurns, vinNom, D, s.vout)
+    return {
+      label: `Output ${i + 2}`,
+      vout_nominal: s.vout,
+      ns,
+      diode_vr_max,
+      capacitance,
+      crossRegPct,
+    }
+  })
+}
+
+// ── Transfer function ─────────────────────────────────────────────────────────
 
 function createFlybackTransferFunction(spec: DesignSpec, result: DesignResult): TransferFunction {
   const D = result.dutyCycle
@@ -29,9 +105,6 @@ function createFlybackTransferFunction(spec: DesignSpec, result: DesignResult): 
   const Rload = spec.vout / spec.iout
   const N = result.turnsRatio || 1
 
-  // Flyback transfer function: single pole + RHPZ
-  // H(s) = (N * (1-D) * (1 + s/(Q*ω0))) / (1 + s/(Q*ω0) + s²/ω0²)
-  // Simplified: H(s) = k * (1 - s/ω_rhpz) / (1 + s/ω_p)
   const k = N * (1 - D)
   const omegaRHPZ = (1 - D)**2 * Rload / (2 * Math.PI * Lm)
   const omegaP = 1 / Math.sqrt(Lm * C)
@@ -52,34 +125,43 @@ function createFlybackTransferFunction(spec: DesignSpec, result: DesignResult): 
   }
 }
 
+// ── Main topology object ──────────────────────────────────────────────────────
+
 export const flybackTopology: Topology = {
   id: 'flyback',
   name: 'Flyback',
 
   compute(spec: DesignSpec): DesignResult {
     const { vinMin, vinMax, vout, iout, fsw, rippleRatio, voutRippleMax, efficiency } = spec
+    const secondaries = spec.secondary_outputs ?? []
 
-    // For offline flyback, use vin_nom for calculations
     const vinNom = (vinMin + vinMax) / 2
-    const dMax = Math.min(0.45, vout / (vinNom + vout)) // Limit duty cycle
 
-    // 1. Turns ratio N = Np/Ns = (Vin_nom × D_max) / Vout
-    const turnsRatio = (vinNom * dMax) / vout
+    // 1. Duty cycle — Erickson & Maksimovic eq. 13.6
+    const dMax = computeDutyCycle(vinNom, vout)
 
-    // 2. Magnetizing inductance (CCM boundary): Lm = (Vin_min × D_max)² / (2 × Pout × fsw)
-    const pout = vout * iout
-    const magnetizingInductance = (vinMin * dMax) ** 2 / (2 * pout * fsw)
+    // 2. Total output power — core sizing uses the sum of all outputs
+    const pPrimary     = vout * iout
+    const pSecondaries = secondaries.reduce((sum, s) => sum + s.vout * s.iout, 0)
+    const pTotal       = pPrimary + pSecondaries
 
-    // 3. Primary peak current: Ip_peak = (Pout / (η × Vin_min × D_max)) + ΔIm/2
-    const inputPower = pout / Math.max(efficiency, 0.7)
+    // 3. Magnetizing inductance — TI SLUA117B eq. 3
+    const magnetizingInductance = computeMagnetizingInductance(vinMin, dMax, pTotal, fsw)
+
+    // 4. Primary peak current
+    const inputPower       = pTotal / Math.max(efficiency, 0.7)
     const primaryCurrentAvg = inputPower / vinMin
-    const deltaIm = rippleRatio * primaryCurrentAvg
+    const deltaIm           = rippleRatio * primaryCurrentAvg
     const primaryPeakCurrent = primaryCurrentAvg + deltaIm / 2
 
-    // 4. Core selection using area product method
-    const bMax = 0.3 // T, typical for ferrite
-    const j = 400000 // A/m², current density
-    const ku = 0.4 // window utilization
+    // 5. Turns ratio (primary/secondary for regulated output)
+    const turnsRatio = computeTurnsRatio(vinNom, dMax, vout)
+
+    // 6. Core selection via area-product method
+    // Bmax = 0.3 T (ferrite), J = 400 kA/m², ku = 0.4 (window utilization)
+    const bMax = 0.3
+    const j    = 400_000
+    const ku   = 0.4
     const areaProduct = (magnetizingInductance * primaryPeakCurrent * primaryCurrentAvg) / (bMax * j * ku)
 
     const selectedCore = selectCore(areaProduct)
@@ -89,58 +171,59 @@ export const flybackTopology: Topology = {
         inductance: magnetizingInductance,
         capacitance: 0,
         peakCurrent: primaryPeakCurrent,
-        warnings: ['No suitable core found for the required area product']
+        warnings: ['No suitable core found for the required area product'],
       }
     }
 
-    // 5. Primary turns: Np = Lm × Ip_peak / (Bmax × Ae)
-    const primaryTurns = Math.ceil(magnetizingInductance * primaryPeakCurrent / (bMax * selectedCore.Ae))
-
-    // 6. Secondary turns: Ns = Np / N
+    // 7. Primary turns: Np = Lm × Ip_peak / (Bmax × Ae)
+    const primaryTurns   = Math.ceil(magnetizingInductance * primaryPeakCurrent / (bMax * selectedCore.Ae))
     const secondaryTurns = Math.ceil(primaryTurns / turnsRatio)
 
-    // 7. Output cap: Cout ≥ Iout × D / (fsw × ΔVout)
+    // 8. Primary output capacitance: Cout ≥ Iout × D / (fsw × ΔVout)
     const deltaVout = Math.max(voutRippleMax, 0.01 * vout)
     const capacitance = (iout * dMax) / (fsw * deltaVout)
 
-    // 8. Clamp voltage estimate
-    const vLeakSpike = 0.1 * vinMax // Estimate leakage spike
-    const clampVoltage = vout * turnsRatio + vLeakSpike
+    // 9. Clamp voltage estimate (leakage spike ≈ 10 % of Vin_max)
+    const clampVoltage = vout * turnsRatio + 0.1 * vinMax
 
-    // 9. Losses estimate (simplified)
-    const primaryCopperLoss = primaryCurrentAvg ** 2 * 0.1 // Assume 0.1Ω DCR
-    const secondaryCopperLoss = iout ** 2 * 0.05 // Assume 0.05Ω DCR
-    const coreLoss = 0.5 // W, placeholder
-    const mosfetLoss = 2 // W, placeholder
-    const diodeLoss = 1 // W, placeholder
-    const clampLoss = 0.5 // W, placeholder
-    const totalLoss = primaryCopperLoss + secondaryCopperLoss + coreLoss + mosfetLoss + diodeLoss + clampLoss
+    // 10. Simplified loss model
+    const primaryCopperLoss  = primaryCurrentAvg ** 2 * 0.1
+    const secondaryCopperLoss = iout ** 2 * 0.05
+    const coreLoss   = 0.5
+    const mosfetLoss = 2
+    const diodeLoss  = 1
+    const clampLoss  = 0.5
+    const totalLoss  = primaryCopperLoss + secondaryCopperLoss + coreLoss + mosfetLoss + diodeLoss + clampLoss
 
-    // CCM/DCM boundary detection
-    // For flyback: Iout_crit = ΔIm × N × (1-D) / 2
+    // 11. CCM/DCM boundary — Iout_crit = ΔIm × N × (1−D) / 2
     const ccm_dcm_boundary = deltaIm * turnsRatio * (1 - dMax) / 2
     let operating_mode: 'CCM' | 'DCM' | 'boundary' = 'CCM'
 
     const warnings: string[] = []
-    
-    if (iout > 1.2 * ccm_dcm_boundary) {
-      operating_mode = 'CCM'
-    } else if (iout < ccm_dcm_boundary) {
+
+    if (iout < ccm_dcm_boundary) {
       operating_mode = 'DCM'
       warnings.push('Operating in DCM. Equations assume CCM — results may be inaccurate. Increase inductance or load current to enter CCM.')
-    } else {
+    } else if (iout < 1.2 * ccm_dcm_boundary) {
       operating_mode = 'boundary'
       warnings.push('Near CCM/DCM boundary. Performance may be unpredictable at light loads.')
     }
-    
-    if (dMax > 0.45) {
-      warnings.push('Duty cycle exceeds 45% - consider DCM or different topology')
-    }
-    if (!selectedCore) {
-      warnings.push('Core saturation risk - increase core size or reduce current')
-    }
-    if (clampVoltage > 1.5 * vinMax) {
-      warnings.push('High clamp voltage - check MOSFET Vds rating')
+
+    if (dMax > 0.45)
+      warnings.push('Duty cycle exceeds 45 % — consider DCM or a different topology.')
+    if (clampVoltage > 1.5 * vinMax)
+      warnings.push('High clamp voltage — check MOSFET Vds rating.')
+
+    // 12. Secondary output results (multi-output mode)
+    const secondaryOutputResults = secondaries.length > 0
+      ? computeSecondaryResultsWithFsw(secondaries, primaryTurns, dMax, vinNom, vinMax, fsw)
+      : undefined
+
+    if (secondaries.length > 0) {
+      warnings.push(
+        'Cross-regulation on unregulated outputs is typically ±5–10 %. ' +
+        'Use post-regulators (LDO) for tight regulation.',
+      )
     }
 
     return {
@@ -150,7 +233,7 @@ export const flybackTopology: Topology = {
       peakCurrent: primaryPeakCurrent,
       ccm_dcm_boundary,
       operating_mode,
-      efficiency: pout / (pout + totalLoss),
+      efficiency: pPrimary / (pPrimary + totalLoss),
       warnings,
       turnsRatio,
       primaryTurns,
@@ -158,19 +241,20 @@ export const flybackTopology: Topology = {
       coreType: selectedCore.type,
       magnetizingInductance,
       clampVoltage,
+      secondaryOutputResults,
       losses: {
-        primaryCopper: primaryCopperLoss,
+        primaryCopper:   primaryCopperLoss,
         secondaryCopper: secondaryCopperLoss,
-        core: coreLoss,
+        core:   coreLoss,
         mosfet: mosfetLoss,
-        diode: diodeLoss,
-        clamp: clampLoss,
-        total: totalLoss
-      }
+        diode:  diodeLoss,
+        clamp:  clampLoss,
+        total:  totalLoss,
+      },
     }
   },
 
   getTransferFunction(spec, result) {
     return createFlybackTransferFunction(spec, result)
-  }
+  },
 }

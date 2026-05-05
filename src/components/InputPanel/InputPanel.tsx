@@ -1,7 +1,8 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useCallback } from 'react'
 import { useDesignStore, type DesignSpec } from '../../store/design-store'
 import { validateSpec } from '../../engine/validation'
 import type { ValidationError } from '../../engine/validation'
+import type { SecondaryOutput } from '../../engine/types'
 import { Tooltip } from '../Tooltip/Tooltip'
 import styles from './InputPanel.module.css'
 
@@ -111,6 +112,61 @@ function formatDisplay(value: number, decimals: number): string {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
+// ── Secondary output row ──────────────────────────────────────────────────────
+
+const DEFAULT_SECONDARY: SecondaryOutput = { vout: 12, iout: 0.5, diode_vf: 0.4, is_regulated: false }
+
+interface SecondaryRowProps {
+  index: number
+  output: SecondaryOutput
+  onChange: (index: number, updated: SecondaryOutput) => void
+  onRemove: (index: number) => void
+}
+
+function SecondaryOutputRow({ index, output, onChange, onRemove }: SecondaryRowProps) {
+  return (
+    <div className={styles.secondaryRow}>
+      <span className={styles.secondaryLabel}>Out {index + 2}</span>
+      <label className={styles.secondaryFieldLabel}>Vout</label>
+      <input
+        type="number"
+        className={styles.secondaryInput}
+        value={output.vout}
+        min={0.1}
+        max={500}
+        step={0.1}
+        onChange={(e) => onChange(index, { ...output, vout: Number(e.target.value) })}
+      />
+      <span className={styles.secondaryUnit}>V</span>
+      <label className={styles.secondaryFieldLabel}>Iout</label>
+      <input
+        type="number"
+        className={styles.secondaryInput}
+        value={output.iout}
+        min={0.01}
+        max={50}
+        step={0.1}
+        onChange={(e) => onChange(index, { ...output, iout: Number(e.target.value) })}
+      />
+      <span className={styles.secondaryUnit}>A</span>
+      <label className={styles.secondaryFieldLabel}>Vf</label>
+      <input
+        type="number"
+        className={styles.secondaryInput}
+        value={output.diode_vf}
+        min={0}
+        max={2}
+        step={0.05}
+        onChange={(e) => onChange(index, { ...output, diode_vf: Number(e.target.value) })}
+      />
+      <span className={styles.secondaryUnit}>V</span>
+      <button className={styles.secondaryRemove} onClick={() => onRemove(index)} title="Remove this output">✕</button>
+    </div>
+  )
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
+
 export function InputPanel(): React.ReactElement {
   const { spec, result, topology, updateSpec, requestMcRun, setActiveVizTab, notes, setNotes } = useDesignStore()
   const [mcIterations, setMcIterations] = useState(1000)
@@ -140,6 +196,32 @@ export function InputPanel(): React.ReactElement {
     }
     return map
   }, [validation.errors])
+
+  // Multi-output handlers (flyback only)
+  const secondaries = spec.secondary_outputs ?? []
+
+  const addSecondary = useCallback(() => {
+    if (secondaries.length >= 3) return
+    updateSpec({ secondary_outputs: [...secondaries, { ...DEFAULT_SECONDARY }] })
+  }, [secondaries, updateSpec])
+
+  const removeSecondary = useCallback((index: number) => {
+    const next = secondaries.filter((_, i) => i !== index)
+    updateSpec({ secondary_outputs: next.length > 0 ? next : undefined })
+  }, [secondaries, updateSpec])
+
+  const updateSecondary = useCallback((index: number, updated: SecondaryOutput) => {
+    const next = secondaries.map((s, i) => (i === index ? updated : s))
+    updateSpec({ secondary_outputs: next })
+  }, [secondaries, updateSpec])
+
+  const toggleMultiOutput = useCallback(() => {
+    if (secondaries.length > 0) {
+      updateSpec({ secondary_outputs: undefined })
+    } else {
+      updateSpec({ secondary_outputs: [{ ...DEFAULT_SECONDARY }] })
+    }
+  }, [secondaries, updateSpec])
 
   const onFieldChange = (field: FieldDef, value: number) => {
     const normalized = field.log ? Math.pow(10, value) : value
@@ -271,6 +353,78 @@ export function InputPanel(): React.ReactElement {
             <strong>{result?.efficiency != null ? `${(result.efficiency * 100).toFixed(1)} %` : '—'}</strong>
           </div>
         </div>
+
+        {/* ── Multi-Output (flyback only) ── */}
+        {topology === 'flyback' && (
+          <div className={styles.multiOutputSection}>
+            <div className={styles.multiOutputHeader}>
+              <span className={styles.multiOutputTitle}>Multi-Output Windings</span>
+              <div className={styles.multiOutputHeaderActions}>
+                {secondaries.length > 0 && secondaries.length < 3 && (
+                  <button className={styles.multiOutputAdd} onClick={addSecondary} title="Add secondary winding (max 4 total)">
+                    + Add Output
+                  </button>
+                )}
+                <button className={styles.multiOutputToggle} onClick={toggleMultiOutput}>
+                  {secondaries.length > 0 ? 'Disable' : 'Enable'}
+                </button>
+              </div>
+            </div>
+
+            {secondaries.length > 0 && (
+              <>
+                {secondaries.length === 0 && (
+                  <button className={styles.multiOutputAdd} onClick={addSecondary}>+ Add Output</button>
+                )}
+                {secondaries.map((s, i) => (
+                  <SecondaryOutputRow
+                    key={i}
+                    index={i}
+                    output={s}
+                    onChange={updateSecondary}
+                    onRemove={removeSecondary}
+                  />
+                ))}
+                {secondaries.length < 3 && secondaries.length > 0 && (
+                  <button className={styles.multiOutputAdd} onClick={addSecondary} title="Add another secondary winding">
+                    + Add Output
+                  </button>
+                )}
+                <div className={styles.crossRegWarning}>
+                  ⚠ Cross-regulation on unregulated outputs is typically ±5–10 %. Use post-regulators (LDO) for tight regulation.
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* ── Advanced (buck only — control loop settings) ── */}
+        {topology === 'buck' && (
+          <details className={styles.advancedSection}>
+            <summary className={styles.advancedTitle}>Advanced</summary>
+            <div className={styles.advancedBody}>
+              <div className={styles.advancedRow}>
+                <label className={styles.advancedLabel}>
+                  Control mode
+                  <Tooltip
+                    content="Voltage mode: Type-II compensator, LC double pole in plant. Current mode (PCM): inner current loop removes the inductor pole — single-pole plant, simpler compensation, better line rejection but requires slope comp when D > 50 %."
+                    side="right"
+                  >
+                    <span className={styles.infoIcon}>ⓘ</span>
+                  </Tooltip>
+                </label>
+                <select
+                  className={styles.advancedSelect}
+                  value={spec.controlMode ?? 'voltage'}
+                  onChange={(e) => updateSpec({ controlMode: e.target.value as 'voltage' | 'current' })}
+                >
+                  <option value="voltage">Voltage Mode (VMC)</option>
+                  <option value="current">Current Mode (PCM)</option>
+                </select>
+              </div>
+            </div>
+          </details>
+        )}
 
         <details className={styles.notesSection}>
           <summary className={styles.notesSectionTitle}>Notes</summary>

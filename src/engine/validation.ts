@@ -102,5 +102,25 @@ export function validateSpec(topology: TopologyId, spec: DesignSpec): Validation
   if (Number.isFinite(iout) && iout > 0 && iout < 0.01)
     push('iout', 'Very light load (< 10 mA). The converter will likely operate in DCM; CCM equations may be inaccurate.', 'warning')
 
+  // ── Flyback multi-output secondaries ─────────────────────────────────────
+  if (topology === 'flyback' && spec.secondary_outputs) {
+    if (spec.secondary_outputs.length > 3)
+      push('secondary_outputs', 'Maximum 3 additional secondary outputs (4 total windings).')
+
+    spec.secondary_outputs.forEach((s, i) => {
+      const tag = `secondary_outputs[${i}]`
+      if (!Number.isFinite(s.vout) || s.vout <= 0)
+        push(tag, `Output ${i + 2}: Vout must be a positive number.`)
+      if (!Number.isFinite(s.iout) || s.iout <= 0)
+        push(tag, `Output ${i + 2}: Iout must be a positive number.`)
+      if (!Number.isFinite(s.diode_vf) || s.diode_vf < 0)
+        push(tag, `Output ${i + 2}: Diode Vf must be ≥ 0.`)
+      if (Number.isFinite(s.vout) && Number.isFinite(vinMin) && s.vout > vinMin * 2)
+        push(tag,
+          `Output ${i + 2}: Vout (${s.vout} V) is more than 2× Vin_min. Check turns ratio — large secondary voltages may be impractical.`,
+          'warning')
+    })
+  }
+
   return { valid: errors.every((e) => e.severity !== 'error'), errors }
 }

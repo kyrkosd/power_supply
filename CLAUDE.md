@@ -66,10 +66,55 @@ always go through the worker.
 | `buck-boost`| `topologies/buckBoost.ts`     | CCM equations implemented |
 | `flyback`   | `topologies/flyback.ts`       | CCM equations implemented |
 | `forward`   | `topologies/forward.ts`       | CCM equations implemented |
-| `sepic`     | `topologies/sepic.ts`       | CCM equations implemented |
+| `sepic`     | `topologies/sepic.ts`         | CCM equations implemented |
 
 Each file exports a single `const xxxTopology: Topology` object.
 Register it in `src/engine/index.ts`.
+
+**Flyback extras:** `DesignSpec.secondary_outputs?: SecondaryOutput[]` enables
+multi-output mode (max 3 additional secondaries). The engine scales core sizing
+to total `Ptotal`, computes per-secondary `Ns_k`, diode Vr, Cout, and a
+cross-regulation estimate (±% under ±50 % primary load swing). Results are
+returned in `DesignResult.secondaryOutputResults`.
+
+---
+
+## Recent Features
+
+### Design Comparison (`src/components/ComparisonView/`)
+Save any computed design as **Design A** (`Ctrl+K`), then change parameters or
+topology and open the side-by-side modal (`Ctrl+Shift+K`). The modal shows 10
+comparison rows with win/lose colour coding and a winner badge.
+Store keys: `comparisonSlot`, `isComparing`, `saveToComparison`, `setIsComparing`.
+
+### Efficiency Heatmap (`src/components/EfficiencyMap/`)
+A 10×10 Vin × Iout grid computed in the Web Worker (`EFFICIENCY_MAP` message).
+Rendered with D3 as SVG rectangles with a dark-red → bright-green colour scale,
+a crosshair at the current operating point, and hover tooltips.
+Worker flow: `requestEfficiencyMap()` → store sets `efficiencyMapRequest` →
+`App.tsx` posts `EFFICIENCY_MAP` message → worker calls `computeEfficiencyMap`
+→ `setEfficiencyMapResult`.
+
+### Input Validation (`src/engine/validation.ts`)
+`validateSpec(topology, spec): ValidationResult` enforces positivity, topology-
+specific voltage constraints (buck step-down, boost step-up, flyback D < 50 %,
+etc.), fsw range, ripple ratio bounds, and output ripple budget.
+`error` severity blocks worker dispatch; `warning` shows inline but allows
+computation. Called directly in components — **not** through the worker.
+
+### Smart Topology Defaults (`src/engine/topologies/defaults.ts`)
+Canonical `TOPOLOGY_DEFAULTS` record keyed by `TopologyId`. On topology switch:
+if the current spec equals the old defaults, silently apply the new ones;
+otherwise show a confirmation banner ("Apply Defaults" / "Keep Current").
+`setTopology` resets spec; `setTopologyOnly` keeps it.
+
+### Gate Drive Calculator (`src/engine/gate-drive.ts`)
+`computeGateDrive(spec, result, mosfet): GateDriveResult` computes Rg, peak
+gate current, turn-on/off times, dead time, gate drive power, bootstrap cap,
+and bootstrap diode Vr.
+- References: TI SLUA618, Infineon AN_201702_PL52_014, Microchip AN1471, TI SLVA301.
+- Bootstrap rows shown only for `buck` and `forward` (high-side switch topologies).
+- Called directly from `ComponentSuggestions` (pure function, no worker needed).
 
 ---
 

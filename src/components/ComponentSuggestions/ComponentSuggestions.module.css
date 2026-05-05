@@ -135,3 +135,133 @@
   color: var(--accent);
   background: var(--accent-dim);
 }
+
+/* ── Gate Drive section ─────────────────────────────────────────────────────── */
+
+/* Reuse .section border/padding; override to make it a <details> element */
+details.section {
+  cursor: default;
+}
+
+.gdrSummary {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 12px 6px;
+  margin: -8px -12px -6px; /* cancel .section padding so summary fills the box */
+  border-radius: var(--radius);
+  user-select: none;
+}
+
+.gdrSummary::-webkit-details-marker { display: none; }
+
+.gdrSummary::before {
+  content: '▶';
+  font-size: 8px;
+  color: var(--text-muted);
+  transition: transform 0.15s;
+  flex-shrink: 0;
+}
+
+details[open] .gdrSummary::before {
+  transform: rotate(90deg);
+}
+
+.gdrBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-top: 8px;
+}
+
+.gdrRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.gdrRow:last-child {
+  border-bottom: none;
+}
+
+.gdrLabel {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.gdrValue {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.gdrDivider {
+  height: 1px;
+  background: var(--border);
+  margin: 6px 0;
+}
+
+/* ── Multi-output table ─────────────────────────────────────────────────────── */
+
+.moTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 10px;
+  margin-top: 4px;
+}
+
+.moTable th {
+  text-align: left;
+  color: var(--text-muted);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 3px 4px;
+  border-bottom: 1px solid var(--border);
+}
+
+.moTable td {
+  padding: 4px 4px;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+  white-space: nowrap;
+}
+
+.moTable tr:last-child td {
+  border-bottom: none;
+}
+
+.moLabel {
+  font-weight: 600;
+  color: var(--accent) !important;
+}
+
+.moRegulated {
+  color: #4ade80 !important;
+  font-weight: 600;
+}
+
+.moCrossReg {
+  color: var(--warning) !important;
+  font-weight: 600;
+}
+
+.moWarning {
+  margin-top: 6px;
+  font-size: 10px;
+  color: var(--warning);
+  line-height: 1.45;
+}

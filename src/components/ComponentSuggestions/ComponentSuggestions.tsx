@@ -8,8 +8,46 @@ import {
   type CapacitorData,
   type MosfetData,
 } from '../../engine/component-selector'
+import { computeGateDrive, type GateDriveResult } from '../../engine/gate-drive'
 import { Tooltip } from '../Tooltip/Tooltip'
 import styles from './ComponentSuggestions.module.css'
+
+// ── Topologies that use a high-side switch requiring a bootstrap circuit ───────
+const HIGH_SIDE_TOPOLOGIES = new Set(['buck', 'forward'])
+
+// ── Formatting helpers ────────────────────────────────────────────────────────
+
+function fmtTime(s: number): string {
+  if (s < 1e-6) return `${(s * 1e9).toFixed(1)} ns`
+  return `${(s * 1e6).toFixed(2)} µs`
+}
+
+function fmtCap(f: number): string {
+  if (f < 1e-6) return `${(f * 1e9).toFixed(0)} nF`
+  return `${(f * 1e6).toFixed(1)} µF`
+}
+
+function fmtPower(w: number): string {
+  return w < 1 ? `${(w * 1000).toFixed(1)} mW` : `${w.toFixed(2)} W`
+}
+
+// ── Gate Drive row sub-component ──────────────────────────────────────────────
+
+function GdrRow({
+  label, value, tip,
+}: { label: string; value: string; tip: React.ReactNode }) {
+  return (
+    <div className={styles.gdrRow}>
+      <span className={styles.gdrLabel}>
+        {label}
+        <Tooltip content={tip} side="left">
+          <span className={styles.infoIcon}>ⓘ</span>
+        </Tooltip>
+      </span>
+      <span className={styles.gdrValue}>{value}</span>
+    </div>
+  )
+}
 
 // ── MOSFET Vds stress per topology ────────────────────────────────────────
 function mosfetVdsRequired(topology: string, vinMax: number, vout: number): number {
@@ -38,6 +76,12 @@ export function ComponentSuggestions() {
   const inductor  = suggestInductors(result.inductance * 1e6, result.peakCurrent)[0]
   const capacitor = suggestCapacitors(result.capacitance * 1e6, spec.vout * 1.5)[0]
   const mosfet    = suggestMosfets(mosfetVdsRequired(topology, spec.vinMax, spec.vout))[0]
+
+  const gateDrive: GateDriveResult | null = mosfet
+    ? computeGateDrive(spec, result, mosfet)
+    : null
+
+  const showBootstrap = HIGH_SIDE_TOPOLOGIES.has(topology)
 
   const sel = selectedComponents
 
@@ -132,6 +176,127 @@ export function ComponentSuggestions() {
             }
           />
         </div>
+      )}
+
+      {/* ── Gate Drive ──────────────────────────────────────────── */}
+      {gateDrive && (
+        <details className={styles.section} open={false}>
+          <summary className={styles.gdrSummary}>Gate Drive Design</summary>
+
+          <div className={styles.gdrBody}>
+            <GdrRow
+              label="Gate Resistor (Rg)"
+              value={`${gateDrive.gate_resistor.toFixed(1)} Ω`}
+              tip={
+                <div>
+                  <strong>External gate resistor</strong><br />
+                  Limits peak gate current to ~{gateDrive.peak_gate_current.toFixed(1)} A.<br />
+                  Too small → fast switching, high EMI and ringing.<br />
+                  Too large → slow switching, higher losses.<br />
+                  <small>TI SLUA618</small>
+                </div>
+              }
+            />
+            <GdrRow
+              label="Peak Gate Current"
+              value={`${gateDrive.peak_gate_current.toFixed(2)} A`}
+              tip={
+                <div>
+                  <strong>Peak gate current</strong><br />
+                  <code style={{ fontSize: '10px' }}>Ig = Vgs / (Rg + Rg_int)</code><br />
+                  Higher current = faster switching but harder to control ringing.
+                  Typical integrated driver limit: 1–4 A.
+                </div>
+              }
+            />
+            <GdrRow
+              label="Gate Drive Power"
+              value={fmtPower(gateDrive.gate_drive_power)}
+              tip={
+                <div>
+                  <strong>Gate drive dissipation</strong><br />
+                  <code style={{ fontSize: '10px' }}>Pgd = Qg × Vgs × fsw</code><br />
+                  Energy stored in gate capacitance is lost every cycle in the driver.
+                  Scales linearly with frequency. Microchip AN1471.
+                </div>
+              }
+            />
+            <GdrRow
+              label="Turn-on Time"
+              value={fmtTime(gateDrive.turn_on_time)}
+              tip={
+                <div>
+                  <strong>Gate turn-on time</strong><br />
+                  <code style={{ fontSize: '10px' }}>t_on ≈ Qg / Ig_peak</code><br />
+                  Time to charge the gate fully. Determines dv/dt during turn-on.
+                  Infineon AN_201702_PL52_014.
+                </div>
+              }
+            />
+            <GdrRow
+              label="Turn-off Time"
+              value={fmtTime(gateDrive.turn_off_time)}
+              tip={
+                <div>
+                  <strong>Gate turn-off time</strong><br />
+                  <code style={{ fontSize: '10px' }}>t_off ≈ Qgd / Ig_peak</code><br />
+                  Dominated by the Miller (gate-to-drain) charge Qgd.
+                  The Miller plateau controls the output dv/dt during turn-off.
+                </div>
+              }
+            />
+            <GdrRow
+              label="Dead Time (rec.)"
+              value={fmtTime(gateDrive.dead_time_recommended)}
+              tip={
+                <div>
+                  <strong>Recommended dead time</strong><br />
+                  <code style={{ fontSize: '10px' }}>t_dead = max(t_on, t_off) × 1.5</code><br />
+                  Gap inserted between high-side turn-off and low-side turn-on (and vice versa)
+                  to prevent both switches conducting simultaneously (shoot-through).
+                  Erickson & Maksimovic §4.3.
+                </div>
+              }
+            />
+
+            {showBootstrap && (
+              <>
+                <div className={styles.gdrDivider} />
+                <GdrRow
+                  label="Bootstrap Cap (Cboot)"
+                  value={fmtCap(gateDrive.bootstrap_cap)}
+                  tip={
+                    <div>
+                      <strong>Bootstrap capacitor</strong><br />
+                      Supplies charge to the high-side gate driver when the switch node
+                      flies above the supply rail. The capacitor charges through a diode
+                      during the low-side on-time and discharges into the gate during
+                      the high-side on-time.<br /><br />
+                      <code style={{ fontSize: '10px' }}>Cboot ≥ 10 × Qg / ΔVboot</code><br />
+                      <small style={{ color: 'var(--text-secondary)' }}>
+                        ΔVboot = 0.2 V max droop; 10× margin for leakage &amp; refresh.<br />
+                        TI SLVA301.
+                      </small>
+                    </div>
+                  }
+                />
+                <GdrRow
+                  label="Bootstrap Diode Vr"
+                  value={`${gateDrive.bootstrap_diode_vr.toFixed(0)} V`}
+                  tip={
+                    <div>
+                      <strong>Bootstrap diode reverse voltage</strong><br />
+                      <code style={{ fontSize: '10px' }}>Vr ≥ Vin_max + Vgs</code><br />
+                      When the high-side switch turns on, the diode must block Vin plus
+                      the gate supply voltage. Use a fast-recovery or Schottky diode rated
+                      above this value.
+                    </div>
+                  }
+                />
+              </>
+            )}
+          </div>
+        </details>
       )}
 
       {/* ── Inductor ────────────────────────────────────────────── */}
@@ -233,6 +398,51 @@ export function ComponentSuggestions() {
             <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '8px' }}>
               Load current below {result.ccm_dcm_boundary.toFixed(3)} A enters DCM
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Flyback multi-output summary ─────────────────────────── */}
+      {result.secondaryOutputResults && result.secondaryOutputResults.length > 0 && (
+        <div className={styles.section}>
+          <div className={styles.sectionTitle}>Multi-Output Summary</div>
+          <table className={styles.moTable}>
+            <thead>
+              <tr>
+                <th>Output</th>
+                <th>Vout</th>
+                <th>Ns</th>
+                <th>Diode Vr</th>
+                <th>Cout</th>
+                <th>Cross-Reg</th>
+              </tr>
+            </thead>
+            <tbody>
+              {/* Primary output (always regulated) */}
+              <tr>
+                <td className={styles.moLabel}>Out 1</td>
+                <td>{spec.vout.toFixed(1)} V</td>
+                <td>{result.secondaryTurns ?? '—'}</td>
+                <td>—</td>
+                <td>{(result.capacitance * 1e6).toFixed(1)} µF</td>
+                <td className={styles.moRegulated}>Regulated</td>
+              </tr>
+              {result.secondaryOutputResults.map((s) => (
+                <tr key={s.label}>
+                  <td className={styles.moLabel}>{s.label}</td>
+                  <td>{s.vout_nominal.toFixed(1)} V</td>
+                  <td>{s.ns}</td>
+                  <td>{s.diode_vr_max.toFixed(0)} V</td>
+                  <td>{(s.capacitance * 1e6).toFixed(1)} µF</td>
+                  <td className={s.crossRegPct > 0 ? styles.moCrossReg : styles.moRegulated}>
+                    {s.crossRegPct > 0 ? `±${s.crossRegPct.toFixed(1)} %` : 'Regulated'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className={styles.moWarning}>
+            ⚠ Cross-regulation on unregulated outputs is typically ±5–10 %. Use post-regulators (LDO) for tight regulation.
           </div>
         </div>
       )}

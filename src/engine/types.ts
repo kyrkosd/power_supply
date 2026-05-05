@@ -2,6 +2,14 @@ import type { WaveformSet, TransferFunction } from './topologies/types'
 
 export type { TransferFunction }
 
+/** One additional transformer secondary winding (flyback multi-output only). */
+export interface SecondaryOutput {
+  vout: number          // V — output voltage
+  iout: number          // A — output current
+  diode_vf: number      // V — rectifier diode forward voltage (typical 0.4 V Schottky)
+  is_regulated: boolean // true only for the feedback-controlled output
+}
+
 export interface DesignSpec {
   vinMin: number        // V — minimum input voltage
   vinMax: number        // V — maximum input voltage
@@ -12,6 +20,20 @@ export interface DesignSpec {
   ambientTemp: number   // °C — ambient temperature
   voutRippleMax: number // V   — maximum output voltage ripple (pk-pk)
   efficiency: number    // 0–1 target efficiency
+  // Flyback multi-output: up to 3 additional secondaries beyond the primary.
+  secondary_outputs?: SecondaryOutput[]
+  // Control loop mode — affects Bode plot only, not component sizing.
+  controlMode?: 'voltage' | 'current'
+}
+
+/** Computed values for one flyback secondary winding. */
+export interface SecondaryOutputResult {
+  label: string          // "Output 2", "Output 3", etc.
+  vout_nominal: number   // V — target voltage
+  ns: number             // secondary turns (integer)
+  diode_vr_max: number   // V — reverse voltage the rectifier diode must withstand
+  capacitance: number    // F — minimum output capacitance
+  crossRegPct: number    // % — cross-regulation estimate under ±50 % primary load variation
 }
 
 export interface InductorResult {
@@ -45,6 +67,7 @@ export interface DesignResult {
   magnetizingInductance?: number // H
   leakageInductance?: number // H
   clampVoltage?: number // V
+  secondaryOutputResults?: SecondaryOutputResult[]
   losses?: {
     primaryCopper: number
     secondaryCopper: number

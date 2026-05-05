@@ -1,0 +1,352 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0 0 24px;
+  overflow-y: auto;
+  height: 100%;
+}
+
+.empty {
+  padding: 24px 16px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* ── Print header ──────────────────────────────────────────────────────────── */
+
+.printHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 16px 8px;
+  border-bottom: 2px solid var(--border);
+  background: var(--bg-surface);
+  flex-shrink: 0;
+}
+
+.printTitle {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--text-primary);
+}
+
+.printSubtitle {
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+}
+
+/* ── Section layout ────────────────────────────────────────────────────────── */
+
+.section {
+  padding: 10px 16px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.sectionTitle {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.sectionSubtitle {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+/* ── Critical loops ────────────────────────────────────────────────────────── */
+
+.loopCard {
+  border-left: 3px solid var(--border);
+  background: var(--bg-elevated);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  padding: 7px 10px;
+  margin-bottom: 6px;
+}
+
+.loopCard:last-child {
+  margin-bottom: 0;
+}
+
+.priority1 { border-left-color: #ef4444; }
+.priority2 { border-left-color: #f59e0b; }
+.priority3 { border-left-color: #6b7280; }
+
+.loopHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 5px;
+}
+
+.loopName {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.priorityBadge {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+.badge1 {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+.badge2 {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+}
+
+.badge3 {
+  background: rgba(107, 114, 128, 0.15);
+  color: #9ca3af;
+}
+
+.loopComponents {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 5px;
+}
+
+.component {
+  font-size: 9px;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--accent-dim);
+  border-radius: 3px;
+  padding: 1px 5px;
+}
+
+.loopDesc {
+  font-size: 10px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  margin: 0;
+}
+
+/* ── Trace widths table ────────────────────────────────────────────────────── */
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 10px;
+}
+
+.table th {
+  text-align: left;
+  color: var(--text-muted);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 3px 6px 4px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.table td {
+  padding: 4px 6px;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  white-space: nowrap;
+}
+
+.table tr:last-child td {
+  border-bottom: none;
+}
+
+.netName {
+  color: var(--text-primary) !important;
+  font-weight: 600;
+}
+
+.recBadge {
+  font-size: 9px;
+  font-weight: 700;
+  background: var(--accent-dim);
+  color: var(--accent);
+  border-radius: 3px;
+  padding: 1px 5px;
+}
+
+/* ── Placement checklist ───────────────────────────────────────────────────── */
+
+.placementList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.placementItem {
+  display: block;
+}
+
+.placementStep {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.stepNum {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--bg-surface);
+  background: var(--text-muted);
+  border-radius: 50%;
+}
+
+.stepContent {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding-top: 1px;
+}
+
+.stepComponent {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.stepReason {
+  font-size: 10px;
+  color: var(--text-secondary);
+  line-height: 1.35;
+}
+
+/* ── Thermal vias ──────────────────────────────────────────────────────────── */
+
+.thermalCard {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  align-items: baseline;
+  gap: 8px;
+  padding: 5px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.thermalCard:last-child {
+  border-bottom: none;
+}
+
+.thermalComponent {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.thermalSpec {
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--accent);
+  background: var(--accent-dim);
+  border-radius: 3px;
+  padding: 1px 5px;
+  white-space: nowrap;
+}
+
+.thermalReason {
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+
+/* ── Keep-outs ─────────────────────────────────────────────────────────────── */
+
+.keepOutRow {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 5px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.keepOutRow:last-child {
+  border-bottom: none;
+}
+
+.keepOutArea {
+  font-size: 11px;
+  font-weight: 600;
+  color: #f59e0b;
+}
+
+.keepOutReason {
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+
+/* ── General tips ──────────────────────────────────────────────────────────── */
+
+.tipsList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tip {
+  font-size: 10px;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  padding-left: 12px;
+  position: relative;
+}
+
+.tip::before {
+  content: '–';
+  position: absolute;
+  left: 0;
+  color: var(--text-muted);
+}
+
+/* ── Print styles ──────────────────────────────────────────────────────────── */
+
+@media print {
+  .container {
+    overflow: visible;
+    height: auto;
+  }
+
+  .section {
+    break-inside: avoid;
+  }
+
+  .loopCard,
+  .thermalCard,
+  .keepOutRow {
+    break-inside: avoid;
+  }
+}

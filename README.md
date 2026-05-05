@@ -28,6 +28,11 @@ Built with **Electron + React + TypeScript**.
 - **CSV BOM export** — 9-column RFC 4180 bill of materials listing every component (Reference, Component, Value, Rating, Package, Manufacturer, Part Number, Quantity, Notes); uses selected component part numbers when available
 - **Per-topology Reset** — one-click restore to sensible default values
 - **Worker thread** — all computation runs off the main thread; UI stays at 60 fps
+- **Design comparison** — save any computed result as Design A (`Ctrl+K`), then change topology or parameters and open a side-by-side diff table (`Ctrl+Shift+K`); win/lose colour coding and a winner badge across 10 key metrics
+- **Efficiency heatmap** — 10×10 Vin × Iout operating-space map computed in the Web Worker, rendered as a D3 colour-gradient SVG (dark red → bright green) with a crosshair at the current operating point and hover tooltips; available as a dedicated visualisation tab
+- **Input validation with smart defaults** — `validateSpec()` enforces topology-specific constraints (e.g. buck Vout < Vin, boost Vout > Vin, flyback D < 50 %) with inline error/warning banners; switching topology auto-applies matching defaults or shows a confirmation dialog when parameters have been customised
+- **Multi-output flyback** — up to 3 additional secondary windings beyond the regulated primary; the engine sizes the transformer core to total output power and computes per-secondary turns count, diode reverse-voltage rating, output capacitance, and a cross-regulation estimate (±% under ±50 % primary load variation); schematic expands to show all secondary circuits
+- **Gate drive calculator** — for the selected MOSFET, computes external gate resistor, peak gate current, turn-on/off times (Qg and Qgd based), recommended dead time, and gate drive power dissipation; buck and forward topologies additionally show bootstrap capacitor (Cboot) and bootstrap diode voltage rating with detailed engineering tooltips
 
 ---
 

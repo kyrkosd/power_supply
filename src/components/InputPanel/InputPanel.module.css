@@ -263,6 +263,73 @@
   font-size: 13px;
 }
 
+/* ── Advanced section (control loop settings) ───────────────────────────────── */
+
+.advancedSection {
+  margin: 10px 14px 0;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.advancedTitle {
+  display: block;
+  padding: 8px 14px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+.advancedTitle::-webkit-details-marker { display: none; }
+
+.advancedBody {
+  padding: 6px 14px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.advancedRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.advancedLabel {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.advancedSelect {
+  flex: 1;
+  padding: 4px 6px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: 11px;
+  cursor: pointer;
+  min-width: 0;
+}
+
+.advancedSelect:focus {
+  border-color: var(--border-focus);
+  outline: none;
+}
+
+/* ── Notes section ──────────────────────────────────────────────────────────── */
+
 .notesSection {
   margin: 10px 14px 0;
   background: var(--bg-surface);
@@ -308,6 +375,158 @@
 
 .notesTextarea::placeholder {
   color: var(--text-muted);
+}
+
+/* ── Multi-output section (flyback only) ────────────────────────────────────── */
+
+.multiOutputSection {
+  margin: 10px 14px 0;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.multiOutputHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid transparent;
+}
+
+.multiOutputSection:has(.secondaryRow) .multiOutputHeader {
+  border-bottom-color: var(--border);
+}
+
+.multiOutputTitle {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text-primary);
+}
+
+.multiOutputHeaderActions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.multiOutputToggle {
+  padding: 3px 10px;
+  font-size: 11px;
+  font-family: var(--font-ui);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.multiOutputToggle:hover {
+  color: var(--text-primary);
+  border-color: var(--text-muted);
+}
+
+.multiOutputAdd {
+  padding: 3px 10px;
+  font-size: 11px;
+  font-family: var(--font-ui);
+  background: var(--accent-dim);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.multiOutputAdd:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* Secondary output row — compact grid layout */
+.secondaryRow {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: nowrap;
+  overflow-x: auto;
+}
+
+.secondaryRow:last-of-type {
+  border-bottom: none;
+}
+
+.secondaryLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+  font-family: var(--font-mono);
+  min-width: 36px;
+  flex-shrink: 0;
+}
+
+.secondaryFieldLabel {
+  font-size: 10px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.secondaryInput {
+  width: 54px;
+  padding: 4px 6px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.secondaryInput:focus {
+  border-color: var(--border-focus);
+  outline: none;
+}
+
+.secondaryUnit {
+  font-size: 10px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.secondaryRemove {
+  margin-left: auto;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 3px;
+  color: var(--text-muted);
+  font-size: 11px;
+  cursor: pointer;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.secondaryRemove:hover {
+  background: rgba(224, 82, 82, 0.15);
+  color: var(--danger);
+}
+
+.crossRegWarning {
+  padding: 7px 12px;
+  font-size: 11px;
+  color: var(--warning);
+  background: rgba(245, 158, 11, 0.06);
+  border-top: 1px solid rgba(245, 158, 11, 0.2);
+  line-height: 1.45;
 }
 
 /* ── Validation states ──────────────────────────────────────────────────────── */

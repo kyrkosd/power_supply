@@ -273,7 +273,7 @@ function ChartsTab(): React.ReactElement {
 
       <h4>Bode Plot Tab</h4>
       <p>
-        Shows the frequency response of your power supply's control loop (plant + compensator). 
+        Shows the frequency response of your power supply's control loop (plant + compensator).
         Three lines:
       </p>
       <ul>
@@ -282,15 +282,45 @@ function ChartsTab(): React.ReactElement {
           Should be high at DC (low frequency) so output voltage is stiff. Should roll off above crossover.
         </li>
         <li>
-          <strong>Phase (bottom):</strong> Time delay through the loop. At the crossover frequency 
-          (where magnitude = 0 dB), the phase should be &gt; −135° (or &gt;45° phase margin). 
+          <strong>Phase (bottom):</strong> Time delay through the loop. At the crossover frequency
+          (where magnitude = 0 dB), the phase should be &gt; −135° (or &gt;45° phase margin).
           If phase drops below −180°, the loop is unstable and will oscillate.
         </li>
         <li>
-          <strong>Crossover frequency:</strong> Where magnitude crosses 0 dB. This is your bandwidth. 
+          <strong>Crossover frequency:</strong> Where magnitude crosses 0 dB. This is your bandwidth.
           Higher = faster response but more susceptible to high-frequency noise.
         </li>
       </ul>
+
+      <h4>Voltage Mode vs Current Mode (Buck only)</h4>
+      <p>
+        Switch between the two control architectures using the <strong>Advanced → Control Mode</strong>{' '}
+        dropdown in the input panel:
+      </p>
+      <ul>
+        <li>
+          <strong>Voltage Mode (VMC):</strong> The duty cycle is controlled directly by comparing a
+          voltage-error signal to a fixed sawtooth ramp. The plant has an <em>LC double pole</em> that
+          causes a −180° phase drop at the resonant frequency — a Type-II (or Type-III) compensator
+          must add phase boost to avoid instability. This is the default.
+        </li>
+        <li>
+          <strong>Current Mode (PCM — Peak Current Mode):</strong> An inner current loop senses the
+          inductor current on every cycle and limits peak current directly. The outer voltage loop sees
+          the inner loop as a controlled current source, so the inductor pole <em>disappears</em> from
+          the plant. The result is a first-order (single-pole) plant that is much easier to stabilise:
+          a Type-II compensator is typically sufficient and achieves wider bandwidth.
+        </li>
+      </ul>
+      <p>
+        <strong>Subharmonic oscillation (D &gt; 50 %):</strong> In peak current mode, when duty cycle
+        exceeds 50 % the converter can exhibit a period-doubling instability called subharmonic
+        oscillation (at fsw/2). The cure is <em>slope compensation</em> — adding an external ramp to
+        the current-sense signal. The tool shows a warning band and reports the minimum required ramp
+        slope Se (in A/s, multiply by your Rsense in Ω to get V/s). A common rule of thumb is
+        Se ≥ Vout / (2L), which is the value shown. See Erickson &amp; Maksimovic §11.3 for the full
+        derivation.
+      </p>
 
       <h4>Loss Breakdown Tab</h4>
       <p>Pie chart showing where power is wasted:</p>

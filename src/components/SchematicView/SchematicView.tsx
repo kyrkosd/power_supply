@@ -516,123 +516,60 @@ function createFlybackSchematic(spec: DesignSpec, result: DesignResult | null): 
   const primaryTurns = result?.primaryTurns ?? 0
   const secondaryTurns = result?.secondaryTurns ?? 0
   const clampVoltage = result?.clampVoltage ?? 0
+  const secondaries = spec.secondary_outputs ?? []
 
   const switchStatus: ComponentStatus = duty >= 0.45 ? 'violation' : duty >= 0.4 ? 'warning' : 'normal'
   const transformerStatus: ComponentStatus = result?.warnings.some(w => w.includes('core')) ? 'warning' : 'normal'
 
+  // Transformer label shows all winding ratios when multi-output is active
+  const turnsLabel = secondaries.length > 0
+    ? `${primaryTurns}:${secondaryTurns}+${secondaries.length}`
+    : `${coreLabel} ${primaryTurns}:${secondaryTurns}`
+
   const nodes: SchematicNode[] = [
-    { id: 'vin', x: 90, y: 102 },
-    { id: 'switch', x: 230, y: 102 },
+    { id: 'vin',      x: 90,  y: 102 },
+    { id: 'switch',   x: 230, y: 102 },
     { id: 'transformer', x: 380, y: 102 },
-    { id: 'diode', x: 530, y: 102 },
-    { id: 'vout', x: 680, y: 102 },
-    { id: 'gndLeft', x: 90, y: 280 },
+    { id: 'diode',    x: 530, y: 102 },
+    { id: 'vout',     x: 680, y: 102 },
+    { id: 'gndLeft',  x: 90,  y: 280 },
     { id: 'gndRight', x: 680, y: 280 },
   ]
 
   const components: SchematicComponent[] = [
     {
-      id: 'Vin',
-      type: 'source',
-      x: 50,
-      y: 50,
-      width: 76,
-      height: 104,
-      label: 'Vin',
-      value: `${spec.vinMin.toFixed(0)}–${spec.vinMax.toFixed(0)} V`,
+      id: 'Vin', type: 'source', x: 50, y: 50, width: 76, height: 104,
+      label: 'Vin', value: `${spec.vinMin.toFixed(0)}–${spec.vinMax.toFixed(0)} V`, status: 'normal',
+    },
+    {
+      id: 'Cin', type: 'capacitor', x: 150, y: 18, width: 40, height: 64,
+      label: 'Cin', value: `${formatU(Math.max(0.01, spec.iout / (spec.fsw * spec.vinMin * 0.1)) * 1e6, 1, 'µF')}`,
       status: 'normal',
     },
     {
-      id: 'Cin',
-      type: 'capacitor',
-      x: 150,
-      y: 18,
-      width: 40,
-      height: 64,
-      label: 'Cin',
-      value: `${formatU(Math.max(0.01, spec.iout / (spec.fsw * spec.vinMin * 0.1)) * 1e6, 1, 'µF')}`,
-      status: 'normal',
+      id: 'Q1', type: 'switch', x: 190, y: 58, width: 92, height: 112,
+      label: 'Q1', value: `D=${duty.toFixed(2)}`, status: switchStatus, meta: 'Primary MOSFET',
     },
     {
-      id: 'Q1',
-      type: 'switch',
-      x: 190,
-      y: 58,
-      width: 92,
-      height: 112,
-      label: 'Q1',
-      value: `D=${duty.toFixed(2)}`,
-      status: switchStatus,
-      meta: 'Primary MOSFET',
-    },
-    {
-      id: 'T1',
-      type: 'inductor',
-      x: 340,
-      y: 50,
-      width: 80,
-      height: 140,
-      label: 'T1',
-      value: `${coreLabel} ${primaryTurns}:${secondaryTurns}`,
-      status: transformerStatus,
+      id: 'T1', type: 'inductor', x: 340, y: 50, width: 80, height: 140,
+      label: 'T1', value: turnsLabel, status: transformerStatus,
       meta: `Lm=${inductanceLabel}, N=${turnsRatio.toFixed(1)}`,
     },
     {
-      id: 'RCD',
-      type: 'resistor',
-      x: 300,
-      y: 10,
-      width: 60,
-      height: 40,
-      label: 'RCD',
-      value: `Vclamp=${clampVoltage.toFixed(0)}V`,
-      status: 'normal',
-      meta: 'Clamp circuit',
+      id: 'RCD', type: 'resistor', x: 300, y: 10, width: 60, height: 40,
+      label: 'RCD', value: `Vclamp=${clampVoltage.toFixed(0)}V`, status: 'normal', meta: 'Clamp circuit',
+    },
+    // Primary regulated output: diode + cap
+    {
+      id: 'D1', type: 'diode', x: 490, y: 58, width: 92, height: 112,
+      label: 'D1', value: 'Regulated out', status: 'normal',
     },
     {
-      id: 'D1',
-      type: 'diode',
-      x: 490,
-      y: 58,
-      width: 92,
-      height: 112,
-      label: 'D1',
-      value: 'Secondary diode',
-      status: 'normal',
+      id: 'Cout', type: 'capacitor', x: 640, y: 40, width: 78, height: 106,
+      label: 'Cout', value: capacitanceLabel, status: 'normal',
     },
-    {
-      id: 'Cout',
-      type: 'capacitor',
-      x: 640,
-      y: 40,
-      width: 78,
-      height: 106,
-      label: 'Cout',
-      value: capacitanceLabel,
-      status: 'normal',
-    },
-    {
-      id: 'GroundLeft',
-      type: 'ground',
-      x: 80,
-      y: 260,
-      width: 0,
-      height: 0,
-      label: '',
-      value: '',
-      status: 'normal',
-    },
-    {
-      id: 'GroundRight',
-      type: 'ground',
-      x: 668,
-      y: 260,
-      width: 0,
-      height: 0,
-      label: '',
-      value: '',
-      status: 'normal',
-    },
+    { id: 'GroundLeft',  type: 'ground', x: 80,  y: 260, width: 0, height: 0, label: '', value: '', status: 'normal' },
+    { id: 'GroundRight', type: 'ground', x: 668, y: 260, width: 0, height: 0, label: '', value: '', status: 'normal' },
   ]
 
   const wires: SchematicWire[] = [
@@ -644,8 +581,43 @@ function createFlybackSchematic(spec: DesignSpec, result: DesignResult | null): 
     { id: 'wire6', points: [nodes[4], { x: 680, y: 190 }, nodes[6]] },
     { id: 'wire7', points: [{ x: 130, y: 18 }, { x: 130, y: 132 }, { x: 90, y: 132 }] },
     { id: 'wire8', points: [{ x: 230, y: 58 }, { x: 230, y: 18 }, { x: 130, y: 18 }] },
-    { id: 'wire9', points: [{ x: 380, y: 50 }, { x: 320, y: 50 }, { x: 320, y: 10 }] }, // to RCD
+    { id: 'wire9', points: [{ x: 380, y: 50 }, { x: 320, y: 50 }, { x: 320, y: 10 }] },
   ]
+
+  // Additional secondary winding circuits — stacked below the primary at +90px each
+  secondaries.forEach((s, i) => {
+    const yOff = 320 + i * 90
+    const secResult = result?.secondaryOutputResults?.[i]
+    const capLabel  = secResult ? `${formatU(secResult.capacitance * 1e6, 1, 'µF')}` : '—'
+
+    // Tap wire from transformer secondary side down to this output's y-level
+    wires.push({
+      id: `wireSec${i}tap`,
+      points: [{ x: 420, y: 102 + i * 90 + 80 }, { x: 490, y: 102 + i * 90 + 80 }],
+    })
+
+    components.push(
+      {
+        id: `D${i + 2}`, type: 'diode', x: 490, y: yOff - 32, width: 92, height: 72,
+        label: `D${i + 2}`, value: `Out ${i + 2}: ${s.vout.toFixed(1)} V`, status: 'normal',
+      },
+      {
+        id: `Cout${i + 2}`, type: 'capacitor', x: 640, y: yOff - 50, width: 60, height: 80,
+        label: `Cout${i + 2}`, value: capLabel, status: 'normal',
+      },
+      {
+        id: `GND${i + 2}`, type: 'ground', x: 668, y: yOff + 44, width: 0, height: 0,
+        label: '', value: '', status: 'normal',
+      },
+    )
+
+    nodes.push({ id: `sec${i}out`, x: 668, y: yOff })
+
+    wires.push(
+      { id: `wireSec${i}a`, points: [{ x: 582, y: yOff }, { x: 640, y: yOff }] },
+      { id: `wireSec${i}b`, points: [{ x: 668, y: yOff }, { x: 668, y: yOff + 44 }] },
+    )
+  })
 
   return { nodes, components, wires }
 }
@@ -1072,9 +1044,9 @@ function renderWire(wire: SchematicWire) {
   )
 }
 
-function SchematicRenderer({ definition }: { definition: SchematicDefinition }) {
+function SchematicRenderer({ definition, viewBox = '0 0 860 320' }: { definition: SchematicDefinition; viewBox?: string }) {
   return (
-    <svg viewBox="0 0 860 320" className={styles.diagram} preserveAspectRatio="xMidYMid meet" data-export-id="schematic">
+    <svg viewBox={viewBox} className={styles.diagram} preserveAspectRatio="xMidYMid meet" data-export-id="schematic">
       <defs>
         <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
           <path d="M 0 0 L 10 5 L 0 10 z" fill="#60a5fa" />
@@ -1107,26 +1079,18 @@ export function SchematicView(): React.ReactElement {
   const spec = useDesignStore((state) => state.spec)
   const result = useDesignStore((state) => state.result)
 
-  const schematic = useMemo(() => {
-    if (topology === 'buck') {
-      return createBuckSchematic(spec, result)
-    }
-    if (topology === 'boost') {
-      return createBoostSchematic(spec, result)
-    }
-    if (topology === 'buck-boost') {
-      return createBuckBoostSchematic(spec, result)
-    }
+  const { schematic, viewBox } = useMemo(() => {
+    if (topology === 'buck')       return { schematic: createBuckSchematic(spec, result),      viewBox: '0 0 860 320' }
+    if (topology === 'boost')      return { schematic: createBoostSchematic(spec, result),     viewBox: '0 0 860 320' }
+    if (topology === 'buck-boost') return { schematic: createBuckBoostSchematic(spec, result), viewBox: '0 0 860 320' }
+    if (topology === 'forward')    return { schematic: createForwardSchematic(spec, result),   viewBox: '0 0 860 320' }
+    if (topology === 'sepic')      return { schematic: createSepicSchematic(spec, result),     viewBox: '0 0 860 320' }
     if (topology === 'flyback') {
-      return createFlybackSchematic(spec, result)
+      const numSec = spec.secondary_outputs?.length ?? 0
+      const height = 320 + numSec * 90
+      return { schematic: createFlybackSchematic(spec, result), viewBox: `0 0 860 ${height}` }
     }
-    if (topology === 'forward') {
-      return createForwardSchematic(spec, result)
-    }
-    if (topology === 'sepic') {
-      return createSepicSchematic(spec, result)
-    }
-    return createBuckSchematic(spec, result)
+    return { schematic: createBuckSchematic(spec, result), viewBox: '0 0 860 320' }
   }, [topology, spec, result])
 
   return (
@@ -1136,7 +1100,7 @@ export function SchematicView(): React.ReactElement {
         <span className={styles.badge}>{topology}</span>
       </div>
       <div className={styles.diagramWrapper}>
-        <SchematicRenderer definition={schematic} />
+        <SchematicRenderer definition={schematic} viewBox={viewBox} />
       </div>
       <div className={styles.description}>
         {TOPOLOGY_DESCRIPTIONS[topology] ?? 'Circuit schematic for the selected topology.'}

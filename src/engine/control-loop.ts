@@ -1,10 +1,24 @@
 import { complex, abs, arg, add, multiply, divide } from 'mathjs'
 import type { DesignSpec, DesignResult } from './types'
 
+export type ControlMode = 'voltage' | 'current'
+
 export interface BodePoint {
   freq_hz: number
   magnitude_db: number
   phase_deg: number
+}
+
+/**
+ * Slope compensation data for peak current-mode control.
+ * Erickson & Maksimovic "Fundamentals of Power Electronics" 3rd ed., §11.3
+ */
+export interface SlopeCompensation {
+  /** Minimum external ramp slope to prevent subharmonic oscillation, in A/s.
+   *  (Normalised — multiply by your Rsense in Ω to get V/s.) */
+  se_required_aps: number
+  /** True when D > 0.5 and no slope compensation is applied. */
+  subharmonic_risk: boolean
 }
 
 export interface ControlLoopAnalysis {
@@ -17,6 +31,8 @@ export interface ControlLoopAnalysis {
   phaseMarginDeg: number
   gainMarginDb: number
   warnings: string[]
+  controlMode: ControlMode
+  slopeCompensation: SlopeCompensation
 }
 
 const RAD_TO_DEG = 180 / Math.PI
@@ -56,7 +72,6 @@ function normalizePhase(phase: number) {
   return (((phase + 180) % 360 + 360) % 360) - 180
 }
 
-
 function findCrossoverPoint(loop: BodePoint[], preferredFreq?: number) {
   const crossings: Array<{ freq: number; phase: number }> = []
   for (let i = 1; i < loop.length; i += 1) {
@@ -94,34 +109,88 @@ function findGainMargin(loop: BodePoint[]) {
   return null
 }
 
+// ── Plant models ──────────────────────────────────────────────────────────────
+
+/**
+ * Voltage-mode buck plant (control-to-output, duty-cycle modulator = Vin).
+ * Double LC pole + ESR zero.
+ * Erickson & Maksimovic §8.1 — buck converter averaged model
+ */
+function voltageModePolynomials(spec: DesignSpec, L: number, C: number, Esr: number, Rload: number) {
+  // Gvd_vm(s) = Vin × (1 + s·ESR·C) / (s²·L·C + s·(ESR·C + L/Rload) + 1)
+  const numerator   = [spec.vinMax * Esr * C, spec.vinMax] as const
+  const denominator = [L * C, Esr * C + L / Rload, 1] as const
+  const w0 = 1 / Math.sqrt(L * C)
+  const z0 = w0                        // compensator zero: cancel LC resonance
+  const p0 = 1 / (Esr * C)            // compensator pole: at ESR zero
+  return { numerator, denominator, z0, p0 }
+}
+
+/**
+ * Peak current-mode buck plant (single-pole, inductor dynamics absorbed by inner loop).
+ * Ridley, "A New Continuous-Time Model for Current-Mode Control" (1991)
+ * Simplified single-pole approximation below fsw/2:
+ *   Gvd_cm(s) = Rload × (1 + s/ωz_esr) / (1 + s/ωp)
+ */
+function currentModePolynomials(C: number, Esr: number, Rload: number, fsw: number) {
+  // Single output pole ωp = 1/(Rload·C); ESR zero ωz = 1/(ESR·C)
+  const numerator   = [Rload * Esr * C, Rload] as const
+  const denominator = [Rload * C, 1] as const
+  const z0 = 1 / (Rload * C)                                   // zero: cancel output pole
+  const p0 = Math.min(1 / (Esr * C), 2 * Math.PI * fsw / 5)   // pole: at ESR zero or fsw/5
+  return { numerator, denominator, z0, p0 }
+}
+
+// ── Slope compensation ────────────────────────────────────────────────────────
+
+/**
+ * Minimum slope compensation for D > 0.5 in peak current mode.
+ * Erickson & Maksimovic §11.3, eq. 11.21:
+ *   Se_min = Vout / (2 × L)   [A/s, normalised — multiply by Rsense for V/s]
+ */
+function computeSlopeCompensation(spec: DesignSpec, result: DesignResult): SlopeCompensation {
+  const subharmonic_risk = result.dutyCycle > 0.5
+  const se_required_aps = spec.vout / (2 * result.inductance)
+  return { se_required_aps, subharmonic_risk }
+}
+
+// ── Main analysis function ────────────────────────────────────────────────────
+
 export function analyzeBuckControlLoop(
   spec: DesignSpec,
   result: DesignResult,
-  options?: { esr?: number; targetCrossoverHz?: number; targetPhaseMarginDeg?: number },
+  options?: {
+    esr?: number
+    targetCrossoverHz?: number
+    targetPhaseMarginDeg?: number
+    controlMode?: ControlMode
+  },
 ): ControlLoopAnalysis {
-  const L = result.inductance
-  const C = result.capacitance
-  const Esr = options?.esr ?? 0.05
+  const L    = result.inductance
+  const C    = result.capacitance
+  const Esr  = options?.esr ?? 0.05
   const Rload = spec.vout / spec.iout
-  const w0 = 1 / Math.sqrt(L * C)
-  const z0 = w0
-  const p0 = 1 / (Esr * C)
-  const targetCrossoverHz = options?.targetCrossoverHz ?? spec.fsw / 10
-
-  const plantNumerator = [spec.vinMax * Esr * C, spec.vinMax]
-  const plantDenominator = [L * C, Esr * C + L / Rload, 1]
-
-  const normCompNumerator = [1, z0]
-  const normCompDenominator = [1 / p0, 1, 0]
+  const controlMode: ControlMode = options?.controlMode ?? spec.controlMode ?? 'voltage'
+  const targetCrossoverHz  = options?.targetCrossoverHz  ?? spec.fsw / 10
   const desiredPhaseMargin = options?.targetPhaseMarginDeg ?? 60
 
+  // Select plant model and compensator zero/pole based on control mode
+  const { numerator: plantNum, denominator: plantDen, z0, p0 } =
+    controlMode === 'current'
+      ? currentModePolynomials(C, Esr, Rload, spec.fsw)
+      : voltageModePolynomials(spec, L, C, Esr, Rload)
+
+  const normCompNumerator   = [1, z0] as const
+  const normCompDenominator = [1 / p0, 1, 0] as const
+
+  // Sweep frequencies to find design point closest to desired phase margin
   const candidateFreqs = logspace(10, Math.min(spec.fsw * 10, targetCrossoverHz * 2), 800)
   const designCandidate = candidateFreqs.reduce(
     (best, freq) => {
-      const plantPhase = evaluateTransferFunction(plantNumerator, plantDenominator, freq).phase_deg
-      const compPhase = evaluateTransferFunction(normCompNumerator, normCompDenominator, freq).phase_deg
+      const plantPhase = evaluateTransferFunction(plantNum, plantDen, freq).phase_deg
+      const compPhase  = evaluateTransferFunction(normCompNumerator, normCompDenominator, freq).phase_deg
       const phaseMargin = 180 + normalizePhase(plantPhase + compPhase)
-      const error = Math.abs(phaseMargin - desiredPhaseMargin)
+      const error       = Math.abs(phaseMargin - desiredPhaseMargin)
       const targetError = Math.abs(best.phaseMargin - desiredPhaseMargin)
       if (error < targetError) return { freq, phaseMargin }
       if (error === targetError && Math.abs(freq - targetCrossoverHz) < Math.abs(best.freq - targetCrossoverHz)) {
@@ -133,38 +202,57 @@ export function analyzeBuckControlLoop(
       freq: targetCrossoverHz,
       phaseMargin:
         180 + normalizePhase(
-          evaluateTransferFunction(plantNumerator, plantDenominator, targetCrossoverHz).phase_deg +
-            evaluateTransferFunction(normCompNumerator, normCompDenominator, targetCrossoverHz).phase_deg,
+          evaluateTransferFunction(plantNum, plantDen, targetCrossoverHz).phase_deg +
+          evaluateTransferFunction(normCompNumerator, normCompDenominator, targetCrossoverHz).phase_deg,
         ),
     },
   )
 
-  const designFreq = designCandidate.freq
-  const plantAtDesign = evaluateTransferFunction(plantNumerator, plantDenominator, designFreq)
+  // Scale compensator gain so loop gain = 0 dB at design frequency
+  const designFreq       = designCandidate.freq
+  const plantAtDesign    = evaluateTransferFunction(plantNum, plantDen, designFreq)
   const compNormAtDesign = evaluateTransferFunction(normCompNumerator, normCompDenominator, designFreq)
-  const linearGain = 1 / (Math.pow(10, plantAtDesign.magnitude_db / 20) * Math.pow(10, compNormAtDesign.magnitude_db / 20))
-  const compensatorNumerator = [linearGain, linearGain * z0]
-  const compensatorDenominator = [1 / p0, 1, 0]
+  const linearGain       = 1 / (10 ** (plantAtDesign.magnitude_db / 20) * 10 ** (compNormAtDesign.magnitude_db / 20))
+  const compensatorNumerator   = [linearGain, linearGain * z0] as const
+  const compensatorDenominator = [1 / p0, 1, 0] as const
+
   const freqs = logspace(10, spec.fsw * 10, 500)
-  const plant = freqs.map((freq) => ({ freq_hz: freq, ...evaluateTransferFunction(plantNumerator, plantDenominator, freq) }))
-  const compensator = freqs.map((freq) => ({ freq_hz: freq, ...evaluateTransferFunction(compensatorNumerator, compensatorDenominator, freq) }))
+  const plant = freqs.map((freq) => ({
+    freq_hz: freq,
+    ...evaluateTransferFunction(plantNum, plantDen, freq),
+  }))
+  const compensator = freqs.map((freq) => ({
+    freq_hz: freq,
+    ...evaluateTransferFunction(compensatorNumerator, compensatorDenominator, freq),
+  }))
   const loop = freqs.map((freq) => {
-    const plantValue = evaluateTransferFunction(plantNumerator, plantDenominator, freq)
-    const compValue = evaluateTransferFunction(compensatorNumerator, compensatorDenominator, freq)
+    const pv = evaluateTransferFunction(plantNum, plantDen, freq)
+    const cv = evaluateTransferFunction(compensatorNumerator, compensatorDenominator, freq)
     return {
       freq_hz: freq,
-      magnitude_db: plantValue.magnitude_db + compValue.magnitude_db,
-      phase_deg: normalizePhase(plantValue.phase_deg + compValue.phase_deg),
+      magnitude_db: pv.magnitude_db + cv.magnitude_db,
+      phase_deg: normalizePhase(pv.phase_deg + cv.phase_deg),
     }
   })
 
   const crossover = findCrossoverPoint(loop, designFreq)
   const gainPoint = findGainMargin(loop)
   const crossoverFrequencyHz = crossover?.freq ?? NaN
-  const phaseMarginDeg = crossover ? 180 + crossover.phase : NaN
-  const gainMarginDb = gainPoint ? -gainPoint.magnitude_db : NaN
+  const phaseMarginDeg       = crossover ? 180 + crossover.phase : NaN
+  const gainMarginDb         = gainPoint ? -gainPoint.magnitude_db : NaN
+
+  const slopeCompensation = computeSlopeCompensation(spec, result)
 
   const warnings: string[] = []
+
+  if (controlMode === 'current' && slopeCompensation.subharmonic_risk) {
+    // Erickson & Maksimovic §11.3 — subharmonic oscillation condition
+    warnings.push(
+      `D = ${(result.dutyCycle * 100).toFixed(0)} % > 50 % — current-mode control requires slope compensation. ` +
+      `Without it the converter will exhibit subharmonic oscillation at fsw/2. ` +
+      `Add an external ramp Se ≥ ${(slopeCompensation.se_required_aps / 1e6).toFixed(1)} MA/s × Rsense.`,
+    )
+  }
   if (!Number.isNaN(phaseMarginDeg) && phaseMarginDeg < 45) {
     warnings.push('Phase margin is below 45° — unstable or marginal control loop')
   }
@@ -185,5 +273,7 @@ export function analyzeBuckControlLoop(
     phaseMarginDeg,
     gainMarginDb,
     warnings,
+    controlMode,
+    slopeCompensation,
   }
 }
