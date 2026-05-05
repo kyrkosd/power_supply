@@ -50,7 +50,7 @@ export function calculateConductedEMI(
   fsw: number,
   dutyCycle: number,
   trise: number,
-  tfall: number,
+  _tfall: number,
   Ipeak: number
 ): EMIAnalysisResult {
   const dataPoints: EMIDataPoint[] = [];
@@ -83,7 +83,7 @@ export function calculateConductedEMI(
       }
     }
 
-    dataPoints.push({ frequencyHz, amplitude_dbuv, limit_dbuv });
+    dataPoints.push({ frequencyHz: freqHz, amplitude_dbuv, limit_dbuv });
   }
 
   let filterSuggestion: EMIFilterSuggestion | null = null;

@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react'
-import { useDesignStore, type DesignSpec } from '../../store/design-store'
+import { useDesignStore } from '../../store/design-store'
+import type { DesignSpec } from '../../engine/types'
 import { validateSpec } from '../../engine/validation'
 import type { ValidationError } from '../../engine/validation'
 import type { SecondaryOutput } from '../../engine/types'
@@ -260,12 +261,12 @@ export function InputPanel(): React.ReactElement {
                   const displayValue = toDisplay(field, rawValue)
                   const minDisplay  = toDisplay(field, field.min)
                   const maxDisplay  = toDisplay(field, field.max)
-                  const fieldErrors = errorsByField.get(field.key) ?? []
+                  const fieldErrors = errorsByField.get(field.key as string) ?? []
                   const hasError    = fieldErrors.some((e) => e.severity === 'error')
                   const hasWarning  = !hasError && fieldErrors.some((e) => e.severity === 'warning')
 
                   return (
-                    <div key={field.key} className={styles.fieldRow}>
+                    <div key={field.key as string} className={styles.fieldRow}>
                       <div className={styles.rowLabel}>
                         <span>{field.label}</span>
                         {field.tooltip && (
@@ -396,6 +397,38 @@ export function InputPanel(): React.ReactElement {
               </>
             )}
           </div>
+        )}
+
+        {/* ── Advanced (flyback/forward — RCD clamp settings) ── */}
+        {(topology === 'flyback' || topology === 'forward') && (
+          <details className={styles.advancedSection}>
+            <summary className={styles.advancedTitle}>Advanced</summary>
+            <div className={styles.advancedBody}>
+              <div className={styles.advancedRow}>
+                <label className={styles.advancedLabel}>
+                  Leakage ratio
+                  <Tooltip
+                    content="Transformer leakage inductance as a fraction of magnetising inductance. Typical: 1–3 % for well-coupled transformers. Higher ratio → larger RCD clamp dissipation and MOSFET voltage spike."
+                    side="right"
+                  >
+                    <span className={styles.infoIcon}>ⓘ</span>
+                  </Tooltip>
+                </label>
+                <div className={styles.advancedInputGroup}>
+                  <input
+                    type="number"
+                    className={styles.advancedNumberInput}
+                    value={((spec.leakageRatio ?? 0.02) * 100).toFixed(1)}
+                    min={0.5}
+                    max={10}
+                    step={0.5}
+                    onChange={(e) => updateSpec({ leakageRatio: Number(e.target.value) / 100 })}
+                  />
+                  <span className={styles.advancedUnit}>%</span>
+                </div>
+              </div>
+            </div>
+          </details>
         )}
 
         {/* ── Advanced (buck only — control loop settings) ── */}

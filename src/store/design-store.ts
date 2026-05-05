@@ -134,6 +134,7 @@ const EMPTY_SELECTION: SelectedComponents = { inductor: null, capacitor: null, m
 export const useDesignStore = create<DesignStoreState>(
   // undoMiddleware wraps set() to intercept spec/topology changes and maintain
   // debounced undo history.  It also replaces the undo/redo stubs below.
+  // @ts-expect-error Zustand 5 StateCreator overload incompatibility with undoMiddleware's SetFn type
   undoMiddleware((set, get) => ({
     topology: 'buck',
     spec: defaultSpec,

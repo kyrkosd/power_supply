@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { useDesignStore } from '../../store/design-store'
 import styles from './ThermalView.module.css'
 

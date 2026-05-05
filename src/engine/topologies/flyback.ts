@@ -1,9 +1,10 @@
-import { complex, abs, arg, add, multiply, divide } from 'mathjs'
+import { complex, abs, arg, add, multiply, divide, type Complex } from 'mathjs'
 import {
   DesignSpec, DesignResult, Topology, TransferFunction,
   SecondaryOutput, SecondaryOutputResult,
 } from '../types'
 import { checkSaturation } from '../inductor-saturation'
+import { designSnubber, DEFAULT_LEAKAGE_RATIO } from '../snubber'
 import coresData from '../../data/cores.json'
 
 // ── Core database ─────────────────────────────────────────────────────────────
@@ -119,8 +120,8 @@ function createFlybackTransferFunction(spec: DesignSpec, result: DesignResult): 
       const den = add(add(multiply(s, s), multiply(omegaP / (2 * Math.PI), s)), complex(0, 0))
       const h = divide(num, den)
       return {
-        magnitude_db: 20 * Math.log10(abs(h)),
-        phase_deg: arg(h) * (180 / Math.PI),
+        magnitude_db: 20 * Math.log10(abs(h as Complex)),
+        phase_deg: arg(h as Complex) * (180 / Math.PI),
       }
     },
   }
@@ -184,8 +185,19 @@ export const flybackTopology: Topology = {
     const deltaVout = Math.max(voutRippleMax, 0.01 * vout)
     const capacitance = (iout * dMax) / (fsw * deltaVout)
 
-    // 9. Clamp voltage estimate (leakage spike ≈ 10 % of Vin_max)
-    const clampVoltage = vout * turnsRatio + 0.1 * vinMax
+    // 9. RCD clamp design
+    // Build a minimal result stub so designSnubber can access magnetizingInductance and peakCurrent.
+    const snubber = designSnubber('flyback', spec, {
+      dutyCycle: dMax,
+      inductance: magnetizingInductance,
+      capacitance: 0,
+      peakCurrent: primaryPeakCurrent,
+      magnetizingInductance,
+      turnsRatio,
+      warnings: [],
+    }, spec.leakageRatio ?? DEFAULT_LEAKAGE_RATIO)
+
+    const clampVoltage = snubber.V_clamp  // V — designed RCD clamp voltage
 
     // 10. Simplified loss model
     const primaryCopperLoss  = primaryCurrentAvg ** 2 * 0.1
@@ -193,7 +205,7 @@ export const flybackTopology: Topology = {
     const coreLoss   = 0.5
     const mosfetLoss = 2
     const diodeLoss  = 1
-    const clampLoss  = 0.5
+    const clampLoss  = snubber.P_dissipated   // actual RCD resistor dissipation
     const totalLoss  = primaryCopperLoss + secondaryCopperLoss + coreLoss + mosfetLoss + diodeLoss + clampLoss
 
     // 11. CCM/DCM boundary — Iout_crit = ΔIm × N × (1−D) / 2
@@ -212,8 +224,12 @@ export const flybackTopology: Topology = {
 
     if (dMax > 0.45)
       warnings.push('Duty cycle exceeds 45 % — consider DCM or a different topology.')
-    if (clampVoltage > 1.5 * vinMax)
-      warnings.push('High clamp voltage — check MOSFET Vds rating.')
+    if (snubber.P_dissipated > 0.05 * pPrimary)
+      warnings.push(
+        `RCD clamp dissipates ${snubber.P_dissipated.toFixed(1)} W ` +
+        `(${((snubber.P_dissipated / pPrimary) * 100).toFixed(0)} % of Pout). ` +
+        `Reduce leakage ratio or switching frequency to lower clamp losses.`,
+      )
 
     // 12. Secondary output results (multi-output mode)
     const secondaryOutputResults = secondaries.length > 0
@@ -239,6 +255,7 @@ export const flybackTopology: Topology = {
       ccm_dcm_boundary,
       operating_mode,
       saturation_check,
+      snubber,
       efficiency: pPrimary / (pPrimary + totalLoss),
       warnings,
       turnsRatio,

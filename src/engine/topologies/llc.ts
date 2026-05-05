@@ -11,7 +11,8 @@ export const llcTopology: Topology = {
       dutyCycle: NaN,
       inductance: NaN,
       capacitance: NaN,
-      peakCurrent: NaN
+      peakCurrent: NaN,
+      warnings: [],
     }
   }
 }

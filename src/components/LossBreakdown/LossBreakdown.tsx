@@ -63,10 +63,10 @@ function formatPercent(value: number): string {
   return `${value.toFixed(0)}%`
 }
 
-function createEfficiencyCurve(spec: DesignSpec, result: DesignResult) {
+function createEfficiencyCurve(spec: DesignSpec, result: DesignResult, topology: string) {
   // The efficiency curve calculation is currently only implemented for the
   // buck topology. Return an empty array for others to prevent a crash.
-  if (spec.topology !== 'buck') {
+  if (topology !== 'buck') {
     return []
   }
   // This calculation is only valid for a buck converter.
@@ -114,6 +114,7 @@ function createEfficiencyCurve(spec: DesignSpec, result: DesignResult) {
 export function LossBreakdown(): React.ReactElement {
   const spec = useDesignStore((state) => state.spec)
   const result = useDesignStore((state) => state.result)
+  const topology = useDesignStore((state) => state.topology)
   const setActiveVizTab = useDesignStore((state) => state.setActiveVizTab)
   const svgRef = useRef<SVGSVGElement>(null)
 
@@ -122,18 +123,18 @@ export function LossBreakdown(): React.ReactElement {
     return LOSS_SEGMENTS.every((segment) => typeof (result.losses as Record<string, unknown>)[segment.key] === 'number')
   }, [result])
 
-  const lossData = useMemo(() => {
+  const lossData = useMemo((): Array<LossBreakdownValues & { name: string }> => {
     if (!result || !hasLossBreakdown) return []
     return [{
       name: 'losses',
-      ...(result.losses as Record<string, number>),
+      ...(result.losses as unknown as LossBreakdownValues),
     }]
   }, [result, hasLossBreakdown])
 
   const efficiencyCurve = useMemo(() => {
     if (!result) return []
-    return createEfficiencyCurve(spec, result)
-  }, [spec, result])
+    return createEfficiencyCurve(spec, result, topology)
+  }, [spec, result, topology])
 
   const operatingPoint = useMemo(() => {
     if (!result || efficiencyCurve.length === 0) return null
@@ -274,7 +275,7 @@ export function LossBreakdown(): React.ReactElement {
                   >
                     <LabelList
                       dataKey={segment.key}
-                      position="insideCenter"
+                      position="center"
                       content={(props) => {
                         const { value, width, x, y, height } = props as { value: number; width: number; x: number; y: number; height: number }
                         if (!Number.isFinite(value) || value <= 0 || width < 54) return null

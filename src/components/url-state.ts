@@ -6,15 +6,15 @@ import type { DesignSpec } from '../engine/types';
  * Prevents crashes if a user loads a severely outdated or malformed link.
  */
 export function isValidDesignSpec(data: unknown): data is DesignSpec {
+  if (!data || typeof data !== 'object') return false
+  const d = data as Record<string, unknown>
   return (
-    data &&
-    typeof data === 'object' &&
-    typeof data.vinMin === 'number' &&
-    typeof data.vinMax === 'number' &&
-    typeof data.vout === 'number' &&
-    typeof data.iout === 'number' &&
-    typeof data.fsw === 'number'
-  );
+    typeof d.vinMin === 'number' &&
+    typeof d.vinMax === 'number' &&
+    typeof d.vout === 'number' &&
+    typeof d.iout === 'number' &&
+    typeof d.fsw === 'number'
+  )
 }
 
 export function serializeDesign(state: DesignSpec): string {

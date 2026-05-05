@@ -189,7 +189,7 @@ export function LayoutGuide(): React.ReactElement {
         <span className={styles.printTitle}>PCB Layout Guide</span>
         <span className={styles.printSubtitle}>
           {topology.toUpperCase()} · {(spec.fsw / 1e3).toFixed(0)} kHz ·{' '}
-          {spec.vinNom} V → {spec.vout} V @ {spec.iout} A
+          {spec.vinMin.toFixed(0)}–{spec.vinMax.toFixed(0)} V → {spec.vout} V @ {spec.iout} A
         </span>
       </div>
 

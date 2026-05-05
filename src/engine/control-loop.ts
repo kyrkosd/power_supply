@@ -1,4 +1,4 @@
-import { complex, abs, arg, add, multiply, divide } from 'mathjs'
+import { complex, abs, arg, add, multiply, divide, type Complex } from 'mathjs'
 import type { DesignSpec, DesignResult } from './types'
 
 export type ControlMode = 'voltage' | 'current'
@@ -51,8 +51,8 @@ function evaluateTransferFunction(
   const den = evaluatePolynomial(denominator, s)
   const h = divide(num, den)
   return {
-    magnitude_db: 20 * Math.log10(abs(h)),
-    phase_deg: arg(h) * RAD_TO_DEG,
+    magnitude_db: 20 * Math.log10(abs(h as Complex)),
+    phase_deg: arg(h as Complex) * RAD_TO_DEG,
   }
 }
 

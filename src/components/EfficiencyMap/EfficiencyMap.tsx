@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react'
-import { select } from 'd3-selection'
+import { select, type Selection } from 'd3-selection'
 import { scaleLinear } from 'd3-scale'
 import { axisBottom, axisLeft, axisRight } from 'd3-axis'
 import { interpolateRgb } from 'd3-interpolate'
@@ -159,13 +159,13 @@ function drawHeatmap(
   const cy = yScale(clampedIout)
   const arm = Math.min(cellW, cellH) * 0.75
 
-  const crossStyle = (sel: ReturnType<typeof root.append>) =>
+  const crossStyle = (sel: Selection<SVGLineElement, unknown, null, undefined>) =>
     sel.attr('stroke', 'white').attr('stroke-width', 1.5).attr('opacity', 0.9)
 
-  crossStyle(root.append('line')
+  crossStyle(root.append<SVGLineElement>('line')
     .attr('x1', cx - arm).attr('x2', cx + arm)
     .attr('y1', cy).attr('y2', cy))
-  crossStyle(root.append('line')
+  crossStyle(root.append<SVGLineElement>('line')
     .attr('x1', cx).attr('x2', cx)
     .attr('y1', cy - arm).attr('y2', cy + arm))
 

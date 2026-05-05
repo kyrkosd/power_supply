@@ -12,8 +12,8 @@ function normalizeDuty(duty: number): number {
 // RHP zero at ωz = (1−D)²·R/L.  DC gain uses the same approximation as boost.ts.
 function createTransferFunction(spec: DesignSpec, result: DesignResult): TransferFunction {
   const D = result.dutyCycle
-  const L = result.inductor.value
-  const C = result.output_cap.value
+  const L = result.inductor!.value
+  const C = result.output_cap!.value
   const voutMag = Math.abs(spec.vout)
   const Rload = voutMag / spec.iout
 

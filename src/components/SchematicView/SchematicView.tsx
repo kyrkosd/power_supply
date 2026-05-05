@@ -498,6 +498,13 @@ function createBuckBoostSchematic(spec: DesignSpec, result: DesignResult | null)
   return { nodes, components, wires }
 }
 
+function formatCapacitance(value: number) {
+  if (!Number.isFinite(value) || value <= 0) return '—'
+  if (value >= 1e-6) return `${(value * 1e6).toFixed(1)} µF`
+  if (value >= 1e-9) return `${(value * 1e9).toFixed(1)} nF`
+  return `${(value * 1e12).toFixed(1)} pF`
+}
+
 function createFlybackSchematic(spec: DesignSpec, result: DesignResult | null): SchematicDefinition {
   const duty = result?.dutyCycle ?? Math.min(Math.max(spec.vout / (spec.vinMin + spec.vout), 0.01), 0.45)
   const turnsRatio = result?.turnsRatio ?? (spec.vinMin * duty) / spec.vout
@@ -506,16 +513,22 @@ function createFlybackSchematic(spec: DesignSpec, result: DesignResult | null): 
   const coreLabel = result?.coreType ?? '—'
   const primaryTurns = result?.primaryTurns ?? 0
   const secondaryTurns = result?.secondaryTurns ?? 0
-  const clampVoltage = result?.clampVoltage ?? 0
+  const snubber = result?.snubber
+  const clampVoltage = snubber?.V_clamp ?? result?.clampVoltage ?? 0
   const secondaries = spec.secondary_outputs ?? []
 
   const switchStatus: ComponentStatus = duty >= 0.45 ? 'violation' : duty >= 0.4 ? 'warning' : 'normal'
   const transformerStatus: ComponentStatus = result?.warnings.some(w => w.includes('core')) ? 'warning' : 'normal'
+  const rcdStatus: ComponentStatus = snubber && snubber.P_dissipated > 0.05 * spec.vout * spec.iout ? 'warning' : 'normal'
 
   // Transformer label shows all winding ratios when multi-output is active
   const turnsLabel = secondaries.length > 0
     ? `${primaryTurns}:${secondaryTurns}+${secondaries.length}`
     : `${coreLabel} ${primaryTurns}:${secondaryTurns}`
+
+  const rcdLabel = snubber
+    ? `${formatResistance(snubber.R)}, ${formatCapacitance(snubber.C)}`
+    : `Vclamp=${clampVoltage.toFixed(0)}V`
 
   const nodes: SchematicNode[] = [
     { id: 'vin',      x: 90,  y: 102 },
@@ -548,7 +561,8 @@ function createFlybackSchematic(spec: DesignSpec, result: DesignResult | null): 
     },
     {
       id: 'RCD', type: 'resistor', x: 300, y: 10, width: 60, height: 40,
-      label: 'RCD', value: `Vclamp=${clampVoltage.toFixed(0)}V`, status: 'normal', meta: 'Clamp circuit',
+      label: 'RCD', value: rcdLabel, status: rcdStatus,
+      meta: snubber ? `Vclamp=${clampVoltage.toFixed(0)}V, P=${snubber.P_dissipated.toFixed(1)}W` : 'Clamp circuit',
     },
     // Primary regulated output: diode + cap
     {
@@ -621,10 +635,15 @@ function createForwardSchematic(spec: DesignSpec, result: DesignResult | null): 
   const coreLabel = result?.coreType ?? '—'
   const primaryTurns = result?.primaryTurns ?? 0
   const secondaryTurns = result?.secondaryTurns ?? 0
-  const resetVoltage = result?.resetVoltage ?? 0
+  const snubber = result?.snubber
+  const resetVoltage = snubber?.V_clamp ?? result?.resetVoltage ?? 0
 
   const switchStatus: ComponentStatus = duty >= 0.45 ? 'violation' : duty >= 0.4 ? 'warning' : 'normal'
   const transformerStatus: ComponentStatus = result?.warnings.some(w => w.includes('core')) ? 'warning' : 'normal'
+  const rcdStatus: ComponentStatus = snubber && snubber.P_dissipated > 0.05 * spec.vout * spec.iout ? 'warning' : 'normal'
+  const rcdLabel = snubber
+    ? `${formatResistance(snubber.R)}, ${formatCapacitance(snubber.C)}`
+    : `Vclamp=${resetVoltage.toFixed(0)}V`
 
   const nodes: SchematicNode[] = [
     { id: 'vin', x: 90, y: 102 },
@@ -731,6 +750,18 @@ function createForwardSchematic(spec: DesignSpec, result: DesignResult | null): 
       status: 'normal',
     },
     {
+      id: 'RCD',
+      type: 'resistor',
+      x: 280,
+      y: 10,
+      width: 60,
+      height: 40,
+      label: 'RCD',
+      value: rcdLabel,
+      status: rcdStatus,
+      meta: snubber ? `Vclamp=${resetVoltage.toFixed(0)}V, P=${snubber.P_dissipated.toFixed(1)}W` : 'Reset clamp',
+    },
+    {
       id: 'GroundLeft',
       type: 'ground',
       x: 80,
@@ -765,6 +796,7 @@ function createForwardSchematic(spec: DesignSpec, result: DesignResult | null): 
     { id: 'wire8', points: [nodes[6], { x: 780, y: 190 }, nodes[7]] },
     { id: 'wire9', points: [{ x: 130, y: 18 }, { x: 130, y: 132 }, { x: 90, y: 132 }] },
     { id: 'wire10', points: [{ x: 230, y: 58 }, { x: 230, y: 18 }, { x: 130, y: 18 }] },
+    { id: 'wire11', points: [{ x: 340, y: 50 }, { x: 310, y: 50 }, { x: 310, y: 10 }] },
   ]
 
   return { nodes, components, wires }

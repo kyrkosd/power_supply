@@ -1,6 +1,7 @@
-import { complex, abs, arg, add, multiply, divide } from 'mathjs'
+import { complex, abs, arg, add, multiply, divide, type Complex } from 'mathjs'
 import { DesignSpec, DesignResult, Topology, TransferFunction } from '../types'
 import { checkSaturation } from '../inductor-saturation'
+import { designSnubber, DEFAULT_LEAKAGE_RATIO } from '../snubber'
 import coresData from '../../data/cores.json'
 
 interface CoreData {
@@ -54,8 +55,8 @@ function createForwardTransferFunction(spec: DesignSpec, result: DesignResult): 
       )
       const h = divide(num, den)
       return {
-        magnitude_db: 20 * Math.log10(abs(h)),
-        phase_deg: arg(h) * (180 / Math.PI),
+        magnitude_db: 20 * Math.log10(abs(h as Complex)),
+        phase_deg: arg(h as Complex) * (180 / Math.PI),
       }
     },
   }
@@ -189,7 +190,18 @@ export const forwardTopology: Topology = {
     const d1Loss = 0.7 * d1IfAvg                          // 0.7 V Vf, Schottky estimate
     const d2Loss = 0.7 * d2IfAvg
     const diodeLoss = d1Loss + d2Loss
-    const clampLoss = 0.5                                  // W, RCD clamp resistor dissipation
+
+    // 11.5. RCD clamp design (replaces placeholder clampLoss = 0.5)
+    const snubber = designSnubber('forward', spec, {
+      dutyCycle,
+      inductance: magnetizingInductance,
+      capacitance: 0,
+      peakCurrent: IL_peak,
+      magnetizingInductance,
+      turnsRatio,
+      warnings: [],
+    }, spec.leakageRatio ?? DEFAULT_LEAKAGE_RATIO)
+    const clampLoss = snubber.P_dissipated
 
     const totalLoss = primaryCopper + secondaryCopper + outputInductorLoss +
                       coreLoss + mosfetLoss + diodeLoss + clampLoss
@@ -246,6 +258,12 @@ export const forwardTopology: Topology = {
       `Input cap must handle ${I_cin_rms.toFixed(2)} A rms pulsed current ` +
       `(min Cin ≈ ${(cin * 1e6).toFixed(1)} µF).`
     )
+    if (snubber.P_dissipated > 0.05 * pout)
+      warnings.push(
+        `RCD clamp dissipates ${snubber.P_dissipated.toFixed(1)} W ` +
+        `(${((snubber.P_dissipated / pout) * 100).toFixed(0)} % of Pout). ` +
+        `Reduce leakage ratio or switching frequency to lower clamp losses.`,
+      )
 
     // Saturation check on the output filter inductor (Lo)
     const saturation_check = checkSaturation(IL_peak, iout)
@@ -259,6 +277,7 @@ export const forwardTopology: Topology = {
       ccm_dcm_boundary,
       operating_mode,
       saturation_check,
+      snubber,
       inductor: {
         value: outputInductance,
         peak_current: IL_peak,
@@ -276,7 +295,7 @@ export const forwardTopology: Topology = {
       secondaryTurns,
       coreType: selectedCore?.type,
       magnetizingInductance,
-      resetVoltage: vClamp,
+      resetVoltage: snubber.V_clamp,
       rectifierDiodes: 2,
       outputInductance,
       mosfetVdsMax,

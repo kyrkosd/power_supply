@@ -49,7 +49,7 @@ export function clearUndoHistory(): void {
 
 // Flush any in-flight debounce window and commit the snapshot immediately.
 // Call this before undo() so that Ctrl+Z while dragging commits + reverts the drag.
-function flush(get: GetFn<UndoableStore>, originalSet: SetFn<UndoableStore>): void {
+function flush(_get: GetFn<UndoableStore>, originalSet: SetFn<UndoableStore>): void {
   if (debounceTimer) {
     clearTimeout(debounceTimer)
     debounceTimer = null
@@ -122,7 +122,7 @@ export function undoMiddleware<T extends UndoableStore>(
     // Replace stub undo/redo with real implementations that use originalSet
     // directly, bypassing wrappedSet so they never re-record history.
     store.undo = () => {
-      flush(get as GetFn<UndoableStore>, originalSet as SetFn<UndoableStore>)
+      flush(get as unknown as GetFn<UndoableStore>, originalSet as unknown as SetFn<UndoableStore>)
       if (undoHistory.length === 0) return
       const snapshot = undoHistory.pop()!
       const state = get()

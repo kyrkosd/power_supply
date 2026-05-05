@@ -59,13 +59,15 @@ function scheduleCompute(payload: ComputePayload): void {
       const timing_ms = performance.now() - start
       const response: ResultResponse = { type: 'RESULT', payload: { result, waveforms, timing_ms } }
       if (waveforms) {
-        self.postMessage(response, [
-          waveforms.time.buffer,
-          waveforms.inductor_current.buffer,
-          waveforms.switch_node.buffer,
-          waveforms.output_ripple.buffer,
-          waveforms.diode_current.buffer,
-        ])
+        self.postMessage(response, {
+          transfer: [
+            waveforms.time.buffer as ArrayBuffer,
+            waveforms.inductor_current.buffer as ArrayBuffer,
+            waveforms.switch_node.buffer as ArrayBuffer,
+            waveforms.output_ripple.buffer as ArrayBuffer,
+            waveforms.diode_current.buffer as ArrayBuffer,
+          ],
+        })
       } else {
         self.postMessage(response)
       }

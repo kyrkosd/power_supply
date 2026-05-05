@@ -1,7 +1,9 @@
-import type { WaveformSet, TransferFunction } from './topologies/types'
+import type { WaveformSet, TransferFunction, StateSpaceModel } from './topologies/types'
 import type { SaturationResult } from './inductor-saturation'
+import type { SnubberResult } from './snubber'
 
 export type { SaturationResult }
+export type { SnubberResult }
 
 export type { TransferFunction }
 
@@ -27,6 +29,8 @@ export interface DesignSpec {
   secondary_outputs?: SecondaryOutput[]
   // Control loop mode — affects Bode plot only, not component sizing.
   controlMode?: 'voltage' | 'current'
+  // Leakage inductance as fraction of Lm (flyback/forward RCD clamp). Default: 0.02 (2 %).
+  leakageRatio?: number
 }
 
 /** Computed values for one flyback secondary winding. */
@@ -81,6 +85,7 @@ export interface DesignResult {
     total: number
   }
   saturation_check?: SaturationResult
+  snubber?: SnubberResult         // RCD clamp design (flyback and forward only)
   // Forward-specific fields
   outputInductance?: number // H - separate from magnetizing
   resetVoltage?: number // V - reset winding voltage
@@ -97,4 +102,5 @@ export interface Topology {
   compute: (spec: DesignSpec) => DesignResult
   getTransferFunction?: (spec: DesignSpec, result: DesignResult) => TransferFunction
   generateWaveforms?: (spec: DesignSpec) => WaveformSet
+  getStateSpaceModel?: (spec: DesignSpec, result: DesignResult, vin: number, iout: number) => StateSpaceModel
 }

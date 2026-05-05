@@ -16,7 +16,7 @@ interface EMIDesignResult {
   inductor?: { peak_current: number };
 }
 
-export function estimateEMI(topology: string, spec: DesignSpec, result: EMIDesignResult): EMIResult {
+export function estimateEMI(_topology: string, spec: DesignSpec, result: EMIDesignResult): EMIResult {
   const fsw = spec.fsw || 200000;
   const D = result.dutyCycle || result.duty_cycle || 0.5;
   const Ipeak = result.peakCurrent || result.inductor?.peak_current || spec.iout_max || 1;
@@ -52,7 +52,7 @@ export function estimateEMI(topology: string, spec: DesignSpec, result: EMIDesig
     harmonics.push({ frequency: freq, amplitude_dbuv: dbuv, limit_dbuv: limit, margin_db: margin });
   }
 
-  let suggested_filter = null;
+  let suggested_filter: { Lf_uH: number; Cf_uF: number } | null = null;
   if (first_failing_harmonic !== null && first_failing_harmonic > 0) {
     const req_atten_db = Math.abs(worst_margin_db) + 6; // Add 6dB extra margin
     const atten_lin = Math.pow(10, req_atten_db / 20);

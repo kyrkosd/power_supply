@@ -116,6 +116,31 @@ and bootstrap diode Vr.
 - Bootstrap rows shown only for `buck` and `forward` (high-side switch topologies).
 - Called directly from `ComponentSuggestions` (pure function, no worker needed).
 
+### RCD Snubber / Clamp Design (`src/engine/snubber.ts`)
+`designSnubber(topologyId, spec, result, leakage_ratio): SnubberResult` sizes an
+RCD clamping network for flyback and forward converters.
+- Energy model: `Llk = ratio × Lm`, `E_lk = 0.5 × Llk × Ip²`, `V_clamp = 1.5 × Vin_max`.
+- Component values: `R = V_clamp² / (E_lk × fsw)`, `C = 2E_lk / V_clamp²`, `P = E_lk × fsw`.
+- References: TI SLUA107 (flyback), Erickson & Maksimovic §6.2.2 (forward).
+- `DesignSpec.leakageRatio?: number` (default 0.02 = 2 %) — editable via an Advanced slider
+  in InputPanel (flyback and forward only, range 0.5–10 %).
+- `DesignResult.snubber?: SnubberResult` carries the result into the schematic and PDF.
+- Clamp power dissipation replaces the previous fixed-placeholder `clampLoss` in both
+  flyback.ts and forward.ts; a warning fires if P > 5 % of Pout.
+- Schematic annotates R, C, and diode reverse-voltage values on the RCD clamp symbol.
+
+### PCB Layout Guide (`src/components/LayoutGuide/`, `src/engine/pcb-guidelines.ts`)
+`generateLayoutGuidelines(topology, spec, result): LayoutGuidelines` produces:
+- `critical_loops[]` — current loops ranked CRITICAL/IMPORTANT/RECOMMENDED with
+  component lists and routing guidance.
+- `trace_widths[]` — IPC-2221 external-layer widths for every power net (1 oz and 2 oz).
+- `placement_order[]` — numbered steps; each step constrains the next.
+- `thermal_vias[]` — via count and diameter for hot components.
+- `keep_outs[]` — regions where high-impedance or sensitive signals must be excluded.
+- `general_tips[]` — topology-specific routing reminders.
+`LayoutGuide` component renders the above in a scrollable panel (tab 5) and the data
+is also captured in the PDF report export.
+
 ---
 
 ## Testing

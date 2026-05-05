@@ -6,7 +6,7 @@ import { TabPanel } from './components/TabPanel/TabPanel'
 import { ComponentSuggestions } from './components/ComponentSuggestions/ComponentSuggestions'
 import { FirstRunWelcome } from './components/FirstRunWelcome/FirstRunWelcome'
 import { StatusBar } from './components/StatusBar/StatusBar'
-import { useDesignStore } from './store/design-store'
+import { useDesignStore, type ActiveVizTab } from './store/design-store'
 import { DesignComparison } from './components/ComparisonView/DesignComparison'
 import { validateSpec } from './engine/validation'
 import styles from './App.module.css'
@@ -23,7 +23,7 @@ type FileHandlers = {
 type EditHandlers = {
   undo: () => void
   redo: () => void
-  setActiveVizTab: (tab: string) => void
+  setActiveVizTab: (tab: ActiveVizTab) => void
   saveToComparison: () => void
   setIsComparing: (open: boolean) => void
 }

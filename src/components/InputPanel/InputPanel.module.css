@@ -328,6 +328,35 @@
   outline: none;
 }
 
+.advancedInputGroup {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.advancedNumberInput {
+  width: 56px;
+  padding: 4px 6px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-align: right;
+}
+
+.advancedNumberInput:focus {
+  border-color: var(--border-focus);
+  outline: none;
+}
+
+.advancedUnit {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
 /* ── Notes section ──────────────────────────────────────────────────────────── */
 
 .notesSection {

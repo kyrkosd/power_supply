@@ -1,4 +1,4 @@
-import { complex, abs, arg, add, multiply, divide } from 'mathjs'
+import { complex, abs, arg, add, multiply, divide, type Complex } from 'mathjs'
 import { DesignSpec, DesignResult, Topology } from '../types'
 import { checkSaturation } from '../inductor-saturation'
 
@@ -25,8 +25,8 @@ function createTransferFunction(spec: DesignSpec, result: DesignResult) {
       const den = add(add(multiply(s, s), multiply(omega0, s)), complex(0, 0))
       const h = divide(num, den)
       return {
-        magnitude_db: 20 * Math.log10(abs(h)),
-        phase_deg: arg(h) * (180 / Math.PI),
+        magnitude_db: 20 * Math.log10(abs(h as Complex)),
+        phase_deg: arg(h as Complex) * (180 / Math.PI),
       }
     },
   }
