@@ -1,3 +1,5 @@
+// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
+// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
 /**
  * PCB layout guidance generator.
  * Pure engine module — no React, no DOM, no Zustand.

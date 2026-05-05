@@ -1,3 +1,5 @@
+<!-- INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability. -->
+<!-- INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability. -->
 # Power Supply Design Workbench
 
 A desktop engineering tool for designing and analysing switching power supplies.

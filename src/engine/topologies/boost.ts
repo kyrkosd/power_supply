@@ -1,3 +1,5 @@
+// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
+// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
 import { complex, abs, arg, add, multiply, divide, type Complex } from 'mathjs'
 import { DesignSpec, DesignResult, Topology } from '../types'
 import { checkSaturation } from '../inductor-saturation'

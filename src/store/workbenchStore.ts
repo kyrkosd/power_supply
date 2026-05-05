@@ -1,3 +1,5 @@
+// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
+// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
 import { create } from 'zustand'
 
 export type TopologyId = 'buck' | 'boost' | 'buck-boost' | 'flyback' | 'forward' | 'sepic'

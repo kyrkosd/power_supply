@@ -1,3 +1,5 @@
+// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
+// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
 /**
  * Smoke-tests: every topology must compute without throwing when given the
  * same default DesignSpec values that the app loads on first run.

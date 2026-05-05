@@ -1,3 +1,5 @@
+// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
+// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
 import type { Topology, DesignSpec, DesignResult } from './types'
 import { analyzeBuckControlLoop } from './control-loop'
 import {

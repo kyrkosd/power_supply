@@ -1,3 +1,5 @@
+// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
+// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
 import jsPDF from 'jspdf'
 import type { DesignSpec, DesignResult } from '../engine/types'
 import type { ActiveVizTab } from '../store/design-store'

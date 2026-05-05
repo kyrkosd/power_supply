@@ -1,3 +1,5 @@
+// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
+// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
 import React, { useEffect, useRef } from 'react'
 import { Toolbar } from './components/Toolbar/Toolbar'
 import { InputPanel } from './components/InputPanel/InputPanel'

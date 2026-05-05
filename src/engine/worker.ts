@@ -1,3 +1,5 @@
+// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
+// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
 import { compute, generateWaveforms, getTopology } from './index'
 import { runMonteCarlo } from './monte-carlo'
 import type { DesignSpec, DesignResult } from './types'

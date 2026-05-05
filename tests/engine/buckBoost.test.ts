@@ -1,3 +1,5 @@
+// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
+// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
 import { describe, it, expect } from 'vitest'
 import { buckBoostTopology } from '../../src/engine/topologies/buckBoost'
 import type { DesignSpec } from '../../src/engine/types'

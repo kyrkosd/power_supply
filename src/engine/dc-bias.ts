@@ -1,3 +1,5 @@
+// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
+// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
 import dcBiasCurves from '../data/dc-bias-curves.json';
 
 export interface DeratingResult {

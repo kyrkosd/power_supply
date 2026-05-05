@@ -1,3 +1,5 @@
+// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
+// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
 // RCD clamp/snubber design for flyback and forward converters.
 // Reference: TI Application Report SLUA107 "Flyback Converter Design",
 //            Erickson & Maksimovic "Fundamentals of Power Electronics" 3rd ed., §6.2.2

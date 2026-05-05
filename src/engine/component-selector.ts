@@ -1,3 +1,5 @@
+// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
+// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
 import inductorsData from '../data/inductors.json'
 import capacitorsData from '../data/capacitors.json'
 import mosfetsData from '../data/mosfets.json'

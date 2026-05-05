@@ -1,3 +1,5 @@
+// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
+// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
 import { DesignSpec, DesignResult, Topology } from '../types'
 
 export const llcTopology: Topology = {

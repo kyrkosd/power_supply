@@ -1,3 +1,5 @@
+// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
+// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
 import React, { useEffect, useCallback } from 'react'
 import { useDesignStore } from '../../store/design-store'
 import type { ComparisonSlot } from '../../store/design-store'

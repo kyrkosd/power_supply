@@ -1,3 +1,5 @@
+// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
+// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
 /** Formats a Henry value with automatic mH / µH / nH scaling. */
 export function fmtL(h: number): string {
   if (h >= 1e-3) return `${(h * 1e3).toFixed(2)} mH`

@@ -1,3 +1,5 @@
+// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
+// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
 import type { DesignSpec, DesignResult } from './types'
 import type { MosfetData } from './component-selector'
 

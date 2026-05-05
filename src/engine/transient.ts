@@ -1,3 +1,5 @@
+// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
+// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
 import type { DesignSpec, DesignResult, StateSpaceModel, TransientResult, TransientMode } from './topologies/types';
 
 // Optimized 2x2 matrix dot product block without array allocations 

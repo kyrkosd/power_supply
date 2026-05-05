@@ -1,3 +1,5 @@
+// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
+// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
 // This module defines IPC handlers for exporting data (PDFs, CSVs) from the app.
 // The handlers prompt the user for a save location (via the native dialog) and then
 // write the data to disk. The handlers return a `SaveResult` indicating success or

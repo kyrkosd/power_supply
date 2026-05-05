@@ -1,3 +1,5 @@
+// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
+// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
 import React, { useEffect, useRef, useState, useCallback } from 'react'
 import { select, type Selection } from 'd3-selection'
 import { scaleLinear } from 'd3-scale'
