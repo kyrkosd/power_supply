@@ -20,6 +20,12 @@ export interface MCRunRequest {
   computePhaseMargin: boolean
 }
 
+export interface ComparisonSlot {
+  topology: TopologyId
+  spec: DesignSpec
+  result: DesignResult
+}
+
 export interface DesignStoreState {
   topology: TopologyId
   spec: DesignSpec
@@ -38,6 +44,13 @@ export interface DesignStoreState {
   isModified: boolean
   notes: string
   projectCreated: string | null
+
+  // Comparison
+  comparisonSlot: ComparisonSlot | null
+  isComparing: boolean
+  saveToComparison: () => void
+  setIsComparing: (open: boolean) => void
+  clearComparison: () => void
 
   // Undo / redo (managed by undoMiddleware)
   canUndo: boolean
@@ -139,6 +152,20 @@ export const useDesignStore = create<DesignStoreState>(
     notes: '',
     projectCreated: null,
     selectedComponents: EMPTY_SELECTION,
+
+    // Comparison state
+    comparisonSlot: null,
+    isComparing: false,
+
+    saveToComparison: () => {
+      const { topology, spec, result } = get()
+      if (!result) return
+      set({ comparisonSlot: { topology, spec, result } })
+    },
+
+    setIsComparing: (open) => set({ isComparing: open }),
+
+    clearComparison: () => set({ comparisonSlot: null, isComparing: false }),
 
     // Stubs — overridden by undoMiddleware before the store is returned
     canUndo: false,

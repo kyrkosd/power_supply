@@ -7,6 +7,7 @@ import { ComponentSuggestions } from './components/ComponentSuggestions/Componen
 import { FirstRunWelcome } from './components/FirstRunWelcome/FirstRunWelcome'
 import { StatusBar } from './components/StatusBar/StatusBar'
 import { useDesignStore } from './store/design-store'
+import { DesignComparison } from './components/ComparisonView/DesignComparison'
 import styles from './App.module.css'
 
 // ── Keyboard shortcut handlers ────────────────────────────────────────────────
@@ -22,6 +23,8 @@ type EditHandlers = {
   undo: () => void
   redo: () => void
   setActiveVizTab: (tab: string) => void
+  saveToComparison: () => void
+  setIsComparing: (open: boolean) => void
 }
 
 function handleFileShortcut(event: KeyboardEvent, handlers: FileHandlers): boolean {
@@ -41,6 +44,7 @@ function handleEditShortcut(event: KeyboardEvent, handlers: EditHandlers): void 
   switch (event.key) {
     case 'z': event.preventDefault(); event.shiftKey ? handlers.redo() : handlers.undo(); break
     case 'y': event.preventDefault(); handlers.redo(); break
+    case 'k': event.preventDefault(); event.shiftKey ? handlers.setIsComparing(true) : handlers.saveToComparison(); break
     case '1': event.preventDefault(); handlers.setActiveVizTab('waveforms'); break
     case '2': event.preventDefault(); handlers.setActiveVizTab('bode'); break
     case '3': event.preventDefault(); handlers.setActiveVizTab('losses'); break
@@ -62,15 +66,17 @@ export default function App(): React.ReactElement {
   const openProject     = useDesignStore((s) => s.openProject)
   const saveProject     = useDesignStore((s) => s.saveProject)
   const saveProjectAs   = useDesignStore((s) => s.saveProjectAs)
-  const undo            = useDesignStore((s) => s.undo)
-  const redo            = useDesignStore((s) => s.redo)
+  const undo              = useDesignStore((s) => s.undo)
+  const redo              = useDesignStore((s) => s.redo)
+  const saveToComparison  = useDesignStore((s) => s.saveToComparison)
+  const setIsComparing    = useDesignStore((s) => s.setIsComparing)
 
   const workerRef = useRef<Worker | null>(null)
 
   // Keyboard shortcuts
   useEffect(() => {
     const fileHandlers: FileHandlers = { newProject, openProject, saveProject, saveProjectAs }
-    const editHandlers: EditHandlers = { undo, redo, setActiveVizTab }
+    const editHandlers: EditHandlers = { undo, redo, setActiveVizTab, saveToComparison, setIsComparing }
 
     function onKeyDown(event: KeyboardEvent): void {
       // File shortcuts work even when focus is inside a text field
@@ -82,7 +88,7 @@ export default function App(): React.ReactElement {
 
     document.addEventListener('keydown', onKeyDown)
     return () => document.removeEventListener('keydown', onKeyDown)
-  }, [setActiveVizTab, newProject, openProject, saveProject, saveProjectAs, undo, redo])
+  }, [setActiveVizTab, newProject, openProject, saveProject, saveProjectAs, undo, redo, saveToComparison, setIsComparing])
 
   // Engine worker — lifecycle
   useEffect(() => {
@@ -127,6 +133,7 @@ export default function App(): React.ReactElement {
   return (
     <div className={styles.shell}>
       <FirstRunWelcome />
+      <DesignComparison />
       <Toolbar />
       <div className={styles.workspace}>
         <aside className={styles.sidebar}>

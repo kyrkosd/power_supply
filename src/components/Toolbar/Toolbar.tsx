@@ -23,6 +23,7 @@ export function Toolbar(): React.ReactElement {
     spec, result, notes,
     activeVizTab, setActiveVizTab,
     selectedComponents,
+    comparisonSlot, saveToComparison, setIsComparing,
   } = useDesignStore()
 
   const [isExporting, setIsExporting] = useState(false)
@@ -161,6 +162,22 @@ export function Toolbar(): React.ReactElement {
           title={`Reset ${topology} to default values`}
         >
           ↺ Reset
+        </button>
+        <button
+          className={styles.btn}
+          onClick={saveToComparison}
+          disabled={!result}
+          title={result ? 'Save current design as Design A for comparison (Ctrl+K)' : 'Run simulation first'}
+        >
+          {comparisonSlot ? '✓ Saved A' : '⊞ Save to A'}
+        </button>
+        <button
+          className={styles.btn}
+          onClick={() => setIsComparing(true)}
+          disabled={!comparisonSlot || !result}
+          title={comparisonSlot && result ? 'Compare Design A vs current (Ctrl+Shift+K)' : 'Save a design first'}
+        >
+          ⇄ Compare
         </button>
         <button
           className={styles.btn}
