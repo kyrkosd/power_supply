@@ -67,7 +67,7 @@ export interface DesignStoreState {
   saveProjectAs: () => Promise<void>
 }
 
-const TOPOLOGY_DEFAULTS: Record<TopologyId, DesignSpec> = {
+export const TOPOLOGY_DEFAULTS: Record<TopologyId, DesignSpec> = {
   buck: {
     vinMin: 10, vinMax: 15, vout: 5, iout: 2,
     fsw: 200_000, rippleRatio: 0.3, ambientTemp: 25, voutRippleMax: 0.01, efficiency: 0.9,

@@ -5,14 +5,16 @@
  * without any data loss — the same guarantee that project:save / project:open
  * rely on in the Electron main process.
  *
- * No Electron, DOM, or Zustand imports needed: the ProjectFile interface is
- * a plain data type, and JSON.stringify / JSON.parse are the only serialisers
- * used in the actual IPC handlers.
+ * No Electron or DOM imports needed: the ProjectFile interface is a plain data
+ * type, and JSON.stringify / JSON.parse are the only serialisers used in the
+ * actual IPC handlers. TOPOLOGY_DEFAULTS is imported from the live store so
+ * any change to a default spec is automatically covered by these tests.
  */
 import { describe, it, expect } from 'vitest'
 import type { ProjectFile } from '../../src/types/project'
 import type { DesignSpec } from '../../src/engine/types'
-import type { TopologyId } from '../../src/store/workbenchStore'
+import { TOPOLOGY_DEFAULTS } from '../../src/store/design-store'
+import type { TopologyId } from '../../src/store/design-store'
 
 // ── Helper ────────────────────────────────────────────────────────────────────
 
@@ -33,34 +35,7 @@ function makeProject(topology: TopologyId, spec: DesignSpec, notes = ''): Projec
   }
 }
 
-// ── Default specs (mirrors design-store.ts TOPOLOGY_DEFAULTS) ────────────────
-
-const SPECS: Record<TopologyId, DesignSpec> = {
-  buck: {
-    vinMin: 10, vinMax: 15, vout: 5, iout: 2,
-    fsw: 200_000, rippleRatio: 0.3, ambientTemp: 25, voutRippleMax: 0.01, efficiency: 0.9,
-  },
-  boost: {
-    vinMin: 5, vinMax: 8, vout: 12, iout: 1,
-    fsw: 200_000, rippleRatio: 0.3, ambientTemp: 25, voutRippleMax: 0.05, efficiency: 0.9,
-  },
-  'buck-boost': {
-    vinMin: 5, vinMax: 15, vout: 9, iout: 1,
-    fsw: 200_000, rippleRatio: 0.3, ambientTemp: 25, voutRippleMax: 0.05, efficiency: 0.85,
-  },
-  flyback: {
-    vinMin: 36, vinMax: 72, vout: 12, iout: 2,
-    fsw: 100_000, rippleRatio: 0.3, ambientTemp: 25, voutRippleMax: 0.1, efficiency: 0.85,
-  },
-  forward: {
-    vinMin: 36, vinMax: 72, vout: 12, iout: 3,
-    fsw: 100_000, rippleRatio: 0.3, ambientTemp: 25, voutRippleMax: 0.1, efficiency: 0.88,
-  },
-  sepic: {
-    vinMin: 6, vinMax: 14, vout: 9, iout: 1,
-    fsw: 200_000, rippleRatio: 0.3, ambientTemp: 25, voutRippleMax: 0.05, efficiency: 0.88,
-  },
-}
+const SPECS = TOPOLOGY_DEFAULTS
 
 const SPEC_KEYS: Array<keyof DesignSpec> = [
   'vinMin', 'vinMax', 'vout', 'iout', 'fsw',

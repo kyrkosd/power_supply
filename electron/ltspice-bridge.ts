@@ -26,18 +26,6 @@ export function detectLTspicePath(): string | null {
   return candidates.find(p => fs.existsSync(p)) ?? null
 }
 
-/**
- * Throws if the given path is not in the static whitelist of known LTspice
- * executables. Called immediately before spawn() as defence-in-depth: even if
- * a caller somehow passes a different string, the process is never started.
- */
-function assertTrustedExecutable(ltspicePath: string): void {
-  const trusted = (Object.values(KNOWN_LTSPICE_PATHS) as string[][]).flat()
-  if (!trusted.includes(ltspicePath)) {
-    throw new Error(`Untrusted executable path rejected: ${ltspicePath}`)
-  }
-}
-
 // ── File utilities ────────────────────────────────────────────────────────────
 
 export function exportNetlist(asc_content: string, filepath: string): void {
@@ -66,19 +54,22 @@ function resolveOutputPaths(asc_path: string): { rawPath: string; logPath: strin
  * Spawns LTspice in batch mode and resolves with the output file paths.
  * Rejects if the process errors, exits non-zero, or exceeds SIMULATION_TIMEOUT_MS.
  *
- * Both the executable path and the .asc path are validated before the process
- * is started so that no untrusted input can reach child_process.spawn().
+ * The executable path is resolved internally from KNOWN_LTSPICE_PATHS — it is
+ * never accepted as a parameter, so no caller-supplied value can reach spawn().
  */
-function spawnSimulation(ltspicePath: string, asc_path: string): Promise<{ rawPath: string; logPath: string }> {
-  // Validate both paths eagerly — before the Promise is constructed and before
-  // any process is spawned. Throwing here is synchronous and clean.
-  assertTrustedExecutable(ltspicePath)
+function spawnSimulation(asc_path: string): Promise<{ rawPath: string; logPath: string }> {
+  // Resolve the executable from the module-level whitelist, not from any argument.
+  const exePath = detectLTspicePath()
+  if (!exePath) throw new Error('LTspice executable not found. Please check installation paths.')
+
+  // Validate the .asc path before the Promise is constructed so no process
+  // is started if the path contains traversal sequences or null bytes.
   const { rawPath, logPath } = resolveOutputPaths(asc_path)
 
   return new Promise((resolve, reject) => {
-    const proc = spawn(ltspicePath, ['-b', asc_path], {
+    const proc = spawn(exePath, ['-b', asc_path], {
       cwd: dirname(asc_path),
-      shell: false, // never invoke a shell; prevents shell-injection even if args were tainted
+      shell: false, // explicit: never invoke a shell
     })
 
     const timer = setTimeout(() => {
@@ -107,10 +98,8 @@ function spawnSimulation(ltspicePath: string, asc_path: string): Promise<{ rawPa
   })
 }
 
-export async function runSimulation(asc_path: string): Promise<{ rawPath: string; logPath: string }> {
-  const ltspicePath = detectLTspicePath()
-  if (!ltspicePath) throw new Error('LTspice executable not found. Please check installation paths.')
-  return spawnSimulation(ltspicePath, asc_path)
+export function runSimulation(asc_path: string): Promise<{ rawPath: string; logPath: string }> {
+  return spawnSimulation(asc_path)
 }
 
 // ── Temp-file simulation ──────────────────────────────────────────────────────

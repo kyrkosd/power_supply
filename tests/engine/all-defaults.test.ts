@@ -10,36 +10,11 @@ import { buckBoostTopology } from '../../src/engine/topologies/buckBoost'
 import { flybackTopology }   from '../../src/engine/topologies/flyback'
 import { forwardTopology }   from '../../src/engine/topologies/forward'
 import { sepicTopology }     from '../../src/engine/topologies/sepic'
-import type { DesignSpec } from '../../src/engine/types'
+import { TOPOLOGY_DEFAULTS } from '../../src/store/design-store'
 
-// Copied verbatim from design-store.ts TOPOLOGY_DEFAULTS so the test breaks
-// if the defaults become physically invalid.
-const defaults: Record<string, DesignSpec> = {
-  buck: {
-    vinMin: 10, vinMax: 15, vout: 5, iout: 2,
-    fsw: 200_000, rippleRatio: 0.3, ambientTemp: 25, voutRippleMax: 0.01, efficiency: 0.9,
-  },
-  boost: {
-    vinMin: 5, vinMax: 8, vout: 12, iout: 1,
-    fsw: 200_000, rippleRatio: 0.3, ambientTemp: 25, voutRippleMax: 0.05, efficiency: 0.9,
-  },
-  'buck-boost': {
-    vinMin: 5, vinMax: 15, vout: 9, iout: 1,
-    fsw: 200_000, rippleRatio: 0.3, ambientTemp: 25, voutRippleMax: 0.05, efficiency: 0.85,
-  },
-  flyback: {
-    vinMin: 36, vinMax: 72, vout: 12, iout: 2,
-    fsw: 100_000, rippleRatio: 0.3, ambientTemp: 25, voutRippleMax: 0.1, efficiency: 0.85,
-  },
-  forward: {
-    vinMin: 36, vinMax: 72, vout: 12, iout: 3,
-    fsw: 100_000, rippleRatio: 0.3, ambientTemp: 25, voutRippleMax: 0.1, efficiency: 0.88,
-  },
-  sepic: {
-    vinMin: 6, vinMax: 14, vout: 9, iout: 1,
-    fsw: 200_000, rippleRatio: 0.3, ambientTemp: 25, voutRippleMax: 0.05, efficiency: 0.88,
-  },
-}
+// Use the live store defaults so this test breaks automatically whenever
+// a default spec value changes to something physically invalid.
+const defaults = TOPOLOGY_DEFAULTS
 
 function sanityCheck(id: string, result: ReturnType<typeof buckTopology.compute>) {
   expect(result.dutyCycle,   `${id}: duty cycle`).toBeGreaterThan(0)
