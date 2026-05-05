@@ -1,4 +1,7 @@
 import type { WaveformSet, TransferFunction } from './topologies/types'
+import type { SaturationResult } from './inductor-saturation'
+
+export type { SaturationResult }
 
 export type { TransferFunction }
 
@@ -77,6 +80,7 @@ export interface DesignResult {
     clamp: number
     total: number
   }
+  saturation_check?: SaturationResult
   // Forward-specific fields
   outputInductance?: number // H - separate from magnetizing
   resetVoltage?: number // V - reset winding voltage

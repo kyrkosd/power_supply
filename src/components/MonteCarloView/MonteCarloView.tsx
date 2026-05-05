@@ -207,12 +207,13 @@ export function MonteCarloView(): React.ReactElement {
         </div>
       </div>
 
-      {/* 2 × 2 histogram grid */}
+      {/* histogram grid */}
       <div className={styles.histGrid}>
-        <Histogram title="Efficiency"     data={m.efficiency}    limit={spec.efficiency}    isUpperLimit={false} multiplier={100}  unit="%" />
-        <Histogram title="Output Ripple"  data={m.output_ripple} limit={spec.voutRippleMax} isUpperLimit={true}  multiplier={1000} unit="mV" />
-        <Histogram title="Phase Margin"   data={m.phase_margin}  limit={45}                 isUpperLimit={false} unit="°" />
-        <Histogram title="MOSFET Tj"      data={m.tj_mosfet}     limit={125}                isUpperLimit={true}  unit="°C" />
+        <Histogram title="Efficiency"        data={m.efficiency}         limit={spec.efficiency}    isUpperLimit={false} multiplier={100}  unit="%" />
+        <Histogram title="Output Ripple"     data={m.output_ripple}      limit={spec.voutRippleMax} isUpperLimit={true}  multiplier={1000} unit="mV" />
+        <Histogram title="Phase Margin"      data={m.phase_margin}       limit={45}                 isUpperLimit={false} unit="°" />
+        <Histogram title="MOSFET Tj"         data={m.tj_mosfet}          limit={125}                isUpperLimit={true}  unit="°C" />
+        <Histogram title="Isat Margin"       data={m.saturation_margin}  limit={20}                 isUpperLimit={false} unit="%" />
       </div>
 
       {/* Worst-case summary table */}
@@ -232,6 +233,7 @@ export function MonteCarloView(): React.ReactElement {
             <TableRow label="Output ripple" specLimit={spec.voutRippleMax} mean={m.output_ripple.mean} worst={m.output_ripple.max} isUpperLimit={true}  multiplier={1000} unit=" mV" decimals={1} />
             <TableRow label="Phase margin"  specLimit={45}                 mean={m.phase_margin.mean}  worst={m.phase_margin.min}  isUpperLimit={false} unit="°" decimals={1} />
             <TableRow label="MOSFET Tj"     specLimit={125}                mean={m.tj_mosfet.mean}     worst={m.tj_mosfet.max}     isUpperLimit={true}  unit=" °C" decimals={1} />
+            <TableRow label="Isat margin"   specLimit={20}                 mean={m.saturation_margin.mean} worst={m.saturation_margin.min} isUpperLimit={false} unit=" %" decimals={1} />
           </tbody>
         </table>
       </div>

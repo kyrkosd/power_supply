@@ -62,3 +62,8 @@ export const MosfetQgTolerance: ToleranceModel = {
 export const DiodeVfTolerance: ToleranceModel = {
   sample(nominal, rng) { return sampleNormal(nominal, 0.050, rng) },
 }
+
+/** Inductor Isat: ±10 % uniform — datasheet spread plus temperature derating. */
+export const InductorIsatTolerance: ToleranceModel = {
+  sample(nominal, rng) { return nominal * (0.90 + rng() * 0.20) },
+}

@@ -1,5 +1,6 @@
 import { complex, abs, arg, add, multiply, divide } from 'mathjs'
 import { DesignSpec, DesignResult, Topology } from '../types'
+import { checkSaturation } from '../inductor-saturation'
 
 function normalizeDuty(duty: number): number {
   return Math.min(Math.max(duty, 0.01), 0.99)
@@ -88,6 +89,9 @@ export const boostTopology: Topology = {
       warnings.push(`Right-half-plane zero at ${Math.round(frhpz)} Hz may limit crossover to less than one-third of the RHPZ frequency.`)
     }
 
+    const saturation_check = checkSaturation(peakCurrent, inputCurrent)
+    if (saturation_check.warning) warnings.push(saturation_check.warning)
+
     return {
       dutyCycle,
       inductance,
@@ -95,6 +99,7 @@ export const boostTopology: Topology = {
       peakCurrent,
       ccm_dcm_boundary,
       operating_mode,
+      saturation_check,
       warnings,
     }
   },

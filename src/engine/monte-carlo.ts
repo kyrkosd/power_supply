@@ -9,6 +9,7 @@ import {
   ElectrolyticCapTolerance,
   MosfetRdsOnTolerance,
   DiodeVfTolerance,
+  InductorIsatTolerance,
 } from './tolerances'
 
 export interface MonteCarloConfig {
@@ -24,6 +25,7 @@ export interface MonteCarloConfig {
     esr?: ToleranceModel
     rdsOn?: ToleranceModel
     vf?: ToleranceModel
+    isat?: ToleranceModel
   }
 }
 
@@ -47,6 +49,7 @@ export interface MonteCarloResult {
     output_ripple: MCDistribution
     phase_margin: MCDistribution
     tj_mosfet: MCDistribution
+    saturation_margin: MCDistribution
   }
 }
 
@@ -119,6 +122,10 @@ export function runMonteCarlo(
   const esrTol = tol.esr ?? ElectrolyticCapTolerance
   const rdsOnTol = tol.rdsOn ?? MosfetRdsOnTolerance
   const vfTol = tol.vf ?? DiodeVfTolerance
+  const isatTol = tol.isat ?? InductorIsatTolerance
+
+  // Nominal Isat from the design result — null when no specific part is selected.
+  const nomIsat = nominalResult.saturation_check?.i_sat ?? null
 
   const D = nominalResult.dutyCycle
   const nomL = nominalResult.inductance
@@ -133,6 +140,7 @@ export function runMonteCarlo(
   const ripples: number[] = []
   const phaseMargins: number[] = []
   const tjValues: number[] = []
+  const satMargins: number[] = []
 
   let passes = 0
   let worstCase = nominalResult
@@ -145,6 +153,8 @@ export function runMonteCarlo(
     const RdsOn = rdsOnTol.sample(NOMINAL_RDS_ON, rng)
     const Vf = vfTol.sample(NOMINAL_VF, rng)
     const ESR = esrTol.sample(nomESR, rng)
+    // Sample Isat with ±10% spread (datasheet spread + temperature derating).
+    const Isat = nomIsat !== null ? isatTol.sample(nomIsat, rng) : null
 
     // Ripple current with perturbed inductance (volt-second balance, buck approximation).
     // ΔiL = Vout·(1−D) / (L·fsw)
@@ -177,13 +187,19 @@ export function runMonteCarlo(
       }
     }
 
+    // Saturation margin: (Isat - Ipeak) / Isat × 100; positive = safe.
+    const I_peak_i = iout + deltaIL / 2
+    const satMargin = Isat !== null ? (Isat - I_peak_i) / Isat * 100 : NaN
+    const satOk = Isat === null || I_peak_i < Isat
+
     efficiencies.push(efficiency)
     ripples.push(outputRipple)
     phaseMargins.push(phaseMargin)
     tjValues.push(Tj)
+    if (!Number.isNaN(satMargin)) satMargins.push(satMargin)
 
     const pmOk = !doPhaseMargin || Number.isNaN(phaseMargin) || phaseMargin >= PM_MIN
-    if (efficiency >= effTarget && outputRipple <= voutRippleMax && pmOk && Tj <= TJ_MAX) passes++
+    if (efficiency >= effTarget && outputRipple <= voutRippleMax && pmOk && Tj <= TJ_MAX && satOk) passes++
 
     if (efficiency < worstEfficiency) {
       worstEfficiency = efficiency
@@ -200,6 +216,7 @@ export function runMonteCarlo(
       output_ripple: computeDistribution(ripples),
       phase_margin: computeDistribution(phaseMargins.filter(v => !Number.isNaN(v))),
       tj_mosfet: computeDistribution(tjValues),
+      saturation_margin: computeDistribution(satMargins),
     },
   }
 }

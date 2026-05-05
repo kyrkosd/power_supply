@@ -1,4 +1,5 @@
 import { DesignSpec, DesignResult, Topology } from '../types'
+import { checkSaturation } from '../inductor-saturation'
 
 export const sepicTopology: Topology = {
   id: 'sepic',
@@ -78,6 +79,10 @@ export const sepicTopology: Topology = {
       warnings.push('High coupling capacitor ripple current - use low-ESR capacitor')
     }
 
+    // Saturation check on the input inductor L1
+    const saturation_check = checkSaturation(peakInputCurrent, inputCurrentAvg)
+    if (saturation_check.warning) warnings.push(saturation_check.warning)
+
     return {
       dutyCycle,
       inductance: inputInductance, // L1
@@ -85,6 +90,7 @@ export const sepicTopology: Topology = {
       peakCurrent: peakInputCurrent,
       ccm_dcm_boundary,
       operating_mode,
+      saturation_check,
       efficiency: pout / (pout + totalLoss),
       warnings,
       // SEPIC-specific fields

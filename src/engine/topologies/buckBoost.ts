@@ -1,5 +1,6 @@
 import { complex, abs, arg, add, multiply, divide, type Complex } from 'mathjs'
 import { DesignSpec, DesignResult, Topology, TransferFunction } from '../types'
+import { checkSaturation } from '../inductor-saturation'
 
 function normalizeDuty(duty: number): number {
   return Math.min(Math.max(duty, 0.01), 0.99)
@@ -173,6 +174,9 @@ export const buckBoostTopology: Topology = {
       `Consider boost or SEPIC if Vin + |Vout| stress is unacceptable.`
     )
 
+    const saturation_check = checkSaturation(IL_peak, IL_dc)
+    if (saturation_check.warning) warnings.push(saturation_check.warning)
+
     return {
       dutyCycle,
       inductance,
@@ -180,6 +184,7 @@ export const buckBoostTopology: Topology = {
       peakCurrent: IL_peak,
       ccm_dcm_boundary,
       operating_mode,
+      saturation_check,
       inductor: {
         value: inductance,
         peak_current: IL_peak,

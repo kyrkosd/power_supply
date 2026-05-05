@@ -3,6 +3,7 @@ import {
   DesignSpec, DesignResult, Topology, TransferFunction,
   SecondaryOutput, SecondaryOutputResult,
 } from '../types'
+import { checkSaturation } from '../inductor-saturation'
 import coresData from '../../data/cores.json'
 
 // ── Core database ─────────────────────────────────────────────────────────────
@@ -226,6 +227,10 @@ export const flybackTopology: Topology = {
       )
     }
 
+    // Saturation check on the magnetizing inductance (primary winding)
+    const saturation_check = checkSaturation(primaryPeakCurrent, primaryCurrentAvg)
+    if (saturation_check.warning) warnings.push(saturation_check.warning)
+
     return {
       dutyCycle: dMax,
       inductance: magnetizingInductance,
@@ -233,6 +238,7 @@ export const flybackTopology: Topology = {
       peakCurrent: primaryPeakCurrent,
       ccm_dcm_boundary,
       operating_mode,
+      saturation_check,
       efficiency: pPrimary / (pPrimary + totalLoss),
       warnings,
       turnsRatio,

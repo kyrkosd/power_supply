@@ -1,5 +1,6 @@
 import { complex, abs, arg, add, multiply, divide } from 'mathjs'
 import { DesignSpec, DesignResult, Topology, TransferFunction } from '../types'
+import { checkSaturation } from '../inductor-saturation'
 import coresData from '../../data/cores.json'
 
 interface CoreData {
@@ -246,6 +247,10 @@ export const forwardTopology: Topology = {
       `(min Cin ≈ ${(cin * 1e6).toFixed(1)} µF).`
     )
 
+    // Saturation check on the output filter inductor (Lo)
+    const saturation_check = checkSaturation(IL_peak, iout)
+    if (saturation_check.warning) warnings.push(saturation_check.warning)
+
     return {
       dutyCycle,
       inductance: outputInductance,  // Lo — the main energy-storage inductor
@@ -253,6 +258,7 @@ export const forwardTopology: Topology = {
       peakCurrent: IL_peak,          // output inductor peak current
       ccm_dcm_boundary,
       operating_mode,
+      saturation_check,
       inductor: {
         value: outputInductance,
         peak_current: IL_peak,

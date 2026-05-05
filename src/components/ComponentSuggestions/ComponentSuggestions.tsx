@@ -9,6 +9,7 @@ import {
   type MosfetData,
 } from '../../engine/component-selector'
 import { computeGateDrive, type GateDriveResult } from '../../engine/gate-drive'
+import { checkSaturation } from '../../engine/inductor-saturation'
 import { Tooltip } from '../Tooltip/Tooltip'
 import styles from './ComponentSuggestions.module.css'
 
@@ -300,44 +301,65 @@ export function ComponentSuggestions() {
       )}
 
       {/* ── Inductor ────────────────────────────────────────────── */}
-      {inductor && (
-        <div className={styles.section}>
-          <div className={styles.sectionTitle}>
-            Inductor (L1)
-            <Tooltip content={inductanceTooltip} side="right">
-              <span className={styles.infoIcon}>ⓘ</span>
-            </Tooltip>
-            {selectBadge(sel.inductor?.part_number === inductor.part_number)}
-          </div>
-          <div className={styles.card}>
-            <div className={styles.cardHeader}>
-              <span className={styles.rank}>#1</span>
-              <span className={styles.partNumber}>{inductor.part_number}</span>
+      {inductor && (() => {
+        const satCheck = checkSaturation(result.peakCurrent, spec.iout, inductor)
+        const marginPct = satCheck.margin_pct
+        const marginColor =
+          satCheck.is_saturated ? '#ef4444'
+          : marginPct !== null && marginPct < 10 ? '#ef4444'
+          : marginPct !== null && marginPct < 30 ? '#f59e0b'
+          : '#4ade80'
+        const marginLabel =
+          satCheck.is_saturated
+            ? 'SATURATED'
+            : marginPct !== null
+              ? `${marginPct.toFixed(0)} % headroom`
+              : `B ≈ ${(satCheck.estimated_B_peak / satCheck.B_sat_material * 100).toFixed(0)} % of Bsat`
+        return (
+          <div className={styles.section}>
+            <div className={styles.sectionTitle}>
+              Inductor (L1)
+              <Tooltip content={inductanceTooltip} side="right">
+                <span className={styles.infoIcon}>ⓘ</span>
+              </Tooltip>
+              {selectBadge(sel.inductor?.part_number === inductor.part_number)}
             </div>
-            <div className={styles.manufacturer}>{inductor.manufacturer}</div>
-            <div className={styles.specs}>
-              <span className={styles.spec}><strong>{inductor.inductance_uh}</strong> µH</span>
-              <span className={styles.spec}>DCR <strong>{inductor.dcr_mohm}</strong> mΩ</span>
-              <span className={styles.spec}>
-                Isat <Tooltip content={peakCurrentTooltip} side="top">
-                  <strong>{inductor.isat_a}</strong>
-                </Tooltip> A
-              </span>
-              <span className={styles.spec}>Irms <strong>{inductor.irms_a}</strong> A</span>
+            <div className={styles.card}>
+              <div className={styles.cardHeader}>
+                <span className={styles.rank}>#1</span>
+                <span className={styles.partNumber}>{inductor.part_number}</span>
+              </div>
+              <div className={styles.manufacturer}>{inductor.manufacturer}</div>
+              <div className={styles.specs}>
+                <span className={styles.spec}><strong>{inductor.inductance_uh}</strong> µH</span>
+                <span className={styles.spec}>DCR <strong>{inductor.dcr_mohm}</strong> mΩ</span>
+                <span className={styles.spec}>
+                  Isat <Tooltip content={peakCurrentTooltip} side="top">
+                    <strong>{inductor.isat_a}</strong>
+                  </Tooltip> A
+                </span>
+                <span className={styles.spec}>Irms <strong>{inductor.irms_a}</strong> A</span>
+              </div>
+              <div className={styles.satRow}>
+                <span className={styles.satLabel}>Sat. margin</span>
+                <span className={styles.satValue} style={{ color: marginColor }}>
+                  {marginLabel}
+                </span>
+              </div>
+              <button
+                className={styles.selectButton}
+                onClick={() =>
+                  setSelectedComponent('inductor',
+                    sel.inductor?.part_number === inductor.part_number ? null : inductor
+                  )
+                }
+              >
+                {sel.inductor?.part_number === inductor.part_number ? 'Deselect' : 'Select'}
+              </button>
             </div>
-            <button
-              className={styles.selectButton}
-              onClick={() =>
-                setSelectedComponent('inductor',
-                  sel.inductor?.part_number === inductor.part_number ? null : inductor
-                )
-              }
-            >
-              {sel.inductor?.part_number === inductor.part_number ? 'Deselect' : 'Select'}
-            </button>
           </div>
-        </div>
-      )}
+        )
+      })()}
 
       {/* ── Output capacitor ────────────────────────────────────── */}
       {capacitor && (

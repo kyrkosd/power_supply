@@ -115,6 +115,28 @@
   font-family: var(--font-mono);
 }
 
+/* Saturation margin row inside inductor card */
+.satRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0 5px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  margin-top: 3px;
+}
+
+.satLabel {
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+}
+
+.satValue {
+  font-size: 10px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+}
+
 .selectButton {
   width: 100%;
   padding: 5px 0;

@@ -1,6 +1,7 @@
 import { DesignSpec, DesignResult, Topology } from '../types'
 import type { WaveformSet } from '../topologies/types'
 import { analyzeBuckControlLoop } from '../control-loop'
+import { checkSaturation } from '../inductor-saturation'
 import type { StateSpaceModel } from './types'
 
 // Buck (step-down) converter steady-state design equations.
@@ -40,13 +41,17 @@ export const buckTopology: Topology = {
 
     const loop = analyzeBuckControlLoop(spec, { dutyCycle, inductance, capacitance, peakCurrent, warnings: [] })
 
-    return { 
-      dutyCycle, 
-      inductance, 
-      capacitance, 
-      peakCurrent, 
+    const saturation_check = checkSaturation(peakCurrent, iout)
+    if (saturation_check.warning) dcm_warnings.push(saturation_check.warning)
+
+    return {
+      dutyCycle,
+      inductance,
+      capacitance,
+      peakCurrent,
       ccm_dcm_boundary,
       operating_mode,
+      saturation_check,
       warnings: [...dcm_warnings, ...loop.warnings]
     }
   },

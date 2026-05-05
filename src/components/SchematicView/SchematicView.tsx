@@ -59,6 +59,15 @@ function formatU(value: number, decimals: number, unit: string) {
   return `${value.toFixed(decimals)} ${unit}`
 }
 
+function inductorStatusFromResult(result: DesignResult | null): ComponentStatus {
+  const sat = result?.saturation_check
+  if (!sat) return 'normal'
+  if (sat.is_saturated) return 'violation'
+  if (sat.margin_pct !== null && sat.margin_pct < 20) return 'warning'
+  if (sat.estimated_B_peak > sat.B_sat_material * 0.80) return 'warning'
+  return 'normal'
+}
+
 function formatResistance(value: number) {
   if (!Number.isFinite(value)) return '—'
   if (value >= 1000) return `${(value / 1000).toFixed(1)} kΩ`
@@ -80,13 +89,7 @@ function createBuckSchematic(spec: DesignSpec, result: DesignResult | null): Sch
     ? `${(outputEsr * 1000).toFixed(1)} mΩ ESR`
     : 'ESR —'
   const loadResistance = spec.iout > 0 ? spec.vout / spec.iout : NaN
-  const inductorStatus: ComponentStatus = result
-    ? result.peakCurrent > spec.iout * 3
-      ? 'violation'
-      : result.peakCurrent > spec.iout * 2.5
-      ? 'warning'
-      : 'normal'
-    : 'normal'
+  const inductorStatus: ComponentStatus = inductorStatusFromResult(result)
   const switchStatus: ComponentStatus = duty >= 0.9 || duty <= 0.1 ? 'violation' : duty >= 0.82 || duty <= 0.15 ? 'warning' : 'normal'
   const outputStatus: ComponentStatus = outputEsr > 0.1 ? 'warning' : 'normal'
 
@@ -227,13 +230,7 @@ function createBoostSchematic(spec: DesignSpec, result: DesignResult | null): Sc
   const esrLabel = Number.isFinite(outputEsr) ? `${(outputEsr * 1000).toFixed(1)} mΩ ESR` : 'ESR —'
   const loadResistance = spec.iout > 0 ? spec.vout / spec.iout : NaN
   const switchStatus: ComponentStatus = duty >= 0.9 || duty <= 0.1 ? 'violation' : duty >= 0.82 || duty <= 0.15 ? 'warning' : 'normal'
-  const inductorStatus: ComponentStatus = result
-    ? result.peakCurrent > spec.iout * 3
-      ? 'violation'
-      : result.peakCurrent > spec.iout * 2.5
-      ? 'warning'
-      : 'normal'
-    : 'normal'
+  const inductorStatus: ComponentStatus = inductorStatusFromResult(result)
   const outputStatus: ComponentStatus = outputEsr > 0.1 ? 'warning' : 'normal'
 
   const nodes: SchematicNode[] = [
@@ -371,13 +368,7 @@ function createBuckBoostSchematic(spec: DesignSpec, result: DesignResult | null)
   const esrLabel = Number.isFinite(outputEsr) ? `${(outputEsr * 1000).toFixed(1)} mΩ ESR` : 'ESR —'
   const loadResistance = spec.iout > 0 ? Math.abs(spec.vout) / spec.iout : NaN
   const switchStatus: ComponentStatus = duty >= 0.9 || duty <= 0.1 ? 'violation' : duty >= 0.82 || duty <= 0.15 ? 'warning' : 'normal'
-  const inductorStatus: ComponentStatus = result
-    ? result.peakCurrent > spec.iout * 3
-      ? 'violation'
-      : result.peakCurrent > spec.iout * 2.5
-      ? 'warning'
-      : 'normal'
-    : 'normal'
+  const inductorStatus: ComponentStatus = inductorStatusFromResult(result)
   const outputStatus: ComponentStatus = outputEsr > 0.1 ? 'warning' : 'normal'
 
   const nodes: SchematicNode[] = [
