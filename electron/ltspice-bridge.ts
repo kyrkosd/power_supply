@@ -9,19 +9,33 @@ const SIMULATION_TIMEOUT_MS = 60_000
 
 // ── LTspice discovery ─────────────────────────────────────────────────────────
 
+// Exhaustive list of known LTspice installation paths per platform.
+// Shared between detectLTspicePath() and assertTrustedExecutable() so the
+// whitelist is defined exactly once and both functions stay in sync.
+const KNOWN_LTSPICE_PATHS: Partial<Record<NodeJS.Platform, string[]>> = {
+  win32: [
+    'C:\\Program Files\\ADI\\LTspice\\LTspice.exe',
+    'C:\\Program Files\\LTC\\LTspiceXVII\\XVIIx64.exe',
+    'C:\\Program Files\\LTC\\LTspiceXVII\\XVIIx86.exe',
+  ],
+  darwin: ['/Applications/LTspice.app/Contents/MacOS/LTspice'],
+}
+
 export function detectLTspicePath(): string | null {
-  const platform = os.platform()
-  const searchPaths: string[] =
-    platform === 'win32'
-      ? [
-          'C:\\Program Files\\ADI\\LTspice\\LTspice.exe',
-          'C:\\Program Files\\LTC\\LTspiceXVII\\XVIIx64.exe',
-          'C:\\Program Files\\LTC\\LTspiceXVII\\XVIIx86.exe',
-        ]
-      : platform === 'darwin'
-        ? ['/Applications/LTspice.app/Contents/MacOS/LTspice']
-        : []
-  return searchPaths.find(p => fs.existsSync(p)) ?? null
+  const candidates = KNOWN_LTSPICE_PATHS[os.platform()] ?? []
+  return candidates.find(p => fs.existsSync(p)) ?? null
+}
+
+/**
+ * Throws if the given path is not in the static whitelist of known LTspice
+ * executables. Called immediately before spawn() as defence-in-depth: even if
+ * a caller somehow passes a different string, the process is never started.
+ */
+function assertTrustedExecutable(ltspicePath: string): void {
+  const trusted = (Object.values(KNOWN_LTSPICE_PATHS) as string[][]).flat()
+  if (!trusted.includes(ltspicePath)) {
+    throw new Error(`Untrusted executable path rejected: ${ltspicePath}`)
+  }
 }
 
 // ── File utilities ────────────────────────────────────────────────────────────
@@ -51,10 +65,21 @@ function resolveOutputPaths(asc_path: string): { rawPath: string; logPath: strin
 /**
  * Spawns LTspice in batch mode and resolves with the output file paths.
  * Rejects if the process errors, exits non-zero, or exceeds SIMULATION_TIMEOUT_MS.
+ *
+ * Both the executable path and the .asc path are validated before the process
+ * is started so that no untrusted input can reach child_process.spawn().
  */
 function spawnSimulation(ltspicePath: string, asc_path: string): Promise<{ rawPath: string; logPath: string }> {
+  // Validate both paths eagerly — before the Promise is constructed and before
+  // any process is spawned. Throwing here is synchronous and clean.
+  assertTrustedExecutable(ltspicePath)
+  const { rawPath, logPath } = resolveOutputPaths(asc_path)
+
   return new Promise((resolve, reject) => {
-    const proc = spawn(ltspicePath, ['-b', asc_path], { cwd: dirname(asc_path) })
+    const proc = spawn(ltspicePath, ['-b', asc_path], {
+      cwd: dirname(asc_path),
+      shell: false, // never invoke a shell; prevents shell-injection even if args were tainted
+    })
 
     const timer = setTimeout(() => {
       proc.kill()
@@ -74,15 +99,10 @@ function spawnSimulation(ltspicePath: string, asc_path: string): Promise<{ rawPa
       if (code !== 0) {
         return reject(new Error(`LTspice exited with code ${code}. Stderr: ${stderr}`))
       }
-      try {
-        const paths = resolveOutputPaths(asc_path)
-        if (!fs.existsSync(paths.rawPath) || !fs.existsSync(paths.logPath)) {
-          return reject(new Error('LTspice did not produce expected .raw and .log output files.'))
-        }
-        resolve(paths)
-      } catch (err) {
-        reject(err)
+      if (!fs.existsSync(rawPath) || !fs.existsSync(logPath)) {
+        return reject(new Error('LTspice did not produce expected .raw and .log output files.'))
       }
+      resolve({ rawPath, logPath })
     })
   })
 }
