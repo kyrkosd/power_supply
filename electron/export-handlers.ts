@@ -1,3 +1,9 @@
+// This module defines IPC handlers for exporting data (PDFs, CSVs) from the app.
+// The handlers prompt the user for a save location (via the native dialog) and then
+// write the data to disk. The handlers return a `SaveResult` indicating success or
+// failure, along with any relevant details (e.g. error message on failure).
+// The main export is `setupExportIPC()`, which registers all handlers. Call this
+// once during app initialization.
 import { ipcMain, dialog, BrowserWindow } from 'electron'
 import { promises as fsp } from 'fs'
 
