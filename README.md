@@ -21,6 +21,11 @@ Built with **Electron + React + TypeScript**.
 - **LTspice Bridge** — Generates `.asc` netlists, runs simulations in batch mode, and parses `.raw` files to overlay analytical vs. simulated waveforms. Identifies discrepancies in RMS currents or peak ripples. *(Note: LTspice comparison requires LTspice to be installed locally).*
 - **Startup/Transient Simulation** — Solves state-space models using an RK4 integrator to visualize startup inrush, load steps, and line steps directly in the app. Evaluates control loop settling time and voltage overshoot without requiring an external SPICE engine.
 - **EMI Pre-Compliance** — Estimates conducted EMI spectrum from input ripple and compares against CISPR 32 Class A/B limits. Highlights failing harmonics and automatically suggests a required LC input filter.
+- **DCM detection** — flags when a design operates in discontinuous conduction mode and computes the CCM/DCM boundary current for all non-isolated topologies
+- **Project save / load** — saves the full design (topology, all parameters, notes, component overrides) to a `.pswb` JSON file; re-opens it with a single file-open dialog (`Ctrl+S` / `Ctrl+O`)
+- **Undo / Redo** — 50-step history with 300 ms debounce so rapid slider drags produce one undo step (`Ctrl+Z` / `Ctrl+Shift+Z`)
+- **PDF report export** — 6-page A4 PDF containing design summary, component values table, schematic, waveforms, Bode plot, and loss-breakdown charts (captured via SVG serialisation)
+- **CSV BOM export** — 9-column RFC 4180 bill of materials listing every component (Reference, Component, Value, Rating, Package, Manufacturer, Part Number, Quantity, Notes); uses selected component part numbers when available
 - **Per-topology Reset** — one-click restore to sensible default values
 - **Worker thread** — all computation runs off the main thread; UI stays at 60 fps
 

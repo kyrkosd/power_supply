@@ -39,6 +39,14 @@ interface UndoableStore {
   isModified: boolean
 }
 
+/** Reset all history — intended for test teardown only. */
+export function clearUndoHistory(): void {
+  undoHistory.length = 0
+  redoHistory.length = 0
+  if (debounceTimer) { clearTimeout(debounceTimer); debounceTimer = null }
+  pendingSnapshot = null
+}
+
 // Flush any in-flight debounce window and commit the snapshot immediately.
 // Call this before undo() so that Ctrl+Z while dragging commits + reverts the drag.
 function flush(get: GetFn<UndoableStore>, originalSet: SetFn<UndoableStore>): void {

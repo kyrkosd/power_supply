@@ -63,9 +63,9 @@ always go through the worker.
 |-------------|-------------------------------|--------|
 | `buck`      | `topologies/buck.ts`          | CCM equations implemented |
 | `boost`     | `topologies/boost.ts`         | CCM equations implemented |
-| `buck-boost`| `topologies/buckBoost.ts`     | stub |
+| `buck-boost`| `topologies/buckBoost.ts`     | CCM equations implemented |
 | `flyback`   | `topologies/flyback.ts`       | CCM equations implemented |
-| `forward`   | `topologies/forward.ts`       | stub |
+| `forward`   | `topologies/forward.ts`       | CCM equations implemented |
 | `sepic`     | `topologies/sepic.ts`       | CCM equations implemented |
 
 Each file exports a single `const xxxTopology: Topology` object.

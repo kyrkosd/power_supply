@@ -27,8 +27,8 @@ export interface OutputCapResult {
 }
 
 export interface DesignResult {
-  output_cap: OutputCapResult
-  inductor: InductorResult
+  output_cap?: OutputCapResult
+  inductor?: InductorResult
   dutyCycle: number      // 0–1
   inductance: number     // H
   capacitance: number    // F

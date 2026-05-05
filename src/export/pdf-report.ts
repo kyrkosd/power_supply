@@ -234,11 +234,11 @@ function addChartImage(
 function buildComponentRows(result: DesignResult): Row[] {
   const rows: Row[] = [
     ['Inductance (L)',            fmtL(result.inductance)],
-    ['Inductor peak current',    `${result.inductor.peak_current.toFixed(2)} A`],
-    ['Inductor RMS current',     `${result.inductor.rms_current.toFixed(2)} A`],
+    ['Inductor peak current',    `${(result.inductor?.peak_current ?? result.peakCurrent).toFixed(2)} A`],
+    ['Inductor RMS current',     `${(result.inductor?.rms_current ?? 0).toFixed(2)} A`],
     ['Output capacitance (Cout)', fmtC(result.capacitance)],
-    ['Output cap ESR (max)',      fmtR(result.output_cap.esr_max)],
-    ['Cap ripple current (RMS)', `${result.output_cap.ripple_current.toFixed(2)} A`],
+    ['Output cap ESR (max)',      result.output_cap ? fmtR(result.output_cap.esr_max) : '—'],
+    ['Cap ripple current (RMS)', `${(result.output_cap?.ripple_current ?? 0).toFixed(2)} A`],
     ['Duty cycle (D)',            fmtPct(result.dutyCycle)],
     ['Peak switch current',      `${result.peakCurrent.toFixed(2)} A`],
   ]

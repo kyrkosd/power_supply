@@ -211,8 +211,9 @@ export function generateBOM(
   const ind = selected.inductor
     ?? suggestInductors(result.inductance * 1e6, result.peakCurrent)[0]
     ?? null
+  const irms = result.inductor?.rms_current ?? 0
   const lRating =
-    `Isat≥${result.peakCurrent.toFixed(1)} A; Irms≥${result.inductor.rms_current.toFixed(1)} A; DCR≤${maxDcr_mOhm(spec).toFixed(0)} mΩ`
+    `Isat≥${result.peakCurrent.toFixed(1)} A; Irms≥${irms.toFixed(1)} A; DCR≤${maxDcr_mOhm(spec).toFixed(0)} mΩ`
   rows.push({
     ref:          'L1',
     component:    'Inductor',
@@ -247,7 +248,7 @@ export function generateBOM(
     ?? suggestCapacitors(result.capacitance * 1e6, spec.vout * 1.5)[0]
     ?? null
   const coutRating =
-    `V≥${(spec.vout * 1.5).toFixed(0)} V; ESR≤${fmtR(result.output_cap.esr_max)}; Irms≥${result.output_cap.ripple_current.toFixed(2)} A`
+    `V≥${(spec.vout * 1.5).toFixed(0)} V; ESR≤${result.output_cap ? fmtR(result.output_cap.esr_max) : '—'}; Irms≥${(result.output_cap?.ripple_current ?? 0).toFixed(2)} A`
   rows.push({
     ref:          'Cout',
     component:    'Capacitor',
