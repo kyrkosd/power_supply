@@ -1,6 +1,7 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import { useDesignStore, TopologyId } from '../../store/design-store'
 import { HelpPanel } from '../HelpPanel/HelpPanel'
+import { generateReport } from '../../export/pdf-report'
 import styles from './Toolbar.module.css'
 
 const TOPOLOGIES: { id: TopologyId; label: string }[] = [
@@ -18,7 +19,11 @@ export function Toolbar(): React.ReactElement {
     currentProjectPath, isModified,
     newProject, openProject, saveProject, saveProjectAs,
     undo, redo, canUndo, canRedo,
+    spec, result, notes,
+    activeVizTab, setActiveVizTab,
   } = useDesignStore()
+
+  const [isExporting, setIsExporting] = useState(false)
 
   // Keep the native window title bar in sync
   useEffect(() => {
@@ -28,6 +33,28 @@ export function Toolbar(): React.ReactElement {
   const projectName = currentProjectPath
     ? currentProjectPath.replace(/.*[\\/]/, '')
     : null
+
+  const handleExport = useCallback(async () => {
+    if (!result || isExporting) return
+    setIsExporting(true)
+    try {
+      const blob = await generateReport({
+        topology,
+        spec,
+        result,
+        notes,
+        setActiveVizTab,
+        currentTab: activeVizTab,
+      })
+      const buffer = await blob.arrayBuffer()
+      const defaultName = `${topology}_design_report.pdf`
+      await window.exportAPI?.savePdf(buffer, defaultName)
+    } catch (err) {
+      console.error('PDF export failed:', err)
+    } finally {
+      setIsExporting(false)
+    }
+  }, [result, isExporting, topology, spec, notes, setActiveVizTab, activeVizTab])
 
   return (
     <header className={styles.toolbar}>
@@ -118,8 +145,13 @@ export function Toolbar(): React.ReactElement {
         >
           ↺ Reset
         </button>
-        <button className={styles.btn} disabled title="Export report (coming soon)">
-          ↓ Export
+        <button
+          className={styles.btn}
+          onClick={handleExport}
+          disabled={!result || isExporting}
+          title={result ? 'Export PDF report' : 'Run simulation first to enable export'}
+        >
+          {isExporting ? '⏳ Generating…' : '↓ Export PDF'}
         </button>
         <HelpPanel />
       </div>

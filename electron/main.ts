@@ -3,6 +3,7 @@ import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { setupLTspiceIPC } from './ltspice-bridge'
 import { setupProjectIPC } from './file-handlers'
+import { setupExportIPC } from './export-handlers'
 
 function createWindow(): void {
   const win = new BrowserWindow({
@@ -46,6 +47,7 @@ app.whenReady().then(() => {
 
   setupLTspiceIPC()
   setupProjectIPC()
+  setupExportIPC()
 
   createWindow()
 

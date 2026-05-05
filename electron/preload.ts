@@ -14,10 +14,16 @@ const projectAPI = {
     ipcRenderer.invoke('project:set-title', { filename, modified }),
 }
 
+const exportAPI = {
+  savePdf: (buffer: ArrayBuffer, defaultName: string) =>
+    ipcRenderer.invoke('export:save-pdf', { buffer, defaultName }),
+}
+
 if (process.contextIsolated) {
   try {
     contextBridge.exposeInMainWorld('electron', electronAPI)
     contextBridge.exposeInMainWorld('projectAPI', projectAPI)
+    contextBridge.exposeInMainWorld('exportAPI', exportAPI)
   } catch (error) {
     console.error(error)
   }
@@ -26,4 +32,6 @@ if (process.contextIsolated) {
   window.electron = electronAPI
   // @ts-expect-error -- window.projectAPI is declared in env.d.ts
   window.projectAPI = projectAPI
+  // @ts-expect-error -- window.exportAPI is declared in env.d.ts
+  window.exportAPI = exportAPI
 }

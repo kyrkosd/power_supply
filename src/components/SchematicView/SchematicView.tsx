@@ -1074,7 +1074,7 @@ function renderWire(wire: SchematicWire) {
 
 function SchematicRenderer({ definition }: { definition: SchematicDefinition }) {
   return (
-    <svg viewBox="0 0 860 320" className={styles.diagram} preserveAspectRatio="xMidYMid meet">
+    <svg viewBox="0 0 860 320" className={styles.diagram} preserveAspectRatio="xMidYMid meet" data-export-id="schematic">
       <defs>
         <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
           <path d="M 0 0 L 10 5 L 0 10 z" fill="#60a5fa" />

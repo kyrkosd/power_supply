@@ -127,7 +127,7 @@ export function WaveformChart({ waveforms, spec }: WaveformChartProps): React.Re
 
   return (
     <div className={styles.wrapper}>
-      <svg ref={svgRef} className={styles.svg} />
+      <svg ref={svgRef} className={styles.svg} data-export-id="waveform-chart" />
     </div>
   )
 }

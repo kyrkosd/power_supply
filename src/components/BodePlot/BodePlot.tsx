@@ -177,7 +177,7 @@ export function BodePlot({ spec, result }: BodePlotProps): React.ReactElement {
 
   return (
     <div className={styles.wrapper}>
-      <svg ref={svgRef} className={styles.svg} />
+      <svg ref={svgRef} className={styles.svg} data-export-id="bode-plot" />
     </div>
   )
 }

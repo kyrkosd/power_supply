@@ -255,7 +255,7 @@ export function LossBreakdown(): React.ReactElement {
       <div className={styles.charts}>
         <section className={styles.chartCard}>
           <div className={styles.chartHeader}>Loss Breakdown</div>
-          <div className={styles.barChartWrapper}>
+          <div className={styles.barChartWrapper} data-export-id="loss-bar">
             <ResponsiveContainer width="100%" height={110}>
               <BarChart data={barChartData} layout="vertical" margin={{ top: 6, right: 6, bottom: 6, left: 6 }}>
                 <XAxis type="number" hide domain={[0, 'dataMax']} />
@@ -309,7 +309,7 @@ export function LossBreakdown(): React.ReactElement {
 
         <section className={styles.chartCard}>
           <div className={styles.chartHeader}>Efficiency Curve</div>
-          <svg ref={svgRef} className={styles.curveSvg} />
+          <svg ref={svgRef} className={styles.curveSvg} data-export-id="loss-eff" />
         </section>
       </div>
 

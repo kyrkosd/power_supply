@@ -13,6 +13,12 @@ interface ProjectOpenResult {
   error?: string
 }
 
+interface ExportSaveResult {
+  success: boolean
+  filePath?: string
+  error?: string
+}
+
 interface Window {
   electron: import('@electron-toolkit/preload').ElectronAPI
   projectAPI?: {
@@ -21,5 +27,8 @@ interface Window {
     open: () => Promise<ProjectOpenResult>
     recent: () => Promise<string[]>
     setTitle: (filename: string | null, modified: boolean) => Promise<void>
+  }
+  exportAPI?: {
+    savePdf: (buffer: ArrayBuffer, defaultName: string) => Promise<ExportSaveResult>
   }
 }
