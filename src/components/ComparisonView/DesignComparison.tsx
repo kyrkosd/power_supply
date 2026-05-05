@@ -2,7 +2,6 @@ import React, { useEffect, useCallback } from 'react'
 import { useDesignStore } from '../../store/design-store'
 import type { ComparisonSlot } from '../../store/design-store'
 import type { DesignResult, DesignSpec } from '../../engine/types'
-import type { TopologyId } from '../../store/design-store'
 import { fmtL, fmtC, fmtHz } from '../../export/format-utils'
 import styles from './DesignComparison.module.css'
 

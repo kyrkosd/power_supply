@@ -29,22 +29,22 @@ describe('All 6 topologies — default application specs', () => {
   it('buck computes without error at default spec', () => {
     const r = buckTopology.compute(defaults.buck)
     sanityCheck('buck', r)
-    // D = Vout / Vin_max = 5/15 = 0.3333
-    expect(r.dutyCycle).toBeCloseTo(5 / 15, 4)
+    // D = Vout / Vin_max = 5/14 ≈ 0.3571  (vinMax = 14 V)
+    expect(r.dutyCycle).toBeCloseTo(5 / 14, 4)
   })
 
   it('boost computes without error at default spec', () => {
     const r = boostTopology.compute(defaults.boost)
     sanityCheck('boost', r)
-    // D = 1 - (Vin_min × η) / Vout = 1 - (5 × 0.9) / 12 = 0.625
-    expect(r.dutyCycle).toBeCloseTo(1 - (5 * 0.9) / 12, 2)
+    // D = 1 - (Vin_min × η) / Vout = 1 - (4.5 × 0.90) / 12 ≈ 0.6625
+    expect(r.dutyCycle).toBeCloseTo(1 - (4.5 * 0.90) / 12, 2)
   })
 
-  it('buck-boost computes without error at default spec (vout = 9 V positive)', () => {
+  it('buck-boost computes without error at default spec (vout = −5 V)', () => {
     const r = buckBoostTopology.compute(defaults['buck-boost'])
     sanityCheck('buck-boost', r)
-    // D = |Vout| / (Vin_min·η + |Vout|) = 9 / (5·0.85 + 9) = 9 / 13.25 ≈ 0.6792
-    expect(r.dutyCycle).toBeCloseTo(9 / (5 * 0.85 + 9), 3)
+    // D = |Vout| / (Vin_min·η + |Vout|) = 5 / (10·0.85 + 5) = 5/13.5 ≈ 0.3704
+    expect(r.dutyCycle).toBeCloseTo(5 / (10 * 0.85 + 5), 3)
   })
 
   it('flyback computes without error at default spec', () => {

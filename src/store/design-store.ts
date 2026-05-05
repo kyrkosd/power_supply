@@ -12,7 +12,7 @@ import type { SelectedComponents } from '../engine/component-selector'
 export type { SelectedComponents } from '../engine/component-selector'
 
 export type { TopologyId } from './workbenchStore'
-export type ActiveVizTab = 'waveforms' | 'bode' | 'losses' | 'thermal' | 'monte-carlo' | 'ltspice-comparison' | 'transient' | 'emi'
+export type ActiveVizTab = 'waveforms' | 'bode' | 'losses' | 'thermal' | 'monte-carlo' | 'ltspice-comparison' | 'transient' | 'emi' | 'efficiency-map'
 
 export interface MCRunRequest {
   iterations: number
@@ -24,6 +24,17 @@ export interface ComparisonSlot {
   topology: TopologyId
   spec: DesignSpec
   result: DesignResult
+}
+
+export interface EfficiencyMapRequest {
+  topology: TopologyId
+  spec: DesignSpec
+}
+
+export interface EfficiencyMapResult {
+  matrix: number[][]   // [vinIdx][ioutIdx], 10×10 — values in range 0–1
+  vinPoints: number[]  // V
+  ioutPoints: number[] // A
 }
 
 export interface DesignStoreState {
@@ -52,6 +63,14 @@ export interface DesignStoreState {
   setIsComparing: (open: boolean) => void
   clearComparison: () => void
 
+  // Efficiency map
+  efficiencyMapResult: EfficiencyMapResult | null
+  efficiencyMapLoading: boolean
+  efficiencyMapRequest: EfficiencyMapRequest | null
+  requestEfficiencyMap: () => void
+  clearEfficiencyMapRequest: () => void
+  setEfficiencyMapResult: (r: EfficiencyMapResult | null) => void
+
   // Undo / redo (managed by undoMiddleware)
   canUndo: boolean
   canRedo: boolean
@@ -59,6 +78,8 @@ export interface DesignStoreState {
   redo: () => void
 
   setTopology: (topology: TopologyId) => void
+  setTopologyOnly: (topology: TopologyId) => void
+  cancelComputing: () => void
   updateSpec: (updates: Partial<DesignSpec>) => void
   resetSpec: () => void
   setResult: (result: DesignResult | null, waveforms: WaveformSet | null, computeTimeMs?: number) => void
@@ -80,32 +101,10 @@ export interface DesignStoreState {
   saveProjectAs: () => Promise<void>
 }
 
-export const TOPOLOGY_DEFAULTS: Record<TopologyId, DesignSpec> = {
-  buck: {
-    vinMin: 10, vinMax: 15, vout: 5, iout: 2,
-    fsw: 200_000, rippleRatio: 0.3, ambientTemp: 25, voutRippleMax: 0.01, efficiency: 0.9,
-  },
-  boost: {
-    vinMin: 5, vinMax: 8, vout: 12, iout: 1,
-    fsw: 200_000, rippleRatio: 0.3, ambientTemp: 25, voutRippleMax: 0.05, efficiency: 0.9,
-  },
-  'buck-boost': {
-    vinMin: 5, vinMax: 15, vout: 9, iout: 1,
-    fsw: 200_000, rippleRatio: 0.3, ambientTemp: 25, voutRippleMax: 0.05, efficiency: 0.85,
-  },
-  flyback: {
-    vinMin: 36, vinMax: 72, vout: 12, iout: 2,
-    fsw: 100_000, rippleRatio: 0.3, ambientTemp: 25, voutRippleMax: 0.1, efficiency: 0.85,
-  },
-  forward: {
-    vinMin: 36, vinMax: 72, vout: 12, iout: 3,
-    fsw: 100_000, rippleRatio: 0.3, ambientTemp: 25, voutRippleMax: 0.1, efficiency: 0.88,
-  },
-  sepic: {
-    vinMin: 6, vinMax: 14, vout: 9, iout: 1,
-    fsw: 200_000, rippleRatio: 0.3, ambientTemp: 25, voutRippleMax: 0.05, efficiency: 0.88,
-  },
-}
+// Re-exported from the engine layer so the rest of the app keeps the same
+// import path, but defaults are defined exactly once in defaults.ts.
+export { TOPOLOGY_DEFAULTS } from '../engine/topologies/defaults'
+import { TOPOLOGY_DEFAULTS } from '../engine/topologies/defaults'
 
 const defaultSpec: DesignSpec = TOPOLOGY_DEFAULTS['buck']
 
@@ -157,6 +156,11 @@ export const useDesignStore = create<DesignStoreState>(
     comparisonSlot: null,
     isComparing: false,
 
+    // Efficiency map state
+    efficiencyMapResult: null,
+    efficiencyMapLoading: false,
+    efficiencyMapRequest: null,
+
     saveToComparison: () => {
       const { topology, spec, result } = get()
       if (!result) return
@@ -166,6 +170,15 @@ export const useDesignStore = create<DesignStoreState>(
     setIsComparing: (open) => set({ isComparing: open }),
 
     clearComparison: () => set({ comparisonSlot: null, isComparing: false }),
+
+    requestEfficiencyMap: () => {
+      const { topology, spec } = get()
+      set({ efficiencyMapRequest: { topology, spec }, efficiencyMapLoading: true })
+    },
+
+    clearEfficiencyMapRequest: () => set({ efficiencyMapRequest: null }),
+
+    setEfficiencyMapResult: (r) => set({ efficiencyMapResult: r, efficiencyMapLoading: false }),
 
     // Stubs — overridden by undoMiddleware before the store is returned
     canUndo: false,
@@ -178,6 +191,13 @@ export const useDesignStore = create<DesignStoreState>(
 
     setTopology: (topology) =>
       set({ topology, spec: TOPOLOGY_DEFAULTS[topology], isModified: true, selectedComponents: EMPTY_SELECTION, ...COMPUTE_RESET }),
+
+    // Switches topology without resetting spec values (user chose "Keep Current")
+    setTopologyOnly: (topology) =>
+      set({ topology, isModified: true, selectedComponents: EMPTY_SELECTION, ...COMPUTE_RESET }),
+
+    // Cancels the computing spinner when the worker is blocked by validation errors
+    cancelComputing: () => set({ isComputing: false }),
 
     updateSpec: (updates) =>
       set((state) => ({

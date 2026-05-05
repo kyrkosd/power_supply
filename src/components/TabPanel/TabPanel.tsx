@@ -5,14 +5,16 @@ import { BodeTab } from './tabs/BodeTab'
 import { LossesTab } from './tabs/LossesTab'
 import { ThermalTab } from './tabs/ThermalTab'
 import { MonteCarloTab } from './tabs/MonteCarloTab'
+import { EfficiencyMapTab } from './tabs/EfficiencyMapTab'
 import styles from './TabPanel.module.css'
 
 const TABS: { id: ActiveVizTab; label: string }[] = [
-  { id: 'waveforms',   label: 'Waveforms' },
-  { id: 'bode',        label: 'Bode Plot' },
-  { id: 'losses',      label: 'Losses' },
-  { id: 'thermal',     label: 'Thermal' },
-  { id: 'monte-carlo', label: 'Monte Carlo' },
+  { id: 'waveforms',      label: 'Waveforms' },
+  { id: 'bode',           label: 'Bode Plot' },
+  { id: 'losses',         label: 'Losses' },
+  { id: 'thermal',        label: 'Thermal' },
+  { id: 'monte-carlo',    label: 'Monte Carlo' },
+  { id: 'efficiency-map', label: 'Efficiency Map' },
 ]
 
 export function TabPanel(): React.ReactElement {
@@ -37,7 +39,8 @@ export function TabPanel(): React.ReactElement {
         {activeVizTab === 'bode'      && <BodeTab />}
         {activeVizTab === 'losses'    && <LossesTab />}
         {activeVizTab === 'thermal'      && <ThermalTab />}
-        {activeVizTab === 'monte-carlo' && <MonteCarloTab />}
+        {activeVizTab === 'monte-carlo'    && <MonteCarloTab />}
+        {activeVizTab === 'efficiency-map' && <EfficiencyMapTab />}
       </div>
     </div>
   )

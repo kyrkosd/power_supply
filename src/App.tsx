@@ -8,6 +8,7 @@ import { FirstRunWelcome } from './components/FirstRunWelcome/FirstRunWelcome'
 import { StatusBar } from './components/StatusBar/StatusBar'
 import { useDesignStore } from './store/design-store'
 import { DesignComparison } from './components/ComparisonView/DesignComparison'
+import { validateSpec } from './engine/validation'
 import styles from './App.module.css'
 
 // ── Keyboard shortcut handlers ────────────────────────────────────────────────
@@ -66,10 +67,14 @@ export default function App(): React.ReactElement {
   const openProject     = useDesignStore((s) => s.openProject)
   const saveProject     = useDesignStore((s) => s.saveProject)
   const saveProjectAs   = useDesignStore((s) => s.saveProjectAs)
-  const undo              = useDesignStore((s) => s.undo)
-  const redo              = useDesignStore((s) => s.redo)
-  const saveToComparison  = useDesignStore((s) => s.saveToComparison)
-  const setIsComparing    = useDesignStore((s) => s.setIsComparing)
+  const undo                      = useDesignStore((s) => s.undo)
+  const redo                      = useDesignStore((s) => s.redo)
+  const cancelComputing           = useDesignStore((s) => s.cancelComputing)
+  const saveToComparison          = useDesignStore((s) => s.saveToComparison)
+  const setIsComparing            = useDesignStore((s) => s.setIsComparing)
+  const efficiencyMapRequest      = useDesignStore((s) => s.efficiencyMapRequest)
+  const clearEfficiencyMapRequest = useDesignStore((s) => s.clearEfficiencyMapRequest)
+  const setEfficiencyMapResult    = useDesignStore((s) => s.setEfficiencyMapResult)
 
   const workerRef = useRef<Worker | null>(null)
 
@@ -100,6 +105,8 @@ export default function App(): React.ReactElement {
         setResult(msg.payload.result, msg.payload.waveforms)
       } else if (msg?.type === 'MC_RESULT' && msg.payload) {
         setMcResult(msg.payload)
+      } else if (msg?.type === 'EFFICIENCY_MAP_RESULT' && msg.payload) {
+        setEfficiencyMapResult(msg.payload)
       } else if (msg?.type === 'ERROR' && msg.payload) {
         console.error('Engine worker error:', msg.payload.message)
       }
@@ -112,12 +119,25 @@ export default function App(): React.ReactElement {
       worker.terminate()
       workerRef.current = null
     }
-  }, [setResult, setMcResult])
+  }, [setResult, setMcResult, setEfficiencyMapResult])
 
   // Engine worker — dispatch design computation on spec/topology change
+  // Skip when validation errors exist; cancelComputing clears the spinner.
   useEffect(() => {
+    const { valid } = validateSpec(topology, spec)
+    if (!valid) {
+      cancelComputing()
+      return
+    }
     workerRef.current?.postMessage({ type: 'COMPUTE', payload: { topology, spec } })
-  }, [topology, spec])
+  }, [topology, spec, cancelComputing])
+
+  // Engine worker — dispatch efficiency map computation when requested
+  useEffect(() => {
+    if (!efficiencyMapRequest) return
+    workerRef.current?.postMessage({ type: 'EFFICIENCY_MAP', payload: efficiencyMapRequest })
+    clearEfficiencyMapRequest()
+  }, [efficiencyMapRequest, clearEfficiencyMapRequest])
 
   // Engine worker — dispatch Monte Carlo run when requested
   useEffect(() => {

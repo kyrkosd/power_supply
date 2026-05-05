@@ -309,3 +309,61 @@
 .notesTextarea::placeholder {
   color: var(--text-muted);
 }
+
+/* ── Validation states ──────────────────────────────────────────────────────── */
+
+.validationBanner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 14px 0;
+  padding: 7px 12px;
+  background: rgba(224, 82, 82, 0.1);
+  border: 1px solid rgba(224, 82, 82, 0.3);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  color: var(--danger);
+}
+
+.validationBannerIcon {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+/* Slider colour overrides for error / warning states */
+.sliderError {
+  accent-color: var(--danger);
+}
+
+.sliderWarning {
+  accent-color: var(--warning);
+}
+
+/* Number input border overrides */
+.numberInputError {
+  border-color: var(--danger) !important;
+  color: var(--danger);
+}
+
+.numberInputWarning {
+  border-color: var(--warning) !important;
+  color: var(--warning);
+}
+
+/* Inline message below the field */
+.validationMsg {
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  font-size: 11px;
+  line-height: 1.4;
+  padding: 2px 0 0;
+}
+
+.validationError {
+  color: var(--danger);
+}
+
+.validationWarning {
+  color: var(--warning);
+}
