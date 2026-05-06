@@ -38,7 +38,7 @@ always go through the worker.
 - **Monte Carlo**: `src/engine/monte-carlo.ts` leverages the existing topology `compute()` engines to run randomized parameter sweeps. Results are stored in Zustand and rendered via D3.
 - **DC Bias Derating**: `src/engine/dc-bias.ts` hooks into the component sizing phase of the topology calculations, utilizing `src/data/dc-bias-curves.json` to calculate `effective_value`.
 - **LTspice Bridge**: `electron/ltspice-bridge.ts` executes LTspice natively via Electron's `child_process`. `src/engine/ltspice/` contains the netlist generators and `.raw`/`.log` parsers which integrate with `ComparisonView` to overlay data.
-- **Startup/Transient Simulation**: `src/engine/transient.ts` uses an RK4 state-space solver. Integrates by requiring Topologies to optionally implement `getStateSpaceModel()` returning A/B matrices.
+- **Startup/Transient Simulation**: `src/engine/transient.ts` uses an RK4 state-space solver. Integrates by requiring Topologies to optionally implement `getStateSpaceModel()` returning A/B matrices. The `TransientTab` (`src/components/TabPanel/tabs/TransientTab.tsx`) dispatches `TRANSIENT_COMPUTE` through the worker; only Buck implements `getStateSpaceModel`. `src/engine/index.ts` exports `getStateSpaceModelFn(topologyId)` for the worker to look up the bound model function.
 - **EMI Pre-Compliance**: `src/engine/emi.ts` takes the steady-state `DesignResult` and spec, computes the Fourier spectrum, and evaluates against limits from `src/data/emi-limits.json`.
 
 ---
@@ -142,6 +142,84 @@ RCD clamping network for flyback and forward converters.
 - `general_tips[]` — topology-specific routing reminders.
 `LayoutGuide` component renders the above in a scrollable panel (tab 5) and the data
 is also captured in the PDF report export.
+
+### Capacitor Lifetime Estimator (`src/engine/cap-lifetime.ts`)
+`estimateLifetime(cap, conditions): CapLifetimeResult` implements the Arrhenius
+electrolytic lifetime model (Nichicon UPS3, IEC 61709 §6):
+- Applies self-heating from ripple current: `ΔT = (Irms/Irated)² × thermal_resistance`
+- Arrhenius acceleration: `L = L₀ × 2^((T_rated − T_op) / 10)`
+- Voltage stress derating: `L × (V_rated/V_op)^n`
+- Returns `derated_lifetime_years`, `self_heating_C`, `ripple_current_ratio`, and `warnings[]`.
+- Rendered in `ComponentSuggestions` only for `type === 'electrolytic'`; ceramics show "N/A".
+
+### Feedback Resistor Divider (`src/engine/feedback.ts`)
+`designFeedback(vout, options): FeedbackResult` computes the two-resistor voltage
+divider for the output regulation feedback network:
+- Bottom resistor: `Rbot = Vref / I_divider` — snapped to nearest E96 or E24 value.
+- Top resistor: `Rtop = Rbot × (Vout/Vref − 1)` — snapped to the same series.
+- Returns `r_top`, `r_bottom`, `actual_vout`, `vout_error_pct`, `divider_current`,
+  `power_dissipated`, `e96_values_used`. Reference: TI SLVA477B eq. 3.
+- `FeedbackOptions` (store key `feedbackOptions`): `vref`, `divider_current`, `use_e96`.
+- Isolated topologies (flyback, forward) display a note instead of computed values.
+
+### Soft-Start Calculator (`src/engine/soft-start.ts`)
+`designSoftStart(topology, spec, result, inductor?, options?): SoftStartResult` sizes
+the soft-start capacitor and estimates inrush currents:
+- `Css = Iss × tss / Vref` (ON Semiconductor AND9135).
+- Inrush without soft-start: `Ipeak = Vout × Cout / tss_min`.
+- Inrush with soft-start: `Iss_limited = Vref / tss × Css`.
+- Monotonic-startup and pre-bias-safe flags derived from tss vs. L/R time constant.
+- `SoftStartOptions` (store key `softStartOptions`): `mode` (`'auto'|'manual'`), `tss_ms`.
+- `TransientTab` reads `softStartOptions` to compute `softStartSeconds` when dispatching
+  `TRANSIENT_COMPUTE` to the worker.
+
+### Inductor Saturation Check (`src/engine/inductor-saturation.ts`)
+`checkSaturation(peakCurrent, iout, inductor): SaturationResult`:
+- Compares `peakCurrent` to `inductor.isat_a`; if exceeded → `is_saturated = true`.
+- Estimates peak flux: `B_peak ≈ µ₀ × µr × N × Ipeak / (l_c)`.
+- Returns `margin_pct` (headroom to Isat), `estimated_B_peak`, `B_sat_material`.
+- In `ComponentSuggestions`: red text when `is_saturated || margin_pct < 10 %`, amber
+  when `margin_pct < 30 %`, green otherwise. Triggered at ripple ratio ≥ 0.6.
+
+### Power Sequencing Analyzer (`src/engine/sequencing.ts`, `src/components/SequencingView/`)
+`analyzeSequencing(rails: SequencingRail[]): SequencingResult` implements TI SLVA722:
+- Sequential chain: each rail enables when the previous reaches power-good (PG).
+- `recommendedOrder(rails)`: core (≤1.8 V) → I/O (≤3.3 V) → high-voltage (>3.3 V),
+  sorted by `vout` within each group.
+- `estimatePgDelay(tss, spec, transientResult?)`: `pg_delay = tss + settling`;
+  settling uses `transient.metrics.settling_time_ms/1000` if available, else `50/fsw`
+  (TI SLVA236A eq. 4).
+- Warnings: only one rail, total boot time > 100 ms, simultaneous start (all pg_delay ≈ 0),
+  and brown-out conflict when a dependent rail enables before its input supply reaches PG.
+- `SequencingView` modal: load rails from saved `.pswb` files or enter manually; drag-and-drop
+  ↑/↓ reorder; D3 timing diagram; conflict highlighting. Toolbar button: ⏱ Sequencing.
+
+### Component Search / Digi-Key Integration
+Provider abstraction in `src/engine/component-search.ts`:
+- `ComponentSearchProvider` interface with `search(req): Promise<ComponentResult[]>`.
+- `LocalDatabaseProvider` — delegates to existing `suggestInductors/Capacitors/Mosfets`.
+- `DigiKeyProvider` — renderer-side stub that calls `(globalThis as any).digikeyAPI.search(req)`.
+- `getProvider(useDigiKey): ComponentSearchProvider` factory.
+
+Main-process bridge in `electron/digikey-bridge.ts`:
+- `safeStorage` credential encryption (OS keychain).
+- OAuth2 client credentials: `POST https://api.digikey.com/v1/oauth2/token`; token cached
+  with 30 s refresh buffer.
+- Token-bucket rate limiter: 5 tokens, 1 per 12 seconds.
+- 1-hour TTL result cache keyed on requirements JSON.
+- Keyword search: `POST https://api.digikey.com/products/v4/search/keyword`.
+- IPC handlers: `digikey:set-credentials`, `digikey:get-credentials`,
+  `digikey:test-connection`, `digikey:search`.
+- `window.digikeyAPI` injected via preload (`electron/preload.ts`); typed in `src/env.d.ts`.
+
+Settings modal in `src/components/Settings/Settings.tsx`:
+- Client ID / Client Secret inputs (secret never returned to renderer).
+- Enable/disable toggle; async Test Connection with live status badge.
+- Store keys: `isSettingsOpen`, `setIsSettingsOpen`, `digiKeyEnabled`, `setDigiKeyEnabled`.
+
+`ComponentSuggestions` shows a collapsible "Search Digi-Key" panel per component type
+(inductor, capacitor, MOSFET) only when `digiKeyEnabled`. Graceful offline badge when
+`window.digikeyAPI` is absent (non-Electron environment).
 
 ---
 

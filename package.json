@@ -1,6 +1,6 @@
 {
   "name": "power-supply-workbench",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "description": "Desktop app for designing switching power supplies",
   "productName": "Power Supply Design Workbench",
   "main": "./out/main/main.js",

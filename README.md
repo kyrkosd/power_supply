@@ -1,5 +1,3 @@
-<!-- INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability. -->
-<!-- INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability. -->
 # Power Supply Design Workbench
 
 A desktop engineering tool for designing and analysing switching power supplies.
@@ -9,34 +7,69 @@ Built with **Electron + React + TypeScript**.
 
 ## Features
 
+### Core Analysis
 - **6 topologies** — Buck, Boost, Buck-Boost, Flyback, Forward, SEPIC
 - **Live schematic** — annotated circuit diagram that updates as you change parameters
 - **Interactive sliders** — all design parameters controllable with instant feedback
-- **Bode plot** — Type-2 compensator design with automatic phase-margin targeting
+- **Bode plot** — Type-2 compensator design with automatic phase-margin targeting; current-mode toggle switches to single-pole plant model
 - **Loss breakdown** — MOSFET conduction/switching, diode, inductor DCR/core, capacitor ESR
 - **Efficiency curve** — η vs load current at the selected operating point
 - **Thermal analysis** — junction temperature bars (green/yellow/red) with heatsink recommendations
-- **Component suggestions** — matched inductors, capacitors, and MOSFETs from a curated database
-- **Keyboard shortcuts** — `Ctrl+1/2/3/4` to switch visualisation tabs
-- **Monte Carlo Tolerance Analysis** — Runs hundreds of iterations varying component tolerances to generate yield histograms and worst-case margins. Helps ensure designs meet efficiency and ripple specs across mass production variances.
-- **Ceramic DC Bias Derating** — Automatically derates MLCC capacitance based on DC voltage using empirical curves (e.g., X5R/X7R) to warn about effective capacitance loss. Prevent unexpected instability or high ripple caused by undersized output capacitors.
-- **LTspice Bridge** — Generates `.asc` netlists, runs simulations in batch mode, and parses `.raw` files to overlay analytical vs. simulated waveforms. Identifies discrepancies in RMS currents or peak ripples. *(Note: LTspice comparison requires LTspice to be installed locally).*
-- **Startup/Transient Simulation** — Solves state-space models using an RK4 integrator to visualize startup inrush, load steps, and line steps directly in the app. Evaluates control loop settling time and voltage overshoot without requiring an external SPICE engine.
-- **EMI Pre-Compliance** — Estimates conducted EMI spectrum from input ripple and compares against CISPR 32 Class A/B limits. Highlights failing harmonics and automatically suggests a required LC input filter.
-- **DCM detection** — flags when a design operates in discontinuous conduction mode and computes the CCM/DCM boundary current for all non-isolated topologies
-- **Project save / load** — saves the full design (topology, all parameters, notes, component overrides) to a `.pswb` JSON file; re-opens it with a single file-open dialog (`Ctrl+S` / `Ctrl+O`)
-- **Undo / Redo** — 50-step history with 300 ms debounce so rapid slider drags produce one undo step (`Ctrl+Z` / `Ctrl+Shift+Z`)
-- **PDF report export** — 6-page A4 PDF containing design summary, component values table, schematic, waveforms, Bode plot, and loss-breakdown charts (captured via SVG serialisation)
-- **CSV BOM export** — 9-column RFC 4180 bill of materials listing every component (Reference, Component, Value, Rating, Package, Manufacturer, Part Number, Quantity, Notes); uses selected component part numbers when available
-- **Per-topology Reset** — one-click restore to sensible default values
-- **Worker thread** — all computation runs off the main thread; UI stays at 60 fps
-- **Design comparison** — save any computed result as Design A (`Ctrl+K`), then change topology or parameters and open a side-by-side diff table (`Ctrl+Shift+K`); win/lose colour coding and a winner badge across 10 key metrics
-- **Efficiency heatmap** — 10×10 Vin × Iout operating-space map computed in the Web Worker, rendered as a D3 colour-gradient SVG (dark red → bright green) with a crosshair at the current operating point and hover tooltips; available as a dedicated visualisation tab
-- **Input validation with smart defaults** — `validateSpec()` enforces topology-specific constraints (e.g. buck Vout < Vin, boost Vout > Vin, flyback D < 50 %) with inline error/warning banners; switching topology auto-applies matching defaults or shows a confirmation dialog when parameters have been customised
-- **Multi-output flyback** — up to 3 additional secondary windings beyond the regulated primary; the engine sizes the transformer core to total output power and computes per-secondary turns count, diode reverse-voltage rating, output capacitance, and a cross-regulation estimate (±% under ±50 % primary load variation); schematic expands to show all secondary circuits
-- **Gate drive calculator** — for the selected MOSFET, computes external gate resistor, peak gate current, turn-on/off times (Qg and Qgd based), recommended dead time, and gate drive power dissipation; buck and forward topologies additionally show bootstrap capacitor (Cboot) and bootstrap diode voltage rating with detailed engineering tooltips
-- **RCD snubber / clamp design** — for flyback and forward converters, computes leakage-inductance energy at every switch-off event and sizes the RCD clamping network (resistor, capacitor, and fast-recovery diode) using TI SLUA107 / Erickson §6.2.2 formulas; leakage ratio adjustable via a slider (0.5–10 %); clamp power dissipation is factored into the efficiency calculation; a warning is shown if snubber loss exceeds 5 % of output power; schematic annotates actual R, C, and diode reverse-voltage values
-- **PCB layout guide** — topology-aware checklist generated from the simulation result: critical current loops ranked by priority (CRITICAL / IMPORTANT / RECOMMENDED), IPC-2221 trace widths for every high-current net, step-by-step component placement order, thermal via recommendations for hot components, and keep-out areas; exported in the PDF report
+- **Worker thread** — all heavy computation runs off the main thread; UI stays at 60 fps
+- **DCM detection** — flags discontinuous conduction mode and computes CCM/DCM boundary current
+
+### Component Design
+- **Component suggestions** — matched inductors, capacitors, and MOSFETs from a curated local database
+- **Inductor saturation check** — margin-to-Isat colour coded (green/amber/red); warns when peak ripple threatens saturation
+- **Gate drive calculator** — Rg, peak gate current, turn-on/off times, dead time, gate drive power, bootstrap cap and diode Vr (Buck, Forward)
+- **RCD snubber / clamp design** — sizes the RCD clamping network for flyback and forward converters; leakage ratio adjustable 0.5–10 %
+- **Feedback resistor divider** — E96/E24 snapping, Vout error, divider power dissipation (TI SLVA477B)
+- **Soft-start calculator** — sizes Css, estimates inrush with and without soft-start, flags monotonic-startup and pre-bias-safety (ON Semi AND9135)
+- **Capacitor lifetime estimator** — Arrhenius model with ripple-current self-heating and voltage stress derating (IEC 61709 §6); electrolytic only
+
+### Advanced Analysis
+- **Monte Carlo Tolerance Analysis** — hundreds of iterations varying component tolerances; yield histograms and worst-case margins
+- **Ceramic DC Bias Derating** — MLCC capacitance derated from empirical X5R/X7R DC-voltage curves
+- **Startup/Transient Simulation** — RK4 state-space solver; startup inrush, load step, and line step; settling time and overshoot metrics (Buck only)
+- **EMI Pre-Compliance** — conducted EMI spectrum vs. CISPR 32 Class A/B; highlights failing harmonics and suggests input LC filter
+- **Efficiency heatmap** — 10×10 Vin × Iout colour-gradient SVG; crosshair at operating point; hover tooltips
+- **LTspice Bridge** — generates `.asc` netlists, runs in batch mode, parses `.raw` files, overlays analytical vs. simulated waveforms *(LTspice must be installed)*
+
+### Multi-Rail & Layout
+- **Power sequencing analyzer** — TI SLVA722 sequential chain; auto-orders rails (core → I/O → HV); D3 timing diagram; conflict detection (brown-out warning); load rails from `.pswb` files or enter manually
+- **PCB layout guide** — topology-aware: critical loops (CRITICAL/IMPORTANT/RECOMMENDED), IPC-2221 trace widths, component placement order, thermal via counts, keep-out regions
+- **Multi-output flyback** — up to 3 additional secondary windings; per-secondary Ns, diode Vr, Cout, and cross-regulation estimate (±% under ±50 % primary load swing)
+
+### Project & Workflow
+- **Project save / load** — full design (topology, parameters, notes, overrides) to `.pswb` JSON (`Ctrl+S` / `Ctrl+O`)
+- **Undo / Redo** — 50-step history with 300 ms debounce (`Ctrl+Z` / `Ctrl+Shift+Z`)
+- **Design comparison** — save Design A (`Ctrl+K`), compare side-by-side (`Ctrl+Shift+K`); win/lose colour coding across 10 metrics
+- **PDF report export** — 6-page A4 PDF: design summary, component table, schematic, waveforms, Bode plot, loss breakdown
+- **CSV BOM export** — 9-column RFC 4180 BOM with selected part numbers
+- **Input validation** — per-topology constraints (buck Vout < Vin, boost Vout > Vin, flyback D < 50 %) with inline error/warning banners
+- **Smart topology defaults** — silent default-apply when spec is unmodified; confirmation dialog otherwise
+- **Keyboard shortcuts** — `Ctrl+1–4` tabs, `Ctrl+K/Shift+K` comparison, `?` help, `Ctrl+Z/Y` undo/redo
+
+---
+
+## Component Search
+
+The Components panel shows suggestions from a curated local database by default.
+An optional **Digi-Key API integration** provides real-time pricing, stock, and datasheets.
+
+### Enabling Digi-Key Search
+
+1. Create a free account at [developer.digikey.com](https://developer.digikey.com) and generate a **Production API key** (Client ID + Client Secret, OAuth2 client credentials flow).
+2. Open **⚙ Settings** in the toolbar.
+3. Enter your Client ID and Client Secret, then click **Save**.
+4. Click **Test Connection** to verify credentials.
+5. Toggle **Enable Digi-Key search** on.
+
+Once enabled, each component section (Inductor, Capacitor, MOSFET) shows a collapsible **Search Digi-Key** panel. Results include price, stock quantity, electrical parameters, and a direct product link.
+
+**Offline / no-key behaviour:** If the API is unreachable or no credentials are saved, the panel shows an "offline" badge and falls back to the local database — no interruption to the design workflow.
+
+**Security:** Credentials are encrypted at rest using Electron's `safeStorage` API (OS keychain). The secret is never returned to the renderer process. Results are cached for 1 hour; API requests are rate-limited to 5 per minute to stay within Digi-Key's free-tier limit.
 
 ---
 
@@ -68,6 +101,52 @@ Built with **Electron + React + TypeScript**.
 
 ---
 
+## Architecture
+
+```
+src/
+├── engine/                Pure computation — zero GUI dependencies
+│   ├── types.ts               Shared DesignSpec / DesignResult types
+│   ├── worker.ts              Web Worker bridge (COMPUTE, MC_COMPUTE,
+│   │                          EFFICIENCY_MAP, TRANSIENT_COMPUTE)
+│   ├── index.ts               Topology registry + getStateSpaceModelFn()
+│   ├── control-loop.ts        Type-2 / current-mode Bode analysis
+│   ├── monte-carlo.ts         Monte Carlo parameter sweep
+│   ├── dc-bias.ts             MLCC DC-bias derating
+│   ├── transient.ts           RK4 state-space transient solver
+│   ├── emi.ts                 EMI spectrum + CISPR limit comparison
+│   ├── validation.ts          Per-topology spec validation
+│   ├── gate-drive.ts          Gate drive resistor + bootstrap sizing
+│   ├── snubber.ts             RCD clamp design (flyback, forward)
+│   ├── pcb-guidelines.ts      Topology-aware PCB layout guidelines
+│   ├── cap-lifetime.ts        Arrhenius electrolytic lifetime model
+│   ├── feedback.ts            Feedback resistor divider (E96/E24)
+│   ├── soft-start.ts          Soft-start cap + inrush estimation
+│   ├── inductor-saturation.ts Isat margin and flux density check
+│   ├── sequencing.ts          Multi-rail power sequencing analyzer
+│   ├── component-search.ts    Provider abstraction (local + Digi-Key)
+│   └── topologies/            One file per topology
+├── store/                 Zustand — single source of truth
+│   └── design-store.ts
+└── components/            React presentation layer
+
+electron/
+├── main.ts                App entry; registers all IPC handlers
+├── preload.ts             Context bridge (projectAPI, exportAPI, digikeyAPI)
+├── file-handlers.ts       Project open/save/recent IPC
+├── export-handlers.ts     PDF + CSV save dialogs
+├── ltspice-bridge.ts      LTspice child_process integration
+└── digikey-bridge.ts      Digi-Key OAuth2, rate limit, cache, search IPC
+```
+
+Heavy computation runs in a dedicated Web Worker — the renderer thread is never
+blocked. Components never import `engine/` directly; they dispatch store actions
+which forward messages to the worker. Pure helpers (`computeGateDrive`,
+`designFeedback`, `generateLayoutGuidelines`, etc.) are called directly from
+components without going through the worker.
+
+---
+
 ## Getting Started
 
 ### Prerequisites
@@ -90,14 +169,12 @@ npm run dev          # Electron + Vite with HMR
 ### Tests
 
 ```bash
-npm test             # Single run
+npm test             # Single run (160 tests)
 npm run test:watch   # Watch mode
 npm run type-check   # TypeScript strict check
 ```
 
 ### Production Build
-
-Build the Vite renderer + Electron main, then package with electron-builder:
 
 ```bash
 # Windows installer (.exe / NSIS)
@@ -109,7 +186,7 @@ npm run dist:mac
 # Linux AppImage
 npm run dist:linux
 
-# All platforms (requires the host tools to be present)
+# All platforms
 npm run dist
 ```
 
@@ -122,25 +199,12 @@ Distributable files are written to `dist/`.
 
 ---
 
-## Architecture
-
-```
-src/
-├── engine/        Pure computation — no GUI dependencies
-│   ├── types.ts               Shared DesignSpec / DesignResult types
-│   ├── worker.ts              Web Worker bridge (debounced, 8 ms)
-│   ├── control-loop.ts        Type-2 compensator + Bode analysis
-│   └── topologies/            One file per topology
-├── store/         Zustand state — single source of truth
-└── components/    React presentation layer
-```
-
-Heavy computation runs in a dedicated Web Worker so the renderer thread is
-never blocked. Components never import `engine/` directly; they dispatch store
-actions which forward the message to the worker.
-
----
-
 ## License
 
 MIT
+
+---
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for version history.
