@@ -29,7 +29,8 @@ export function runTransientSimulation(
   spec: DesignSpec,
   result: DesignResult,
   mode: TransientMode,
-  getModel: (spec: DesignSpec, result: DesignResult, vin: number, iout: number) => StateSpaceModel
+  getModel: (spec: DesignSpec, result: DesignResult, vin: number, iout: number) => StateSpaceModel,
+  softStartSeconds?: number,
 ): TransientResult {
   const fsw = spec.fsw || 200000;
   const Tsw = 1 / fsw;
@@ -76,10 +77,10 @@ export function runTransientSimulation(
       }
     }
 
-    // Soft-Start Profile 
+    // Soft-Start Profile — ramp time uses calculator value when provided, else 2 ms default.
     let vref = spec.vout;
     if (mode === 'startup') {
-      const softStartEnd = 0.002;
+      const softStartEnd = softStartSeconds ?? 0.002;
       vref = t < softStartEnd ? spec.vout * (t / softStartEnd) : spec.vout;
     }
 

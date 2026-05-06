@@ -14,6 +14,7 @@ import { computeGateDrive, type GateDriveResult } from '../../engine/gate-drive'
 import { checkSaturation } from '../../engine/inductor-saturation'
 import { estimateLifetime, type CapLifetimeResult } from '../../engine/cap-lifetime'
 import { designFeedback, fmtResistor, type FeedbackResult } from '../../engine/feedback'
+import { designSoftStart, type SoftStartResult } from '../../engine/soft-start'
 import { Tooltip } from '../Tooltip/Tooltip'
 import styles from './ComponentSuggestions.module.css'
 
@@ -67,7 +68,7 @@ function mosfetVdsRequired(topology: string, vinMax: number, vout: number): numb
 }
 
 export function ComponentSuggestions() {
-  const { result, spec, topology, selectedComponents, setSelectedComponent, feedbackOptions } = useDesignStore()
+  const { result, spec, topology, selectedComponents, setSelectedComponent, feedbackOptions, softStartOptions, setActiveVizTab } = useDesignStore()
 
   if (!result) {
     return (
@@ -100,6 +101,9 @@ export function ComponentSuggestions() {
         ambient_temp_C: spec.ambientTemp,
       })
     : null
+
+  // Soft-start analysis — uses selected inductor DCR when available.
+  const softStart: SoftStartResult = designSoftStart(topology, spec, result, inductor, softStartOptions)
 
   // Feedback network — computed regardless of whether an output cap was found.
   // Isolated topologies show a note instead of computed values.
@@ -433,6 +437,12 @@ export function ComponentSuggestions() {
         </div>
       )}
 
+      {/* ── Soft-Start ──────────────────────────────────────────────── */}
+      <div className={styles.section}>
+        <div className={styles.sectionTitle}>Soft-Start</div>
+        <SoftStartDisplay ss={softStart} onTransientClick={() => setActiveVizTab('transient')} />
+      </div>
+
       {/* ── Feedback Network ────────────────────────────────────────── */}
       <div className={styles.section}>
         <div className={styles.sectionTitle}>Feedback Network</div>
@@ -518,6 +528,89 @@ export function ComponentSuggestions() {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+// ── Soft-start display sub-component ─────────────────────────────────────
+
+function fmtMs(s: number): string {
+  return s < 0.001 ? `${(s * 1e6).toFixed(0)} µs` : `${(s * 1e3).toFixed(2)} ms`
+}
+
+function fmtCap2(f: number): string {
+  if (f < 1e-9)  return `${(f * 1e12).toFixed(1)} pF`
+  if (f < 1e-6)  return `${(f * 1e9).toFixed(1)} nF`
+  return `${(f * 1e6).toFixed(2)} µF`
+}
+
+function YesNo({ ok, label }: { ok: boolean; label: string }) {
+  return (
+    <span className={ok ? styles.ssBadgeOk : styles.ssBadgeWarn}>
+      {ok ? `✓ ${label}` : `✗ ${label}`}
+    </span>
+  )
+}
+
+function SoftStartDisplay({ ss, onTransientClick }: { ss: SoftStartResult; onTransientClick: () => void }) {
+  const tip = (
+    <div>
+      <strong>Soft-start capacitor</strong><br />
+      <code style={{ fontSize: '10px' }}>Css = Iss × tss / Vref</code><br />
+      <code style={{ fontSize: '10px' }}>
+        = {(ss.iss * 1e6).toFixed(0)} µA × {fmtMs(ss.tss_used)} / 0.8 V
+      </code><br />
+      <small style={{ color: 'var(--text-secondary)' }}>ON Semiconductor AND9135</small>
+    </div>
+  )
+
+  return (
+    <div className={styles.fbBody}>
+      <div className={styles.fbRow}>
+        <span className={styles.fbLabel}>
+          tss (used)
+        </span>
+        <span className={styles.fbValue}>{fmtMs(ss.tss_used)}</span>
+      </div>
+      <div className={styles.fbRow}>
+        <span className={styles.fbLabel}>
+          tss (recommended)
+        </span>
+        <span className={styles.fbValue}>{fmtMs(ss.recommended_tss)}</span>
+      </div>
+      <div className={styles.fbRow}>
+        <span className={styles.fbLabel}>
+          Css
+          <Tooltip content={tip} side="left">
+            <span className={styles.infoIcon}>ⓘ</span>
+          </Tooltip>
+        </span>
+        <span className={styles.fbValue}>{fmtCap2(ss.css)}</span>
+      </div>
+      <div className={styles.fbRow}>
+        <span className={styles.fbLabel}>Inrush (no SS)</span>
+        <span className={styles.fbValue} style={{ color: ss.peak_inrush_a > 50 ? '#ef4444' : 'inherit' }}>
+          {ss.peak_inrush_a.toFixed(0)} A
+        </span>
+      </div>
+      <div className={styles.fbRow}>
+        <span className={styles.fbLabel}>Inrush (with SS)</span>
+        <span className={styles.fbValue}>{ss.peak_inrush_with_ss.toFixed(2)} A</span>
+      </div>
+      <div className={styles.fbRow}>
+        <span className={styles.fbLabel}>Monotonic startup</span>
+        <YesNo ok={ss.output_monotonic} label={ss.output_monotonic ? 'Yes' : 'No'} />
+      </div>
+      <div className={styles.fbRow}>
+        <span className={styles.fbLabel}>Pre-bias safe</span>
+        <YesNo ok={ss.pre_bias_safe} label={ss.pre_bias_safe ? 'Yes' : 'No'} />
+      </div>
+      {ss.warnings.map((w, i) => (
+        <div key={i} className={styles.ssWarn}>{w}</div>
+      ))}
+      <button className={styles.ssTransientLink} onClick={onTransientClick}>
+        → Transient tab for startup simulation
+      </button>
     </div>
   )
 }

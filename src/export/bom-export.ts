@@ -9,6 +9,8 @@ import type { SelectedComponents } from '../engine/component-selector'
 import type { DesignSpec, DesignResult } from '../engine/types'
 import { designFeedback, fmtResistor } from '../engine/feedback'
 import type { FeedbackOptions } from '../engine/feedback'
+import { designSoftStart } from '../engine/soft-start'
+import type { SoftStartOptions } from '../engine/soft-start'
 
 export type { SelectedComponents }
 
@@ -114,6 +116,7 @@ export function generateBOM(
   result: DesignResult,
   selected: SelectedComponents,
   feedbackOpts?: Partial<FeedbackOptions>,
+  softStartOpts?: Partial<SoftStartOptions>,
 ): string {
   const rows: BOMRow[] = []
   const { mosfetVds, diodeVr } = voltageStress(topology, spec, result)
@@ -257,6 +260,23 @@ export function generateBOM(
     partNumber:   '-',
     qty:          1,
     notes:        'Input decoupling; estimate — verify with ripple current rating',
+  })
+
+  // ── Css — Soft-start capacitor ────────────────────────────────────────────
+  const ss = designSoftStart(topology, spec, result, undefined, softStartOpts)
+  const css_nF = (ss.css * 1e9).toFixed(1)
+  rows.push({
+    ref:          'Css',
+    component:    'Capacitor',
+    value:        `${css_nF} nF`,
+    rating:       'X5R or X7R; 10 V min; 0402',
+    pkg:          '0402',
+    manufacturer: '-',
+    partNumber:   '-',
+    qty:          1,
+    notes:        `Soft-start: tss=${(ss.tss_used * 1e3).toFixed(2)} ms, ` +
+                  `Iss=${(ss.iss * 1e6).toFixed(0)} µA, Vref=0.8 V. ` +
+                  `Inrush without SS: ${ss.peak_inrush_a.toFixed(0)} A`,
   })
 
   // ── Rfb1 / Rfb2 — Feedback voltage divider ───────────────────────────────

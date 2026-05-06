@@ -12,9 +12,12 @@ import { undoMiddleware } from './undo-middleware'
 import type { SelectedComponents } from '../engine/component-selector'
 import { DEFAULT_FEEDBACK_OPTIONS } from '../engine/feedback'
 import type { FeedbackOptions } from '../engine/feedback'
+import { DEFAULT_SOFT_START_OPTIONS } from '../engine/soft-start'
+import type { SoftStartOptions } from '../engine/soft-start'
 
 export type { SelectedComponents } from '../engine/component-selector'
 export type { FeedbackOptions } from '../engine/feedback'
+export type { SoftStartOptions } from '../engine/soft-start'
 
 export type { TopologyId } from './workbenchStore'
 export type ActiveVizTab = 'waveforms' | 'bode' | 'losses' | 'thermal' | 'monte-carlo' | 'ltspice-comparison' | 'transient' | 'emi' | 'efficiency-map' | 'layout'
@@ -101,6 +104,9 @@ export interface DesignStoreState {
   feedbackOptions: FeedbackOptions
   setFeedbackOptions: (opts: Partial<FeedbackOptions>) => void
 
+  softStartOptions: SoftStartOptions
+  setSoftStartOptions: (opts: Partial<SoftStartOptions>) => void
+
   // Project actions
   setNotes: (notes: string) => void
   newProject: () => void
@@ -161,6 +167,7 @@ export const useDesignStore = create<DesignStoreState>(
     projectCreated: null,
     selectedComponents: EMPTY_SELECTION,
     feedbackOptions: { ...DEFAULT_FEEDBACK_OPTIONS },
+    softStartOptions: { ...DEFAULT_SOFT_START_OPTIONS },
 
     // Comparison state
     comparisonSlot: null,
@@ -201,6 +208,9 @@ export const useDesignStore = create<DesignStoreState>(
 
     setFeedbackOptions: (opts) =>
       set((state) => ({ feedbackOptions: { ...state.feedbackOptions, ...opts } })),
+
+    setSoftStartOptions: (opts) =>
+      set((state) => ({ softStartOptions: { ...state.softStartOptions, ...opts } })),
 
     setTopology: (topology) =>
       set({ topology, spec: TOPOLOGY_DEFAULTS[topology], isModified: true, selectedComponents: EMPTY_SELECTION, ...COMPUTE_RESET }),

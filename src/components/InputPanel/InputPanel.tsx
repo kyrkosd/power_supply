@@ -171,7 +171,7 @@ function SecondaryOutputRow({ index, output, onChange, onRemove }: SecondaryRowP
 // ── Main component ────────────────────────────────────────────────────────────
 
 export function InputPanel(): React.ReactElement {
-  const { spec, result, topology, updateSpec, requestMcRun, setActiveVizTab, notes, setNotes, feedbackOptions, setFeedbackOptions } = useDesignStore()
+  const { spec, result, topology, updateSpec, requestMcRun, setActiveVizTab, notes, setNotes, feedbackOptions, setFeedbackOptions, softStartOptions, setSoftStartOptions } = useDesignStore()
   const [mcIterations, setMcIterations] = useState(1000)
   const [mcSeed, setMcSeed] = useState(42)
 
@@ -536,6 +536,88 @@ export function InputPanel(): React.ReactElement {
                 <option value="e96">E96 (1%)</option>
                 <option value="e24">E24 (5%)</option>
               </select>
+            </div>
+          </div>
+        </details>
+
+        {/* ── Soft-Start ── */}
+        <details className={styles.advancedSection}>
+          <summary className={styles.advancedTitle}>
+            Soft-Start
+            <Tooltip
+              content="Controls how quickly the output voltage ramps up at power-on. Limits inrush current and prevents overshoot. Sets the Css capacitor value on ICs with a dedicated soft-start pin."
+              side="right"
+            >
+              <span className={styles.infoIcon}>ⓘ</span>
+            </Tooltip>
+          </summary>
+          <div className={styles.advancedBody}>
+            <div className={styles.advancedRow}>
+              <label className={styles.advancedLabel}>
+                Auto calculate
+                <Tooltip
+                  content="Derive tss from the output time constant: tss = Cout × Vout / Iout × 10. Disable to set a custom value."
+                  side="right"
+                >
+                  <span className={styles.infoIcon}>ⓘ</span>
+                </Tooltip>
+              </label>
+              <select
+                className={styles.advancedSelect}
+                value={softStartOptions.auto_tss ? 'auto' : 'manual'}
+                onChange={(e) => setSoftStartOptions({ auto_tss: e.target.value === 'auto' })}
+              >
+                <option value="auto">Auto (recommended)</option>
+                <option value="manual">Manual</option>
+              </select>
+            </div>
+            {!softStartOptions.auto_tss && (
+              <div className={styles.advancedRow}>
+                <label className={styles.advancedLabel}>
+                  Soft-start time
+                  <Tooltip
+                    content="Time for Vout to ramp from 0 to its setpoint. Typical: 1–10 ms. Shorter → faster startup but higher inrush. Longer → safer but may trip upstream UVLO."
+                    side="right"
+                  >
+                    <span className={styles.infoIcon}>ⓘ</span>
+                  </Tooltip>
+                </label>
+                <div className={styles.advancedInputGroup}>
+                  <input
+                    type="number"
+                    className={styles.advancedNumberInput}
+                    value={(softStartOptions.tss_s * 1000).toFixed(1)}
+                    min={0.5}
+                    max={50}
+                    step={0.5}
+                    onChange={(e) => setSoftStartOptions({ tss_s: Number(e.target.value) / 1000 })}
+                  />
+                  <span className={styles.advancedUnit}>ms</span>
+                </div>
+              </div>
+            )}
+            <div className={styles.advancedRow}>
+              <label className={styles.advancedLabel}>
+                Charge current (Iss)
+                <Tooltip
+                  content="IC internal soft-start pin charge current. Check your controller datasheet — typically 1–50 µA. Used to size the Css capacitor."
+                  side="right"
+                >
+                  <span className={styles.infoIcon}>ⓘ</span>
+                </Tooltip>
+              </label>
+              <div className={styles.advancedInputGroup}>
+                <input
+                  type="number"
+                  className={styles.advancedNumberInput}
+                  value={softStartOptions.iss_ua}
+                  min={1}
+                  max={100}
+                  step={1}
+                  onChange={(e) => setSoftStartOptions({ iss_ua: Math.max(1, Math.min(100, Number(e.target.value))) })}
+                />
+                <span className={styles.advancedUnit}>µA</span>
+              </div>
             </div>
           </div>
         </details>
