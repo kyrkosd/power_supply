@@ -56,6 +56,33 @@ const ANA: SequencingRail = {
   pg_delay: 0.008,
 }
 
+const SUPPLY: SequencingRail = {
+  id: 'sup',
+  name: 'V12',
+  vout: 12,
+  tss: 0.010,
+  pg_delay: 0.012,
+}
+
+const DEPENDENT: SequencingRail = {
+  id: 'dep',
+  name: 'V5',
+  vout: 5,
+  tss: 0.003,
+  pg_delay: 0.005,
+  spec: {
+    vinMin: 10,
+    vinMax: 14,
+    vout: 5,
+    iout: 2,
+    fsw: 200_000,
+    rippleRatio: 0.3,
+    ambientTemp: 25,
+    voutRippleMax: 0.05,
+    efficiency: 0.9,
+  },
+}
+
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 describe('analyzeSequencing', () => {
@@ -149,66 +176,16 @@ describe('analyzeSequencing', () => {
 
   it('conflict warning: dependent rail enables before its input supply reaches PG', () => {
     // R1 is a 12V supply; R2 uses vinMin=10, vinMax=14 → depends on R1
-    const supply: SequencingRail = {
-      id: 'sup',
-      name: 'V12',
-      vout: 12,
-      tss: 0.010,
-      pg_delay: 0.012,
-    }
-    const dependent: SequencingRail = {
-      id: 'dep',
-      name: 'V5',
-      vout: 5,
-      tss: 0.003,
-      pg_delay: 0.005,
-      spec: {
-        vinMin: 10,
-        vinMax: 14,
-        vout: 5,
-        iout: 2,
-        fsw: 200_000,
-        rippleRatio: 0.3,
-        ambientTemp: 25,
-        voutRippleMax: 0.05,
-        efficiency: 0.9,
-      },
-    }
     // If dependent comes BEFORE supply in the order, dependent enables before supply reaches PG
     // dependent enable=0, supply enable=5ms, supply PG=17ms
     // dependent.enable(0) < supply.PG(17ms) → conflict
-    const r = analyzeSequencing([dependent, supply])
+    const r = analyzeSequencing([DEPENDENT, SUPPLY])
     expect(r.warnings.some((w) => w.includes('brown-out'))).toBe(true)
   })
 
   it('no conflict when dependent comes after its input supply in the chain', () => {
-    const supply: SequencingRail = {
-      id: 'sup',
-      name: 'V12',
-      vout: 12,
-      tss: 0.010,
-      pg_delay: 0.012,
-    }
-    const dependent: SequencingRail = {
-      id: 'dep',
-      name: 'V5',
-      vout: 5,
-      tss: 0.003,
-      pg_delay: 0.005,
-      spec: {
-        vinMin: 10,
-        vinMax: 14,
-        vout: 5,
-        iout: 2,
-        fsw: 200_000,
-        rippleRatio: 0.3,
-        ambientTemp: 25,
-        voutRippleMax: 0.05,
-        efficiency: 0.9,
-      },
-    }
     // supply first: supply PG=12ms, dependent enable=12ms → no conflict
-    const r = analyzeSequencing([supply, dependent])
+    const r = analyzeSequencing([SUPPLY, DEPENDENT])
     expect(r.warnings.some((w) => w.includes('brown-out'))).toBe(false)
   })
 })

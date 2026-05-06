@@ -4,26 +4,7 @@ import { complex, abs, arg, add, multiply, divide, type Complex } from 'mathjs'
 import { DesignSpec, DesignResult, Topology, TransferFunction } from '../types'
 import { checkSaturation } from '../inductor-saturation'
 import { designSnubber, DEFAULT_LEAKAGE_RATIO } from '../snubber'
-import coresData from '../../data/cores.json'
-
-interface CoreData {
-  type: string
-  Ae: number  // m²
-  Aw: number  // m²
-  le: number  // m
-  Ve: number  // m³
-  AL: number  // nH/N²
-}
-
-const cores: CoreData[] = coresData as CoreData[]
-
-function selectCore(areaProduct: number): CoreData | null {
-  const suitable = cores.filter(core => core.Ae * core.Aw >= areaProduct)
-  if (suitable.length === 0) return null
-  return suitable.reduce((min, core) =>
-    (core.Ae * core.Aw < min.Ae * min.Aw) ? core : min
-  )
-}
+import { selectCore } from './core-selector'
 
 // Control-to-output transfer function for the single-switch forward converter.
 // Erickson & Maksimovic "Fundamentals of Power Electronics" 3rd ed., §8.2.3.
