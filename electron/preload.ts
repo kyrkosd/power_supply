@@ -23,11 +23,23 @@ const exportAPI = {
     ipcRenderer.invoke('export:save-csv', { content, defaultName }),
 }
 
+const digikeyAPI = {
+  setCredentials: (clientId: string, clientSecret: string) =>
+    ipcRenderer.invoke('digikey:set-credentials', { clientId, clientSecret }),
+  getCredentials: () =>
+    ipcRenderer.invoke('digikey:get-credentials'),
+  testConnection: () =>
+    ipcRenderer.invoke('digikey:test-connection'),
+  search: (req: unknown) =>
+    ipcRenderer.invoke('digikey:search', req),
+}
+
 if (process.contextIsolated) {
   try {
     contextBridge.exposeInMainWorld('electron', electronAPI)
     contextBridge.exposeInMainWorld('projectAPI', projectAPI)
     contextBridge.exposeInMainWorld('exportAPI', exportAPI)
+    contextBridge.exposeInMainWorld('digikeyAPI', digikeyAPI)
   } catch (error) {
     console.error(error)
   }
@@ -38,4 +50,6 @@ if (process.contextIsolated) {
   window.projectAPI = projectAPI
   // @ts-expect-error -- window.exportAPI is declared in env.d.ts
   window.exportAPI = exportAPI
+  // @ts-expect-error -- window.digikeyAPI is declared in env.d.ts
+  window.digikeyAPI = digikeyAPI
 }

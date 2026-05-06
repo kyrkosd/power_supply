@@ -38,4 +38,12 @@ export function generateWaveforms(topologyId: TopologyId, spec: DesignSpec): Wav
   return topology.generateWaveforms(spec)
 }
 
+export function getStateSpaceModelFn(
+  topologyId: TopologyId,
+): ((spec: DesignSpec, result: DesignResult, vin: number, iout: number) => import('./topologies/types').StateSpaceModel) | null {
+  const topology = registry[topologyId]
+  if (!topology?.getStateSpaceModel) return null
+  return topology.getStateSpaceModel.bind(topology)
+}
+
 export type { Topology, DesignSpec, DesignResult }

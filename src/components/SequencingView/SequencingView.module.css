@@ -1,0 +1,427 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  width: min(980px, 96vw);
+  height: min(680px, 92vh);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── Header ──────────────────────────────────────────────────────────────── */
+
+.header {
+  display: flex;
+  align-items: center;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  gap: 10px;
+}
+
+.title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  flex: 1;
+}
+
+.subtitle {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.closeBtn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+  border-radius: 3px;
+  transition: color 0.15s;
+}
+
+.closeBtn:hover { color: var(--text-primary); }
+
+/* ── Body (two-column layout) ────────────────────────────────────────────── */
+
+.body {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* ── Left panel — rail list ──────────────────────────────────────────────── */
+
+.leftPanel {
+  width: 300px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.railList {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.railCard {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.railCardConflict {
+  border-color: var(--warning);
+}
+
+.railCardRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.railName {
+  flex: 1;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.railVout {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+
+.railMeta {
+  font-size: 10px;
+  color: var(--text-muted);
+  display: flex;
+  gap: 8px;
+}
+
+.railSource {
+  font-size: 9px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.orderBtns {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.orderBtn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--text-muted);
+  font-size: 10px;
+  cursor: pointer;
+  padding: 1px 5px;
+  line-height: 1.4;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.orderBtn:hover:not(:disabled) {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.orderBtn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.removeBtn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0 3px;
+  line-height: 1;
+  transition: color 0.15s;
+}
+
+.removeBtn:hover { color: #f87171; }
+
+/* ── Rail actions (below list) ───────────────────────────────────────────── */
+
+.railActions {
+  padding: 8px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.actionRow {
+  display: flex;
+  gap: 6px;
+}
+
+.addBtn {
+  flex: 1;
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px 8px;
+  font-size: 11px;
+  font-family: var(--font-ui);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+  text-align: center;
+}
+
+.addBtn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-dim);
+}
+
+.addBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.resetOrderBtn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 10px;
+  cursor: pointer;
+  padding: 2px 4px;
+  text-decoration: underline;
+  transition: color 0.15s;
+}
+
+.resetOrderBtn:hover { color: var(--accent); }
+
+/* ── Manual entry form ───────────────────────────────────────────────────── */
+
+.manualForm {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.formRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.formLabel {
+  font-size: 10px;
+  color: var(--text-muted);
+  width: 48px;
+  flex-shrink: 0;
+}
+
+.formInput {
+  flex: 1;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--text-primary);
+  font-size: 11px;
+  font-family: var(--font-mono);
+  padding: 3px 6px;
+}
+
+.formInput:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.formUnit {
+  font-size: 10px;
+  color: var(--text-muted);
+  width: 20px;
+  flex-shrink: 0;
+}
+
+.formActions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.formAddBtn {
+  background: var(--accent-dim);
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 3px;
+  padding: 4px 12px;
+  font-size: 11px;
+  font-family: var(--font-ui);
+  cursor: pointer;
+}
+
+.formCancelBtn {
+  background: none;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-family: var(--font-ui);
+  cursor: pointer;
+}
+
+/* ── Right panel — timing diagram ────────────────────────────────────────── */
+
+.rightPanel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.chartHeader {
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.orderNote {
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--accent);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.svgWrap {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+.svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.emptyChart {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 13px;
+  padding: 40px;
+  text-align: center;
+}
+
+.emptyHint {
+  font-size: 11px;
+  line-height: 1.5;
+  max-width: 300px;
+}
+
+/* ── Footer — warnings ───────────────────────────────────────────────────── */
+
+.footer {
+  border-top: 1px solid var(--border);
+  padding: 8px 14px;
+  flex-shrink: 0;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.noWarnings {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.warnList {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.warn {
+  font-size: 11px;
+  color: var(--warning);
+  display: flex;
+  gap: 5px;
+  align-items: flex-start;
+  line-height: 1.4;
+}
+
+.warnIcon {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* ── Stats bar ───────────────────────────────────────────────────────────── */
+
+.statsBar {
+  padding: 4px 14px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 20px;
+  flex-shrink: 0;
+}
+
+.stat {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.stat strong {
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+}

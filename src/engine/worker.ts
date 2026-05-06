@@ -1,9 +1,8 @@
-// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
-// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
-import { compute, generateWaveforms, getTopology } from './index'
+import { compute, generateWaveforms, getTopology, getStateSpaceModelFn } from './index'
+import { runTransientSimulation } from './transient'
 import { runMonteCarlo } from './monte-carlo'
 import type { DesignSpec, DesignResult } from './types'
-import type { WaveformSet } from './topologies/types'
+import type { WaveformSet, TransientResult, TransientMode } from './topologies/types'
 import type { TopologyId } from '../store/workbenchStore'
 import type { MonteCarloConfig, MonteCarloResult } from './monte-carlo'
 
@@ -23,10 +22,19 @@ interface EfficiencyMapPayload {
   spec: DesignSpec
 }
 
+interface TransientPayload {
+  topology: TopologyId
+  spec: DesignSpec
+  result: DesignResult
+  mode: TransientMode
+  softStartSeconds: number
+}
+
 type WorkerRequest =
   | { type: 'COMPUTE'; payload: ComputePayload }
   | { type: 'MC_COMPUTE'; payload: MCComputePayload }
   | { type: 'EFFICIENCY_MAP'; payload: EfficiencyMapPayload }
+  | { type: 'TRANSIENT_COMPUTE'; payload: TransientPayload }
 
 type ResultResponse = {
   type: 'RESULT'
@@ -39,6 +47,10 @@ type MCResultResponse = {
 type EfficiencyMapResponse = {
   type: 'EFFICIENCY_MAP_RESULT'
   payload: { matrix: number[][]; vinPoints: number[]; ioutPoints: number[] }
+}
+type TransientResultResponse = {
+  type: 'TRANSIENT_RESULT'
+  payload: TransientResult
 }
 type ErrorResponse = { type: 'ERROR'; payload: { message: string } }
 
@@ -146,6 +158,36 @@ self.addEventListener('message', (event: MessageEvent<WorkerRequest>) => {
     try {
       const response = computeEfficiencyMap(message.payload)
       self.postMessage(response)
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error)
+      const response: ErrorResponse = { type: 'ERROR', payload: { message: msg } }
+      self.postMessage(response)
+    }
+    return
+  }
+
+  if (message.type === 'TRANSIENT_COMPUTE') {
+    const { topology, spec, result, mode, softStartSeconds } = message.payload
+    const getModel = getStateSpaceModelFn(topology)
+    if (!getModel) {
+      const response: ErrorResponse = {
+        type: 'ERROR',
+        payload: { message: `Topology '${topology}' does not implement getStateSpaceModel — transient unavailable` },
+      }
+      self.postMessage(response)
+      return
+    }
+    try {
+      const transientResult = runTransientSimulation(spec, result, mode, getModel, softStartSeconds)
+      const response: TransientResultResponse = { type: 'TRANSIENT_RESULT', payload: transientResult }
+      self.postMessage(response, {
+        transfer: [
+          transientResult.time.buffer as ArrayBuffer,
+          transientResult.vout.buffer as ArrayBuffer,
+          transientResult.iL.buffer as ArrayBuffer,
+          transientResult.duty.buffer as ArrayBuffer,
+        ],
+      })
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error)
       const response: ErrorResponse = { type: 'ERROR', payload: { message: msg } }

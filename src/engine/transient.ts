@@ -1,8 +1,5 @@
-// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
-// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
 import type { DesignSpec, DesignResult, StateSpaceModel, TransientResult, TransientMode } from './topologies/types';
 
-// Optimized 2x2 matrix dot product block without array allocations 
 function computeDX(A: [[number, number], [number, number]], B: [[number], [number]], x: [number, number]): [number, number] {
   return [
     A[0][0] * x[0] + A[0][1] * x[1] + B[0][0],
@@ -34,8 +31,8 @@ export function runTransientSimulation(
 ): TransientResult {
   const fsw = spec.fsw || 200000;
   const Tsw = 1 / fsw;
-  const dt = Tsw / 20; // 20 steps per cycle
-  const duration = 0.01; // 10ms simulation length
+  const dt = Tsw / 20; // 20 steps per switching cycle
+  const duration = 0.01; // 10 ms simulation window
   const totalSteps = Math.floor(duration / dt);
 
   const time = new Float64Array(totalSteps);
@@ -43,50 +40,50 @@ export function runTransientSimulation(
   const iL = new Float64Array(totalSteps);
   const duty = new Float64Array(totalSteps);
 
-  let current_vin = spec.vin_nom;
-  let current_iout = spec.iout_max;
+  const vin_nom = (spec.vinMin + spec.vinMax) / 2;
+  let current_vin = vin_nom;
+  let current_iout = spec.iout;
   let x: [number, number] = [0, 0]; // [iL, vC]
 
   if (mode === 'load-step' || mode === 'line-step') {
-    current_iout = mode === 'load-step' ? spec.iout_max * 0.5 : spec.iout_max;
-    current_vin = mode === 'line-step' ? spec.vin_min : spec.vin_nom;
+    current_iout = mode === 'load-step' ? spec.iout * 0.5 : spec.iout;
+    current_vin = mode === 'line-step' ? spec.vinMin : vin_nom;
     x = [current_iout, spec.vout];
   }
 
   let model = getModel(spec, result, current_vin, current_iout);
 
-  // Minimal robust digital PI Controller to maintain regulation
+  // Minimal PI controller for closed-loop regulation
   let integral = 0;
   const Kp = 0.02;
   const Ki = 2000;
-  let current_duty = mode === 'startup' ? 0 : ((result as DesignResult & { dutyCycle?: number }).dutyCycle || result.duty_cycle || 0.5);
+  let current_duty = mode === 'startup' ? 0 : (result.dutyCycle || 0.5);
   let peak_inrush = 0;
 
   for (let step = 0; step < totalSteps; step++) {
     const t = step * dt;
 
-    // Apply Step disturbances at 2ms
+    // Step disturbances applied at t = 2 ms
     if (t >= 0.002) {
-      if (mode === 'load-step' && current_iout !== spec.iout_max) {
-        current_iout = spec.iout_max;
+      if (mode === 'load-step' && current_iout !== spec.iout) {
+        current_iout = spec.iout;
         model = getModel(spec, result, current_vin, current_iout);
       }
-      if (mode === 'line-step' && current_vin !== spec.vin_max) {
-        current_vin = spec.vin_max;
+      if (mode === 'line-step' && current_vin !== spec.vinMax) {
+        current_vin = spec.vinMax;
         model = getModel(spec, result, current_vin, current_iout);
       }
     }
 
-    // Soft-Start Profile — ramp time uses calculator value when provided, else 2 ms default.
+    // Soft-start ramp: use the calculator value when provided, else 2 ms default
     let vref = spec.vout;
     if (mode === 'startup') {
       const softStartEnd = softStartSeconds ?? 0.002;
       vref = t < softStartEnd ? spec.vout * (t / softStartEnd) : spec.vout;
     }
 
-    // PI Control Evaluation
     const error = vref - x[1];
-    integral = Math.max(-0.5, Math.min(0.5, integral + error * dt)); // Anti-windup
+    integral = Math.max(-0.5, Math.min(0.5, integral + error * dt));
     current_duty = Math.max(0, Math.min(0.99, Kp * error + Ki * integral));
 
     const isSwitchOn = (t % Tsw) < (current_duty * Tsw);
@@ -99,16 +96,17 @@ export function runTransientSimulation(
 
     time[step] = t;
     iL[step] = x[0];
-    vout[step] = x[1]; 
+    vout[step] = x[1];
     duty[step] = current_duty;
   }
 
-  // Metric Extraction
   let maxV = 0;
   let settledIdx = totalSteps - 1;
-  
+
   for (let i = 0; i < totalSteps; i++) if (vout[i] > maxV) maxV = vout[i];
-  for (let i = totalSteps - 1; i >= 0; i--) if (Math.abs(vout[i] - spec.vout) > 0.02 * spec.vout) { settledIdx = i; break; }
+  for (let i = totalSteps - 1; i >= 0; i--) {
+    if (Math.abs(vout[i] - spec.vout) > 0.02 * spec.vout) { settledIdx = i; break; }
+  }
 
   const overshoot_pct = Math.max(0, ((maxV - spec.vout) / spec.vout) * 100);
   const settling_time_ms = time[settledIdx] * 1000;

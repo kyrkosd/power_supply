@@ -46,6 +46,8 @@ export function Toolbar(): React.ReactElement {
     selectedComponents,
     comparisonSlot, saveToComparison, setIsComparing,
     feedbackOptions, softStartOptions,
+    setIsSequencing,
+    setIsSettingsOpen,
   } = useDesignStore()
 
   const [isExporting, setIsExporting] = useState(false)
@@ -191,6 +193,13 @@ export function Toolbar(): React.ReactElement {
           </button>
           <button
             className={styles.btn}
+            onClick={() => setIsSequencing(true)}
+            title="Power sequencing analysis for multi-rail systems"
+          >
+            ⏱ Sequencing
+          </button>
+          <button
+            className={styles.btn}
             onClick={handleExport}
             disabled={!result || isExporting}
             title={result ? 'Export PDF report' : 'Run simulation first to enable export'}
@@ -204,6 +213,13 @@ export function Toolbar(): React.ReactElement {
             title={result ? 'Export Bill of Materials (CSV)' : 'Run simulation first to enable export'}
           >
             {isExportingBOM ? '⏳ BOM…' : '↓ BOM'}
+          </button>
+          <button
+            className={styles.btn}
+            onClick={() => setIsSettingsOpen(true)}
+            title="Settings (API keys, Digi-Key integration)"
+          >
+            ⚙ Settings
           </button>
           <HelpPanel />
         </div>

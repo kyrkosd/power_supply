@@ -439,3 +439,133 @@ details[open] .gdrSummary::before {
   border-color: var(--accent);
   background: var(--accent-dim);
 }
+
+/* ── Digi-Key search panel ───────────────────────────────────────────────── */
+
+.dkPanel {
+  margin-top: 6px;
+}
+
+.dkSummary {
+  font-size: 11px;
+  color: var(--accent);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  list-style: none;
+  user-select: none;
+}
+
+.dkSummary::-webkit-details-marker { display: none; }
+
+.dkOffline {
+  font-size: 10px;
+  background: #333;
+  color: #999;
+  border-radius: 3px;
+  padding: 1px 5px;
+}
+
+.dkBody {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px 0;
+}
+
+.dkSearchBtn {
+  background: var(--accent);
+  color: #000;
+  border: none;
+  border-radius: 5px;
+  padding: 5px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  align-self: flex-start;
+}
+
+.dkSearchBtn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.dkError {
+  font-size: 11px;
+  color: #f87171;
+  padding: 4px 6px;
+  background: rgba(248, 113, 113, 0.1);
+  border-radius: 4px;
+}
+
+.dkEmpty {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.dkCard {
+  background: var(--bg-depth2, #111);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.dkCardHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.dkPart {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-family: monospace;
+}
+
+.dkPrice {
+  font-size: 12px;
+  font-weight: 600;
+  color: #4ade80;
+  white-space: nowrap;
+}
+
+.dkMfr {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.dkDesc {
+  font-size: 10px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dkMeta {
+  display: flex;
+  gap: 8px;
+}
+
+.dkStock {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.dkLink {
+  font-size: 10px;
+  color: var(--accent);
+  text-decoration: none;
+  margin-top: 2px;
+}
+
+.dkLink:hover {
+  text-decoration: underline;
+}

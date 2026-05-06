@@ -5,7 +5,7 @@ import type { DesignSpec, DesignResult } from '../engine/types'
 import type { WaveformSet } from '../engine/topologies/types'
 import type { TopologyId } from './workbenchStore'
 import type { MonteCarloResult } from '../engine/monte-carlo'
-import type { TransientResult } from '../engine/topologies/types'
+import type { TransientResult, TransientMode } from '../engine/topologies/types'
 import type { EMIResult } from '../engine/topologies/types'
 import type { ProjectFile } from '../types/project'
 import { undoMiddleware } from './undo-middleware'
@@ -45,6 +45,14 @@ export interface EfficiencyMapResult {
   ioutPoints: number[] // A
 }
 
+export interface TransientRunRequest {
+  topology: TopologyId
+  spec: DesignSpec
+  result: DesignResult
+  mode: TransientMode
+  softStartSeconds: number
+}
+
 export interface DesignStoreState {
   topology: TopologyId
   spec: DesignSpec
@@ -78,6 +86,22 @@ export interface DesignStoreState {
   requestEfficiencyMap: () => void
   clearEfficiencyMapRequest: () => void
   setEfficiencyMapResult: (r: EfficiencyMapResult | null) => void
+
+  // Transient simulation
+  transientLoading: boolean
+  transientRunRequest: TransientRunRequest | null
+  requestTransientRun: (req: TransientRunRequest) => void
+  clearTransientRunRequest: () => void
+
+  // Power sequencing modal
+  isSequencing: boolean
+  setIsSequencing: (open: boolean) => void
+
+  // Settings modal
+  isSettingsOpen: boolean
+  setIsSettingsOpen: (open: boolean) => void
+  digiKeyEnabled: boolean
+  setDigiKeyEnabled: (enabled: boolean) => void
 
   // Undo / redo (managed by undoMiddleware)
   canUndo: boolean
@@ -139,6 +163,7 @@ const COMPUTE_RESET = {
   waveforms: null,
   mcResult: null,
   transientResult: null,
+  transientLoading: false,
   emiResult: null,
   isComputing: true,
 } as const
@@ -178,6 +203,17 @@ export const useDesignStore = create<DesignStoreState>(
     efficiencyMapLoading: false,
     efficiencyMapRequest: null,
 
+    // Transient simulation state
+    transientLoading: false,
+    transientRunRequest: null,
+
+    // Power sequencing modal state
+    isSequencing: false,
+
+    // Settings modal state
+    isSettingsOpen: false,
+    digiKeyEnabled: false,
+
     saveToComparison: () => {
       const { topology, spec, result } = get()
       if (!result) return
@@ -196,6 +232,14 @@ export const useDesignStore = create<DesignStoreState>(
     clearEfficiencyMapRequest: () => set({ efficiencyMapRequest: null }),
 
     setEfficiencyMapResult: (r) => set({ efficiencyMapResult: r, efficiencyMapLoading: false }),
+
+    requestTransientRun: (req) => set({ transientRunRequest: req, transientLoading: true }),
+    clearTransientRunRequest: () => set({ transientRunRequest: null }),
+
+    setIsSequencing: (open) => set({ isSequencing: open }),
+
+    setIsSettingsOpen: (open) => set({ isSettingsOpen: open }),
+    setDigiKeyEnabled: (enabled) => set({ digiKeyEnabled: enabled }),
 
     // Stubs — overridden by undoMiddleware before the store is returned
     canUndo: false,
@@ -246,7 +290,7 @@ export const useDesignStore = create<DesignStoreState>(
     clearMcRunRequest: () => set({ mcRunRequest: null }),
 
     setTransientResult: (transientResult) =>
-      set({ transientResult }),
+      set({ transientResult, transientLoading: false }),
 
     setEmiResult: (emiResult) =>
       set({ emiResult }),

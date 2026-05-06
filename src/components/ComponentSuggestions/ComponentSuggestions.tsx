@@ -1,7 +1,8 @@
 // INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
 // INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
-import React from 'react'
+import React, { useState } from 'react'
 import { useDesignStore } from '../../store/design-store'
+import type { ComponentRequirements, ComponentResult } from '../../engine/component-search'
 import {
   suggestInductors,
   suggestCapacitors,
@@ -68,7 +69,7 @@ function mosfetVdsRequired(topology: string, vinMax: number, vout: number): numb
 }
 
 export function ComponentSuggestions() {
-  const { result, spec, topology, selectedComponents, setSelectedComponent, feedbackOptions, softStartOptions, setActiveVizTab } = useDesignStore()
+  const { result, spec, topology, selectedComponents, setSelectedComponent, feedbackOptions, softStartOptions, setActiveVizTab, digiKeyEnabled } = useDesignStore()
 
   if (!result) {
     return (
@@ -204,6 +205,15 @@ export function ComponentSuggestions() {
               )
             }
           />
+          {digiKeyEnabled && (
+            <DigiKeySearchPanel
+              requirements={{
+                type: 'mosfet',
+                vds_min_v: mosfetVdsRequired(topology, spec.vinMax, spec.vout),
+                id_min_a: result.peakCurrent,
+              }}
+            />
+          )}
         </div>
       )}
 
@@ -385,6 +395,16 @@ export function ComponentSuggestions() {
                 {sel.inductor?.part_number === inductor.part_number ? 'Deselect' : 'Select'}
               </button>
             </div>
+            {digiKeyEnabled && (
+              <DigiKeySearchPanel
+                requirements={{
+                  type: 'inductor',
+                  inductance_uh: result.inductance * 1e6,
+                  isat_min_a: result.peakCurrent,
+                  irms_min_a: spec.iout,
+                }}
+              />
+            )}
           </div>
         )
       })()}
@@ -434,6 +454,15 @@ export function ComponentSuggestions() {
               {sel.capacitor?.part_number === capacitor.part_number ? 'Deselect' : 'Select'}
             </button>
           </div>
+          {digiKeyEnabled && (
+            <DigiKeySearchPanel
+              requirements={{
+                type: 'capacitor',
+                capacitance_uf: result.capacitance * 1e6,
+                voltage_min_v: spec.vout * 1.5,
+              }}
+            />
+          )}
         </div>
       )}
 
@@ -752,6 +781,88 @@ function MosfetCard({
         {isSelected ? 'Deselect' : 'Select'}
       </button>
     </div>
+  )
+}
+
+// ── Digi-Key search panel ─────────────────────────────────────────────────────
+
+function DigiKeySearchPanel({ requirements }: { requirements: ComponentRequirements }) {
+  const [loading, setLoading]   = useState(false)
+  const [results, setResults]   = useState<ComponentResult[] | null>(null)
+  const [error, setError]       = useState<string | null>(null)
+
+  const hasApi = Boolean(window.digikeyAPI)
+
+  async function handleSearch() {
+    if (!hasApi) { setError('Digi-Key bridge not available in this environment.'); return }
+    setLoading(true)
+    setError(null)
+    setResults(null)
+    try {
+      const r = await window.digikeyAPI!.search(requirements)
+      if (r.success) {
+        setResults(r.results ?? [])
+      } else {
+        setError(r.error ?? 'Search failed')
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <details className={styles.dkPanel}>
+      <summary className={styles.dkSummary}>
+        <span>🔍 Search Digi-Key</span>
+        {!hasApi && <span className={styles.dkOffline}>offline</span>}
+      </summary>
+
+      <div className={styles.dkBody}>
+        <button
+          className={styles.dkSearchBtn}
+          disabled={loading || !hasApi}
+          onClick={handleSearch}
+        >
+          {loading ? 'Searching…' : 'Search'}
+        </button>
+
+        {error && <div className={styles.dkError}>{error}</div>}
+
+        {results !== null && results.length === 0 && (
+          <div className={styles.dkEmpty}>No results found.</div>
+        )}
+
+        {results && results.map((r) => (
+          <div key={r.part_number} className={styles.dkCard}>
+            <div className={styles.dkCardHeader}>
+              <span className={styles.dkPart}>{r.part_number}</span>
+              {r.price_usd != null && (
+                <span className={styles.dkPrice}>${r.price_usd.toFixed(2)}</span>
+              )}
+            </div>
+            <div className={styles.dkMfr}>{r.manufacturer}</div>
+            <div className={styles.dkDesc}>{r.description}</div>
+            <div className={styles.dkMeta}>
+              {r.stock_qty != null && (
+                <span className={styles.dkStock}>{r.stock_qty.toLocaleString()} in stock</span>
+              )}
+            </div>
+            {r.product_url && (
+              <a
+                className={styles.dkLink}
+                href={r.product_url}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                View on Digi-Key ↗
+              </a>
+            )}
+          </div>
+        ))}
+      </div>
+    </details>
   )
 }
 
