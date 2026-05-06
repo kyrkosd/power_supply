@@ -289,3 +289,99 @@ details[open] .gdrSummary::before {
   color: var(--warning);
   line-height: 1.45;
 }
+
+/* ── Capacitor lifetime row ─────────────────────────────────────────────────── */
+
+.lifetimeRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0 5px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  margin-top: 3px;
+  gap: 6px;
+}
+
+.lifetimeLabel {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.lifetimeValue {
+  font-size: 10px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  text-align: right;
+}
+
+.lifetimeNa {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-style: italic;
+  text-align: right;
+}
+
+.lifetimeWarn {
+  font-size: 10px;
+  color: var(--warning);
+  line-height: 1.4;
+  padding: 2px 0 1px;
+  border-top: 1px solid rgba(245, 158, 11, 0.1);
+}
+
+/* ── Feedback network section ───────────────────────────────────────────── */
+
+.fbBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.fbRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  font-size: 11px;
+}
+
+.fbRow:last-child {
+  border-bottom: none;
+}
+
+.fbLabel {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-secondary);
+}
+
+.fbValue {
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.fbSeries {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--accent);
+  background: var(--accent-dim);
+  border-radius: 3px;
+  padding: 1px 4px;
+  font-family: var(--font-ui);
+  letter-spacing: 0.04em;
+}
+
+.fbNote {
+  font-size: 10px;
+  color: var(--warning);
+  line-height: 1.5;
+  padding: 4px 0 2px;
+}

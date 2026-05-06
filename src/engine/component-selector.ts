@@ -24,6 +24,8 @@ export interface CapacitorData {
   ripple_current_a: number
   type: string
   size: string
+  lifetime_hours?: number  // h  — base lifetime at max rated temp (electrolytic only)
+  temp_rating?: number     // °C — maximum rated temperature (electrolytic only)
 }
 
 export interface MosfetData {

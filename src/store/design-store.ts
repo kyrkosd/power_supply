@@ -10,8 +10,11 @@ import type { EMIResult } from '../engine/topologies/types'
 import type { ProjectFile } from '../types/project'
 import { undoMiddleware } from './undo-middleware'
 import type { SelectedComponents } from '../engine/component-selector'
+import { DEFAULT_FEEDBACK_OPTIONS } from '../engine/feedback'
+import type { FeedbackOptions } from '../engine/feedback'
 
 export type { SelectedComponents } from '../engine/component-selector'
+export type { FeedbackOptions } from '../engine/feedback'
 
 export type { TopologyId } from './workbenchStore'
 export type ActiveVizTab = 'waveforms' | 'bode' | 'losses' | 'thermal' | 'monte-carlo' | 'ltspice-comparison' | 'transient' | 'emi' | 'efficiency-map' | 'layout'
@@ -95,6 +98,9 @@ export interface DesignStoreState {
   selectedComponents: SelectedComponents
   setSelectedComponent: <K extends keyof SelectedComponents>(key: K, value: SelectedComponents[K]) => void
 
+  feedbackOptions: FeedbackOptions
+  setFeedbackOptions: (opts: Partial<FeedbackOptions>) => void
+
   // Project actions
   setNotes: (notes: string) => void
   newProject: () => void
@@ -154,6 +160,7 @@ export const useDesignStore = create<DesignStoreState>(
     notes: '',
     projectCreated: null,
     selectedComponents: EMPTY_SELECTION,
+    feedbackOptions: { ...DEFAULT_FEEDBACK_OPTIONS },
 
     // Comparison state
     comparisonSlot: null,
@@ -191,6 +198,9 @@ export const useDesignStore = create<DesignStoreState>(
 
     setSelectedComponent: (key, value) =>
       set((state) => ({ selectedComponents: { ...state.selectedComponents, [key]: value } })),
+
+    setFeedbackOptions: (opts) =>
+      set((state) => ({ feedbackOptions: { ...state.feedbackOptions, ...opts } })),
 
     setTopology: (topology) =>
       set({ topology, spec: TOPOLOGY_DEFAULTS[topology], isModified: true, selectedComponents: EMPTY_SELECTION, ...COMPUTE_RESET }),

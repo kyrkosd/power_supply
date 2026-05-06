@@ -7,6 +7,8 @@ import {
 } from '../engine/component-selector'
 import type { SelectedComponents } from '../engine/component-selector'
 import type { DesignSpec, DesignResult } from '../engine/types'
+import { designFeedback, fmtResistor } from '../engine/feedback'
+import type { FeedbackOptions } from '../engine/feedback'
 
 export type { SelectedComponents }
 
@@ -111,6 +113,7 @@ export function generateBOM(
   spec: DesignSpec,
   result: DesignResult,
   selected: SelectedComponents,
+  feedbackOpts?: Partial<FeedbackOptions>,
 ): string {
   const rows: BOMRow[] = []
   const { mosfetVds, diodeVr } = voltageStress(topology, spec, result)
@@ -255,6 +258,35 @@ export function generateBOM(
     qty:          1,
     notes:        'Input decoupling; estimate — verify with ripple current rating',
   })
+
+  // ── Rfb1 / Rfb2 — Feedback voltage divider ───────────────────────────────
+  const ISOLATED = topology === 'flyback' || topology === 'forward'
+  if (!ISOLATED) {
+    const fb = designFeedback(spec.vout, feedbackOpts)
+    const seriesLabel = fb.e96_values_used ? 'E96 1%' : 'E24 5%'
+    rows.push({
+      ref:          'Rfb1',
+      component:    'Resistor',
+      value:        fmtResistor(fb.r_top),
+      rating:       `${seriesLabel}; 0.1 W; tolerance ≤${fb.e96_values_used ? '1' : '5'} %`,
+      pkg:          '0402',
+      manufacturer: '-',
+      partNumber:   '-',
+      qty:          1,
+      notes:        `Upper FB divider; Vout→FB. Actual Vout: ${fb.actual_vout.toFixed(4)} V (${fb.vout_error_pct >= 0 ? '+' : ''}${fb.vout_error_pct.toFixed(3)} %)`,
+    })
+    rows.push({
+      ref:          'Rfb2',
+      component:    'Resistor',
+      value:        fmtResistor(fb.r_bottom),
+      rating:       `${seriesLabel}; 0.1 W; tolerance ≤${fb.e96_values_used ? '1' : '5'} %`,
+      pkg:          '0402',
+      manufacturer: '-',
+      partNumber:   '-',
+      qty:          1,
+      notes:        `Lower FB divider; FB→GND. Vref: ${fb.vref} V; Idiv: ${(fb.divider_current * 1e6).toFixed(0)} µA`,
+    })
+  }
 
   return [CSV_HEADER, ...rows.map(rowToCsv)].join('\r\n')
 }

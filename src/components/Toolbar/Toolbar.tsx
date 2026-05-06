@@ -45,6 +45,7 @@ export function Toolbar(): React.ReactElement {
     activeVizTab, setActiveVizTab,
     selectedComponents,
     comparisonSlot, saveToComparison, setIsComparing,
+    feedbackOptions,
   } = useDesignStore()
 
   const [isExporting, setIsExporting] = useState(false)
@@ -107,7 +108,7 @@ export function Toolbar(): React.ReactElement {
     if (!result || isExportingBOM) return
     setIsExportingBOM(true)
     try {
-      const csv = generateBOM(topology, spec, result, selectedComponents)
+      const csv = generateBOM(topology, spec, result, selectedComponents, feedbackOptions)
       await window.exportAPI?.saveCsv(csv, `${topology}_bom.csv`)
     } catch (err) {
       console.error('BOM export failed:', err)

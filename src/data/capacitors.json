@@ -81,7 +81,9 @@
     "type": "electrolytic",
     "size": "8x10.5",
     "package": "8x10.5",
-    "dielectric": "Electrolytic"
+    "dielectric": "Electrolytic",
+    "lifetime_hours": 2000,
+    "temp_rating": 105
   },
   {
     "manufacturer": "Panasonic",
@@ -93,7 +95,9 @@
     "type": "electrolytic",
     "size": "10x10.5",
     "package": "10x10.5",
-    "dielectric": "Electrolytic"
+    "dielectric": "Electrolytic",
+    "lifetime_hours": 2000,
+    "temp_rating": 105
   },
   {
     "manufacturer": "Panasonic",
@@ -105,7 +109,9 @@
     "type": "electrolytic",
     "size": "12.5x13.5",
     "package": "12.5x13.5",
-    "dielectric": "Electrolytic"
+    "dielectric": "Electrolytic",
+    "lifetime_hours": 2000,
+    "temp_rating": 105
   },
   {
     "manufacturer": "Murata",
@@ -189,7 +195,9 @@
     "type": "electrolytic",
     "size": "8x10.5",
     "package": "8x10.5",
-    "dielectric": "Electrolytic"
+    "dielectric": "Electrolytic",
+    "lifetime_hours": 5000,
+    "temp_rating": 105
   },
   {
     "manufacturer": "Panasonic",
@@ -201,7 +209,9 @@
     "type": "electrolytic",
     "size": "10x10.5",
     "package": "10x10.5",
-    "dielectric": "Electrolytic"
+    "dielectric": "Electrolytic",
+    "lifetime_hours": 5000,
+    "temp_rating": 105
   },
   {
     "manufacturer": "Panasonic",
@@ -213,7 +223,9 @@
     "type": "electrolytic",
     "size": "12.5x13.5",
     "package": "12.5x13.5",
-    "dielectric": "Electrolytic"
+    "dielectric": "Electrolytic",
+    "lifetime_hours": 5000,
+    "temp_rating": 105
   },
   {
     "manufacturer": "Murata",
@@ -297,7 +309,9 @@
     "type": "electrolytic",
     "size": "8x10.5",
     "package": "8x10.5",
-    "dielectric": "Electrolytic"
+    "dielectric": "Electrolytic",
+    "lifetime_hours": 10000,
+    "temp_rating": 105
   },
   {
     "manufacturer": "Panasonic",
@@ -309,7 +323,9 @@
     "type": "electrolytic",
     "size": "10x10.5",
     "package": "10x10.5",
-    "dielectric": "Electrolytic"
+    "dielectric": "Electrolytic",
+    "lifetime_hours": 10000,
+    "temp_rating": 105
   },
   {
     "manufacturer": "Panasonic",
@@ -321,7 +337,9 @@
     "type": "electrolytic",
     "size": "12.5x13.5",
     "package": "12.5x13.5",
-    "dielectric": "Electrolytic"
+    "dielectric": "Electrolytic",
+    "lifetime_hours": 10000,
+    "temp_rating": 105
   },
   {
     "manufacturer": "Murata",

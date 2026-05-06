@@ -12,6 +12,8 @@ import {
 } from '../../engine/component-selector'
 import { computeGateDrive, type GateDriveResult } from '../../engine/gate-drive'
 import { checkSaturation } from '../../engine/inductor-saturation'
+import { estimateLifetime, type CapLifetimeResult } from '../../engine/cap-lifetime'
+import { designFeedback, fmtResistor, type FeedbackResult } from '../../engine/feedback'
 import { Tooltip } from '../Tooltip/Tooltip'
 import styles from './ComponentSuggestions.module.css'
 
@@ -65,7 +67,7 @@ function mosfetVdsRequired(topology: string, vinMax: number, vout: number): numb
 }
 
 export function ComponentSuggestions() {
-  const { result, spec, topology, selectedComponents, setSelectedComponent } = useDesignStore()
+  const { result, spec, topology, selectedComponents, setSelectedComponent, feedbackOptions } = useDesignStore()
 
   if (!result) {
     return (
@@ -85,6 +87,26 @@ export function ComponentSuggestions() {
     : null
 
   const showBootstrap = HIGH_SIDE_TOPOLOGIES.has(topology)
+
+  // Capacitor ripple current: triangular waveform through output cap.
+  // For all topologies: ΔIL ≈ 2 × (Ipeak − Iout), Ic_rms = ΔIL / (2√3)
+  const deltaIL = 2 * Math.max(result.peakCurrent - spec.iout, 0)
+  const capRippleRms = deltaIL / (2 * Math.sqrt(3))
+
+  const capLifetime: CapLifetimeResult | null = (capacitor && capacitor.type === 'electrolytic')
+    ? estimateLifetime(capacitor, {
+        irms_actual: capRippleRms,
+        vdc: spec.vout,
+        ambient_temp_C: spec.ambientTemp,
+      })
+    : null
+
+  // Feedback network — computed regardless of whether an output cap was found.
+  // Isolated topologies show a note instead of computed values.
+  const ISOLATED_TOPOLOGIES = new Set(['flyback', 'forward'])
+  const feedback: FeedbackResult | null = ISOLATED_TOPOLOGIES.has(topology)
+    ? null
+    : designFeedback(spec.vout, feedbackOptions)
 
   const sel = selectedComponents
 
@@ -385,6 +407,18 @@ export function ComponentSuggestions() {
               <span className={styles.spec}>ESR <strong>{capacitor.esr_mohm}</strong> mΩ</span>
               <span className={styles.spec}>{capacitor.type}</span>
             </div>
+
+            {/* ── Lifetime estimate (electrolytic only) ── */}
+            {capLifetime !== null
+              ? <CapLifetimeRow lifetime={capLifetime} ambientTemp={spec.ambientTemp} />
+              : capacitor.type !== 'electrolytic' && (
+                <div className={styles.lifetimeRow}>
+                  <span className={styles.lifetimeLabel}>Lifetime</span>
+                  <span className={styles.lifetimeNa}>N/A — ceramic caps have no wear-out</span>
+                </div>
+              )
+            }
+
             <button
               className={styles.selectButton}
               onClick={() =>
@@ -398,6 +432,20 @@ export function ComponentSuggestions() {
           </div>
         </div>
       )}
+
+      {/* ── Feedback Network ────────────────────────────────────────── */}
+      <div className={styles.section}>
+        <div className={styles.sectionTitle}>Feedback Network</div>
+        {ISOLATED_TOPOLOGIES.has(topology)
+          ? (
+            <div className={styles.fbNote}>
+              ⚠ Feedback network is on the secondary side. TL431 + optocoupler
+              compensation not included — see control-loop analysis for loop design.
+            </div>
+          )
+          : feedback && <FeedbackNetworkDisplay fb={feedback} vout={spec.vout} />
+        }
+      </div>
 
       {/* ── CCM/DCM mode badge ───────────────────────────────────── */}
       {result.ccm_dcm_boundary != null && (
@@ -471,6 +519,115 @@ export function ComponentSuggestions() {
         </div>
       )}
     </div>
+  )
+}
+
+// ── Feedback network display sub-component ────────────────────────────────
+
+function errorColor(pct: number): string {
+  const abs = Math.abs(pct)
+  if (abs < 0.5) return '#4ade80'   // green — excellent
+  if (abs < 1.0) return '#f59e0b'   // amber — acceptable
+  return '#ef4444'                  // red   — use a different series
+}
+
+function FeedbackNetworkDisplay({ fb, vout }: { fb: FeedbackResult; vout: number }) {
+  const seriesLabel = fb.e96_values_used ? 'E96' : 'E24'
+  const currentUa = (fb.divider_current * 1e6).toFixed(0)
+  const tip = (
+    <div>
+      <strong>Feedback voltage divider</strong><br />
+      Vout = Vref × (1 + Rtop / Rbot)<br />
+      <code style={{ fontSize: '10px' }}>
+        = {fb.vref} × (1 + {fmtResistor(fb.r_top)} / {fmtResistor(fb.r_bottom)})
+      </code><br />
+      Ideal Rtop: {fmtResistor(fb.vref / (fb.divider_current) * (vout / fb.vref - 1))}<br />
+      Ideal Rbot: {fmtResistor(fb.vref / fb.divider_current)}<br />
+      Snapped to nearest {seriesLabel} value.<br />
+      <small style={{ color: 'var(--text-secondary)' }}>TI SLVA477B eq. 3</small>
+    </div>
+  )
+
+  return (
+    <div className={styles.fbBody}>
+      <div className={styles.fbRow}>
+        <span className={styles.fbLabel}>
+          R_top
+          <Tooltip content={tip} side="left"><span className={styles.infoIcon}>ⓘ</span></Tooltip>
+        </span>
+        <span className={styles.fbValue}>{fmtResistor(fb.r_top)} <span className={styles.fbSeries}>{seriesLabel}</span></span>
+      </div>
+      <div className={styles.fbRow}>
+        <span className={styles.fbLabel}>R_bottom</span>
+        <span className={styles.fbValue}>{fmtResistor(fb.r_bottom)} <span className={styles.fbSeries}>{seriesLabel}</span></span>
+      </div>
+      <div className={styles.fbRow}>
+        <span className={styles.fbLabel}>Actual Vout</span>
+        <span className={styles.fbValue}>{fb.actual_vout.toFixed(4)} V</span>
+      </div>
+      <div className={styles.fbRow}>
+        <span className={styles.fbLabel}>Error</span>
+        <span className={styles.fbValue} style={{ color: errorColor(fb.vout_error_pct) }}>
+          {fb.vout_error_pct >= 0 ? '+' : ''}{fb.vout_error_pct.toFixed(3)} %
+        </span>
+      </div>
+      <div className={styles.fbRow}>
+        <span className={styles.fbLabel}>Divider current</span>
+        <span className={styles.fbValue}>{currentUa} µA</span>
+      </div>
+      <div className={styles.fbRow}>
+        <span className={styles.fbLabel}>Power</span>
+        <span className={styles.fbValue}>{(fb.power_dissipated * 1000).toFixed(2)} mW</span>
+      </div>
+    </div>
+  )
+}
+
+// ── Capacitor lifetime sub-component ─────────────────────────────────────
+
+function lifetimeColor(years: number): string {
+  if (years < 2)  return '#7f1d1d'   // dark red  — critically short
+  if (years < 5)  return '#ef4444'   // red
+  if (years < 10) return '#f59e0b'   // amber
+  return '#4ade80'                   // green
+}
+
+function CapLifetimeRow({ lifetime, ambientTemp }: { lifetime: CapLifetimeResult; ambientTemp: number }) {
+  const years = lifetime.derated_lifetime_years
+  const color = lifetimeColor(years)
+
+  const tip = (
+    <div>
+      <strong>Arrhenius lifetime model</strong><br />
+      Base: {lifetime.base_lifetime_hours.toLocaleString()} h at {lifetime.temp_rated} °C<br />
+      Self-heating: +{lifetime.self_heating_C.toFixed(1)} °C<br />
+      Operating temp: {lifetime.operating_temp.toFixed(1)} °C (ambient {ambientTemp} °C)<br />
+      Ripple ratio: {(lifetime.ripple_current_ratio * 100).toFixed(0)} % of rated<br />
+      Voltage stress: {(lifetime.voltage_stress_ratio * 100).toFixed(0)} % of rated<br />
+      <code style={{ fontSize: '10px' }}>L = L₀ × 2^((T_rated − T_op) / 10)</code><br />
+      <small style={{ color: 'var(--text-secondary)' }}>
+        Nichicon UPS3, IEC 61709 §6
+      </small>
+    </div>
+  )
+
+  return (
+    <>
+      <div className={styles.lifetimeRow}>
+        <span className={styles.lifetimeLabel}>
+          Est. lifetime
+          <Tooltip content={tip} side="left">
+            <span className={styles.infoIcon}>ⓘ</span>
+          </Tooltip>
+        </span>
+        <span className={styles.lifetimeValue} style={{ color }}>
+          {years >= 100 ? '>100 yr' : `${years.toFixed(1)} yr`} @ {ambientTemp} °C
+        </span>
+      </div>
+      {lifetime.warnings.map((w, i) => (
+        <div key={i} className={styles.lifetimeWarn}>{w}</div>
+      ))}
+    </>
   )
 }
 

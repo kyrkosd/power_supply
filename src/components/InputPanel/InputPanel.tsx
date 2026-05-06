@@ -171,7 +171,7 @@ function SecondaryOutputRow({ index, output, onChange, onRemove }: SecondaryRowP
 // ── Main component ────────────────────────────────────────────────────────────
 
 export function InputPanel(): React.ReactElement {
-  const { spec, result, topology, updateSpec, requestMcRun, setActiveVizTab, notes, setNotes } = useDesignStore()
+  const { spec, result, topology, updateSpec, requestMcRun, setActiveVizTab, notes, setNotes, feedbackOptions, setFeedbackOptions } = useDesignStore()
   const [mcIterations, setMcIterations] = useState(1000)
   const [mcSeed, setMcSeed] = useState(42)
 
@@ -460,6 +460,85 @@ export function InputPanel(): React.ReactElement {
             </div>
           </details>
         )}
+
+        {/* ── Feedback Network ── */}
+        <details className={styles.advancedSection}>
+          <summary className={styles.advancedTitle}>
+            Feedback Network
+            <Tooltip
+              content="Resistor divider that sets the output voltage. Vout = Vref × (1 + Rtop/Rbot). Values are snapped to the nearest E96 (or E24) standard value."
+              side="right"
+            >
+              <span className={styles.infoIcon}>ⓘ</span>
+            </Tooltip>
+          </summary>
+          <div className={styles.advancedBody}>
+            <div className={styles.advancedRow}>
+              <label className={styles.advancedLabel}>
+                Reference voltage
+                <Tooltip
+                  content="IC internal reference (Vref). Common values: 0.6 V (Renesas), 0.8 V (TI LMR, TPS6), 1.0 V, 1.25 V (LM317), 2.5 V (older ICs). Check your controller datasheet."
+                  side="right"
+                >
+                  <span className={styles.infoIcon}>ⓘ</span>
+                </Tooltip>
+              </label>
+              <select
+                className={styles.advancedSelect}
+                value={feedbackOptions.vref}
+                onChange={(e) => setFeedbackOptions({ vref: Number(e.target.value) })}
+              >
+                <option value={0.6}>0.6 V</option>
+                <option value={0.8}>0.8 V</option>
+                <option value={1.0}>1.0 V</option>
+                <option value={1.25}>1.25 V</option>
+                <option value={2.5}>2.5 V</option>
+              </select>
+            </div>
+            <div className={styles.advancedRow}>
+              <label className={styles.advancedLabel}>
+                Divider current
+                <Tooltip
+                  content="DC bias current through the feedback divider. Higher current → better noise rejection but more quiescent loss. Typical: 50–200 µA."
+                  side="right"
+                >
+                  <span className={styles.infoIcon}>ⓘ</span>
+                </Tooltip>
+              </label>
+              <div className={styles.advancedInputGroup}>
+                <input
+                  type="number"
+                  className={styles.advancedNumberInput}
+                  value={feedbackOptions.divider_current_ua}
+                  min={10}
+                  max={1000}
+                  step={10}
+                  onChange={(e) => setFeedbackOptions({ divider_current_ua: Math.max(10, Math.min(1000, Number(e.target.value))) })}
+                />
+                <span className={styles.advancedUnit}>µA</span>
+              </div>
+            </div>
+            <div className={styles.advancedRow}>
+              <label className={styles.advancedLabel}>
+                Resistor series
+                <Tooltip
+                  content="E96: 1% tolerance, 96 values/decade — tighter Vout error. E24: 5% tolerance, 24 values/decade — cheaper and more available."
+                  side="right"
+                >
+                  <span className={styles.infoIcon}>ⓘ</span>
+                </Tooltip>
+              </label>
+              <select
+                className={styles.advancedSelect}
+                value={feedbackOptions.prefer_e24 ? 'e24' : 'e96'}
+                onChange={(e) => setFeedbackOptions({ prefer_e24: e.target.value === 'e24' })}
+              >
+                <option value="e96">E96 (1%)</option>
+                <option value="e24">E24 (5%)</option>
+              </select>
+            </div>
+          </div>
+        </details>
 
         <details className={styles.notesSection}>
           <summary className={styles.notesSectionTitle}>Notes</summary>
