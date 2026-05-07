@@ -65,52 +65,57 @@ function formatPercent(value: number): string {
   return `${value.toFixed(0)}%`
 }
 
-function createEfficiencyCurve(spec: DesignSpec, result: DesignResult, topology: string) {
-  // The efficiency curve calculation is currently only implemented for the
-  // buck topology. Return an empty array for others to prevent a crash.
-  if (topology !== 'buck') {
-    return []
-  }
-  // This calculation is only valid for a buck converter.
-  function computeBuckLosses(loadCurrent: number): LossBreakdownValues {
-    const D = Math.min(Math.max(spec.vout / spec.vinMax, 0.01), 0.99)
-    const L = result.inductance
-    const fsw = spec.fsw
-    const deltaIL = Math.abs((spec.vout * (1 - D)) / (L * fsw))
-    const IL_peak = loadCurrent + deltaIL / 2
-    const IL_rms = Math.sqrt(loadCurrent * loadCurrent + (deltaIL * deltaIL) / 12)
-    const Ic_rms = deltaIL / (2 * Math.sqrt(3))
-
-    const mosfet_conduction = loadCurrent * loadCurrent * DEVICE_ASSUMPTIONS.rdsOn * D
-    const mosfet_switching = 0.5 * spec.vinMax * IL_peak * (DEVICE_ASSUMPTIONS.trise + DEVICE_ASSUMPTIONS.tfall) * fsw
-    const mosfet_gate = DEVICE_ASSUMPTIONS.qg * spec.vinMax * fsw
-    const inductor_copper = IL_rms * IL_rms * DEVICE_ASSUMPTIONS.dcr
-    const inductor_core = DEVICE_ASSUMPTIONS.coreFactor * loadCurrent * deltaIL
-    const diode_conduction = DEVICE_ASSUMPTIONS.vf * loadCurrent * (1 - D)
-    const capacitor_esr = Ic_rms * Ic_rms * DEVICE_ASSUMPTIONS.esr
-
-    const total =
-      mosfet_conduction + mosfet_switching + mosfet_gate +
-      inductor_copper + inductor_core + diode_conduction + capacitor_esr
-
-    const pout = spec.vout * loadCurrent
-    const efficiency = pout <= 0 ? 0 : pout / (pout + total)
-
-    return {
-      mosfet_conduction, mosfet_switching, mosfet_gate, inductor_copper,
-      inductor_core, diode_conduction, capacitor_esr, total, efficiency,
-    }
-  }
+// Compute buck efficiency curve for a given number of interleaved phases.
+// Uses same DEVICE_ASSUMPTIONS constants as buck.ts for consistency.
+function computeBuckEfficiencyCurve(
+  spec: DesignSpec,
+  result: DesignResult,
+  phases: number,
+): Array<{ loadCurrent: number; efficiency: number }> {
+  const N = Math.max(1, phases)
+  const D = Math.min(Math.max(spec.vout / spec.vinMax, 0.01), 0.99)
+  const fsw = spec.fsw
+  // Reconstruct per-phase inductance from K_out or use result.phase_inductance
+  const L_phase = (N > 1 && result.phase_inductance) ? result.phase_inductance : result.inductance
 
   return Array.from({ length: 10 }, (_, index) => {
     const ratio = 0.1 + index * 0.1
-    const current = spec.iout * ratio
-    const losses = computeBuckLosses(current)
+    const loadCurrent = spec.iout * ratio
+
+    // N-phase ripple cancellation factor at this duty cycle
+    const ND = N * D
+    const delta = ND - Math.floor(ND)
+    const K_out = (delta < 1e-6 || delta > 1 - 1e-6)
+      ? 0
+      : Math.min((delta * (1 - delta)) / (N * D * (1 - D)), 1)
+
+    const I_phase = loadCurrent / N
+    const deltaIL_phase = Math.abs((spec.vout * (1 - D)) / (L_phase * fsw))
+    const IL_peak_phase = I_phase + deltaIL_phase / 2
+    const IL_rms_phase = Math.sqrt(I_phase ** 2 + deltaIL_phase ** 2 / 12)
+    const Ic_out_rms = (K_out * deltaIL_phase) / (2 * Math.sqrt(3))
+
+    const mosfet_conduction = DEVICE_ASSUMPTIONS.rdsOn * loadCurrent ** 2 * D / N
+    const mosfet_switching = N * 0.5 * spec.vinMax * IL_peak_phase * (DEVICE_ASSUMPTIONS.trise + DEVICE_ASSUMPTIONS.tfall) * fsw
+    const mosfet_gate = N * DEVICE_ASSUMPTIONS.qg * spec.vinMax * fsw
+    const inductor_copper = N * DEVICE_ASSUMPTIONS.dcr * IL_rms_phase ** 2
+    const inductor_core = N * DEVICE_ASSUMPTIONS.coreFactor * I_phase * deltaIL_phase
+    const diode_conduction = DEVICE_ASSUMPTIONS.vf * loadCurrent * (1 - D)
+    const capacitor_esr = Ic_out_rms ** 2 * DEVICE_ASSUMPTIONS.esr
+
+    const total = mosfet_conduction + mosfet_switching + mosfet_gate +
+                  inductor_copper + inductor_core + diode_conduction + capacitor_esr
+    const pout = spec.vout * loadCurrent
     return {
-      loadCurrent: current,
-      efficiency: losses.efficiency * 100,
+      loadCurrent,
+      efficiency: pout <= 0 ? 0 : (pout / (pout + total)) * 100,
     }
   })
+}
+
+function createEfficiencyCurve(spec: DesignSpec, result: DesignResult, topology: string) {
+  if (topology !== 'buck') return []
+  return computeBuckEfficiencyCurve(spec, result, 1)
 }
 
 export function LossBreakdown(): React.ReactElement {
@@ -138,6 +143,14 @@ export function LossBreakdown(): React.ReactElement {
     return createEfficiencyCurve(spec, result, topology)
   }, [spec, result, topology])
 
+  // N-phase curve — single-phase equivalent for comparison (only when N > 1, buck)
+  const efficiencyCurveNPhase = useMemo(() => {
+    if (!result || topology !== 'buck') return []
+    const N = result.phases ?? 1
+    if (N <= 1) return []
+    return computeBuckEfficiencyCurve(spec, result, N)
+  }, [spec, result, topology])
+
   const operatingPoint = useMemo(() => {
     if (!result || efficiencyCurve.length === 0) return null
     const current = spec.iout
@@ -156,10 +169,11 @@ export function LossBreakdown(): React.ReactElement {
     const chartWidth = width - margin.left - margin.right
     const chartHeight = height - margin.top - margin.bottom
 
+    const allPoints = [...efficiencyCurve, ...efficiencyCurveNPhase]
     const xDomain = [efficiencyCurve[0].loadCurrent, efficiencyCurve[efficiencyCurve.length - 1].loadCurrent]
     const yDomain = [
-      Math.max(0, min(efficiencyCurve, (d) => d.efficiency)! - 2),
-      Math.min(100, max(efficiencyCurve, (d) => d.efficiency)! + 2),
+      Math.max(0, min(allPoints, (d) => d.efficiency)! - 2),
+      Math.min(100, max(allPoints, (d) => d.efficiency)! + 2),
     ]
 
     const xScale = scaleLinear().domain(xDomain as [number, number]).range([0, chartWidth]).nice()
@@ -190,17 +204,48 @@ export function LossBreakdown(): React.ReactElement {
       .y((d) => yScale(d.efficiency))
       .curve(curveMonotoneX)
 
-    root.append('path')
-      .datum(efficiencyCurve)
-      .attr('fill', 'none')
-      .attr('stroke', '#32c9e6')
-      .attr('stroke-width', 2.5)
-      .attr('d', lineGenerator)
+    // Single-phase reference curve (dashed gray) when N > 1
+    if (efficiencyCurveNPhase.length > 0) {
+      root.append('path')
+        .datum(efficiencyCurve)
+        .attr('fill', 'none')
+        .attr('stroke', '#64748b')
+        .attr('stroke-width', 1.5)
+        .attr('stroke-dasharray', '4 3')
+        .attr('d', lineGenerator)
 
+      // N-phase curve (solid, highlighted)
+      root.append('path')
+        .datum(efficiencyCurveNPhase)
+        .attr('fill', 'none')
+        .attr('stroke', '#32c9e6')
+        .attr('stroke-width', 2.5)
+        .attr('d', lineGenerator)
+
+      // Legend
+      const N = result.phases ?? 1
+      const legendX = chartWidth - 130
+      root.append('line').attr('x1', legendX).attr('x2', legendX + 20).attr('y1', 6).attr('y2', 6)
+        .attr('stroke', '#64748b').attr('stroke-width', 1.5).attr('stroke-dasharray', '4 3')
+      root.append('text').attr('x', legendX + 24).attr('y', 10).attr('fill', 'var(--text-muted)').attr('font-size', '10px').text('1-phase')
+      root.append('line').attr('x1', legendX).attr('x2', legendX + 20).attr('y1', 20).attr('y2', 20)
+        .attr('stroke', '#32c9e6').attr('stroke-width', 2.5)
+      root.append('text').attr('x', legendX + 24).attr('y', 24).attr('fill', 'var(--text-muted)').attr('font-size', '10px').text(`${N}-phase`)
+    } else {
+      root.append('path')
+        .datum(efficiencyCurve)
+        .attr('fill', 'none')
+        .attr('stroke', '#32c9e6')
+        .attr('stroke-width', 2.5)
+        .attr('d', lineGenerator)
+    }
+
+    const activeCurve = efficiencyCurveNPhase.length > 0 ? efficiencyCurveNPhase : efficiencyCurve
     if (operatingPoint) {
+      const opEff = activeCurve[activeCurve.length - 1]?.efficiency ?? operatingPoint.efficiency
       root.append('circle')
         .attr('cx', xScale(operatingPoint.loadCurrent))
-        .attr('cy', yScale(operatingPoint.efficiency))
+        .attr('cy', yScale(opEff))
         .attr('r', 5)
         .attr('fill', '#00f2ff')
         .attr('stroke', '#ffffff')
@@ -208,7 +253,7 @@ export function LossBreakdown(): React.ReactElement {
 
       root.append('text')
         .attr('x', xScale(operatingPoint.loadCurrent) + 8)
-        .attr('y', yScale(operatingPoint.efficiency) - 8)
+        .attr('y', yScale(opEff) - 8)
         .attr('fill', 'var(--text-primary)')
         .attr('font-size', '11px')
         .text('Current load')
@@ -220,7 +265,7 @@ export function LossBreakdown(): React.ReactElement {
       .attr('fill', 'var(--text-muted)')
       .attr('font-size', '11px')
       .text('Efficiency vs Load')
-  }, [efficiencyCurve, operatingPoint, result])
+  }, [efficiencyCurve, efficiencyCurveNPhase, operatingPoint, result])
 
   if (!result) {
     return (

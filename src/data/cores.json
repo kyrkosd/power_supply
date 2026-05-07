@@ -1,11 +1,36 @@
 [
   {
+    "type": "EE13",
+    "Ae": 0.0000098,
+    "Aw": 0.0000067,
+    "le": 0.025,
+    "Ve": 0.000000245,
+    "AL": 700,
+    "MLT_mm": 22,
+    "bobbin_width_mm": 8,
+    "bobbin_height_mm": 5
+  },
+  {
     "type": "EE16",
     "Ae": 0.000016,
     "Aw": 0.000012,
     "le": 0.035,
     "Ve": 0.00000056,
-    "AL": 1250
+    "AL": 1250,
+    "MLT_mm": 27,
+    "bobbin_width_mm": 11,
+    "bobbin_height_mm": 7
+  },
+  {
+    "type": "EE19",
+    "Ae": 0.000023,
+    "Aw": 0.000016,
+    "le": 0.039,
+    "Ve": 0.000000897,
+    "AL": 1300,
+    "MLT_mm": 32,
+    "bobbin_width_mm": 13,
+    "bobbin_height_mm": 9
   },
   {
     "type": "EE20",
@@ -13,7 +38,10 @@
     "Aw": 0.000018,
     "le": 0.045,
     "Ve": 0.000001125,
-    "AL": 1400
+    "AL": 1400,
+    "MLT_mm": 36,
+    "bobbin_width_mm": 14,
+    "bobbin_height_mm": 9
   },
   {
     "type": "EE25",
@@ -21,7 +49,10 @@
     "Aw": 0.000028,
     "le": 0.055,
     "Ve": 0.0000022,
-    "AL": 1600
+    "AL": 1600,
+    "MLT_mm": 45,
+    "bobbin_width_mm": 17,
+    "bobbin_height_mm": 11
   },
   {
     "type": "EE30",
@@ -29,7 +60,10 @@
     "Aw": 0.000045,
     "le": 0.07,
     "Ve": 0.00000455,
-    "AL": 1800
+    "AL": 1800,
+    "MLT_mm": 55,
+    "bobbin_width_mm": 21,
+    "bobbin_height_mm": 14
   },
   {
     "type": "PQ20/16",
@@ -37,7 +71,10 @@
     "Aw": 0.000025,
     "le": 0.048,
     "Ve": 0.000001536,
-    "AL": 2000
+    "AL": 2000,
+    "MLT_mm": 42,
+    "bobbin_width_mm": 15,
+    "bobbin_height_mm": 10
   },
   {
     "type": "PQ26/20",
@@ -45,7 +82,10 @@
     "Aw": 0.00004,
     "le": 0.062,
     "Ve": 0.000003224,
-    "AL": 2200
+    "AL": 2200,
+    "MLT_mm": 52,
+    "bobbin_width_mm": 18,
+    "bobbin_height_mm": 13
   },
   {
     "type": "PQ32/20",
@@ -53,6 +93,42 @@
     "Aw": 0.00005,
     "le": 0.075,
     "Ve": 0.0000048,
-    "AL": 2400
+    "AL": 2400,
+    "MLT_mm": 62,
+    "bobbin_width_mm": 22,
+    "bobbin_height_mm": 15
+  },
+  {
+    "type": "RM8",
+    "Ae": 0.000030,
+    "Aw": 0.000021,
+    "le": 0.040,
+    "Ve": 0.0000012,
+    "AL": 2500,
+    "MLT_mm": 32,
+    "bobbin_width_mm": 10,
+    "bobbin_height_mm": 8
+  },
+  {
+    "type": "RM10",
+    "Ae": 0.000047,
+    "Aw": 0.000031,
+    "le": 0.050,
+    "Ve": 0.00000235,
+    "AL": 3200,
+    "MLT_mm": 40,
+    "bobbin_width_mm": 13,
+    "bobbin_height_mm": 10
+  },
+  {
+    "type": "RM12",
+    "Ae": 0.000067,
+    "Aw": 0.000044,
+    "le": 0.059,
+    "Ve": 0.00000395,
+    "AL": 4000,
+    "MLT_mm": 50,
+    "bobbin_width_mm": 16,
+    "bobbin_height_mm": 13
   }
 ]

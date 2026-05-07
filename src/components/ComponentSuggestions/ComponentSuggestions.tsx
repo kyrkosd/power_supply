@@ -17,6 +17,7 @@ import { estimateLifetime, type CapLifetimeResult } from '../../engine/cap-lifet
 import { designFeedback, fmtResistor, type FeedbackResult } from '../../engine/feedback'
 import { designSoftStart, type SoftStartResult } from '../../engine/soft-start'
 import type { CurrentSenseResult } from '../../engine/current-sense'
+import type { WindingResult, WindingSection } from '../../engine/transformer-winding'
 import { Tooltip } from '../Tooltip/Tooltip'
 import styles from './ComponentSuggestions.module.css'
 
@@ -522,6 +523,14 @@ export function ComponentSuggestions() {
         </div>
       )}
 
+      {/* ── Transformer winding details ──────────────────────────── */}
+      {result.winding_result && (
+        <details className={styles.section} open={false}>
+          <summary className={styles.gdrSummary}>Transformer Details</summary>
+          <TransformerDetails wr={result.winding_result} />
+        </details>
+      )}
+
       {/* ── Flyback multi-output summary ─────────────────────────── */}
       {result.secondaryOutputResults && result.secondaryOutputResults.length > 0 && (
         <div className={styles.section}>
@@ -831,6 +840,132 @@ function CapLifetimeRow({ lifetime, ambientTemp }: { lifetime: CapLifetimeResult
         <div key={i} className={styles.lifetimeWarn}>{w}</div>
       ))}
     </>
+  )
+}
+
+// ── Transformer details sub-component ─────────────────────────────────────────
+
+function fillColor(pct: number): string {
+  if (pct > 60) return '#ef4444'
+  if (pct > 45) return '#f59e0b'
+  return '#4ade80'
+}
+
+function frColor(fr: number): string {
+  if (fr > 2)   return '#ef4444'
+  if (fr > 1.5) return '#f59e0b'
+  return '#4ade80'
+}
+
+function WindingRow({ label, w }: { label: string; w: WindingSection }) {
+  return (
+    <div style={{ marginBottom: '6px' }}>
+      <div style={{ color: 'var(--text-secondary)', fontSize: '11px', marginBottom: '2px' }}>{label}</div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '4px', fontSize: '12px' }}>
+        <span>AWG {w.wire_gauge_awg} × {w.strands} strand{w.strands > 1 ? 's' : ''}</span>
+        <span>{w.turns} turns, {w.layers} layer{w.layers > 1 ? 's' : ''}</span>
+        <span>R: {w.resistance_mohm.toFixed(1)} mΩ</span>
+      </div>
+      <div style={{ fontSize: '11px', color: fillColor(w.fill_factor_pct) }}>
+        Fill: {w.fill_factor_pct.toFixed(1)} %
+      </div>
+    </div>
+  )
+}
+
+function TransformerDetails({ wr }: { wr: WindingResult }) {
+  const totalFill =
+    wr.primary.fill_factor_pct +
+    wr.secondary.reduce((a, s) => a + s.fill_factor_pct, 0)
+
+  return (
+    <div className={styles.gdrBody}>
+      {/* Skin depth */}
+      <div className={styles.gdrRow}>
+        <span className={styles.gdrLabel}>
+          Skin depth (δ)
+          <Tooltip content={<div><strong>Skin depth</strong><br /><code style={{ fontSize: '10px' }}>δ = 66.2 / √fsw  mm</code><br /><small>Copper at 20 °C. Max strand diameter = 2δ to limit skin-effect losses.</small><br /><small>Kazimierczuk eq. 4.60</small></div>} side="left">
+            <span className={styles.infoIcon}>ⓘ</span>
+          </Tooltip>
+        </span>
+        <span className={styles.gdrValue}>{wr.skin_depth_mm.toFixed(3)} mm (max strand: {wr.max_strand_diameter_mm.toFixed(3)} mm)</span>
+      </div>
+
+      {/* AC loss factor */}
+      <div className={styles.gdrRow}>
+        <span className={styles.gdrLabel}>
+          AC loss factor (Fr)
+          <Tooltip content={<div><strong>Dowell proximity factor</strong><br /><code style={{ fontSize: '10px' }}>Fr = Rac / Rdc</code><br />Accounts for eddy currents induced by adjacent winding layers.<br />Fr &gt; 2 indicates significant AC losses — use litz wire or reduce layers.<br /><small>Dowell (1966) IEE Proc. 113(8)</small></div>} side="left">
+            <span className={styles.infoIcon}>ⓘ</span>
+          </Tooltip>
+        </span>
+        <span className={styles.gdrValue} style={{ color: frColor(wr.proximity_loss_factor) }}>
+          {wr.proximity_loss_factor.toFixed(2)}
+        </span>
+      </div>
+
+      {/* Winding sections */}
+      <div className={styles.gdrDivider} />
+      <WindingRow label="Primary" w={wr.primary} />
+      {wr.secondary.map((s, i) => (
+        <WindingRow key={i} label={`Secondary ${i + 1}`} w={s} />
+      ))}
+
+      {/* Total fill */}
+      <div className={styles.gdrRow} style={{ marginTop: '4px' }}>
+        <span className={styles.gdrLabel}>Total bobbin fill</span>
+        <span className={styles.gdrValue} style={{ color: fillColor(totalFill) }}>
+          {totalFill.toFixed(1)} %
+        </span>
+      </div>
+
+      <div className={styles.gdrDivider} />
+
+      {/* Leakage */}
+      <div className={styles.gdrRow}>
+        <span className={styles.gdrLabel}>
+          Leakage inductance
+          <Tooltip content={<div><strong>Estimated leakage inductance</strong><br /><code style={{ fontSize: '10px' }}>Llk = μ₀ × Np² × MLT × (b_ins/3) / bw</code><br />Interleaved P–S–P winding reduces Llk by ~4×.<br /><small>Kazimierczuk eq. 6.28</small></div>} side="left">
+            <span className={styles.infoIcon}>ⓘ</span>
+          </Tooltip>
+        </span>
+        <span className={styles.gdrValue}>{wr.estimated_leakage_nh.toFixed(0)} nH</span>
+      </div>
+
+      {/* Total copper loss */}
+      <div className={styles.gdrRow}>
+        <span className={styles.gdrLabel}>Total copper loss</span>
+        <span className={styles.gdrValue}>{fmtPower(wr.total_copper_loss)}</span>
+      </div>
+
+      <div className={styles.gdrDivider} />
+
+      {/* Winding order */}
+      <div className={styles.gdrRow}>
+        <span className={styles.gdrLabel}>Winding order</span>
+        <span className={styles.gdrValue} style={{ fontSize: '11px' }}>
+          {wr.winding_order.join(' → ')}
+        </span>
+      </div>
+
+      {/* Creepage / clearance */}
+      <div className={styles.gdrRow}>
+        <span className={styles.gdrLabel}>
+          Creepage (IEC 62368-1)
+          <Tooltip content={<div><strong>Creepage &amp; clearance</strong><br />Reinforced insulation, pollution degree 2.<br />Required between primary and secondary winding layers.<br /><small>IEC 62368-1:2018 Table F.5</small></div>} side="left">
+            <span className={styles.infoIcon}>ⓘ</span>
+          </Tooltip>
+        </span>
+        <span className={styles.gdrValue}>
+          {wr.creepage_mm.toFixed(1)} mm creepage / {wr.clearance_mm.toFixed(1)} mm clearance
+        </span>
+      </div>
+
+      {/* Warnings */}
+      {wr.warnings.map((w, i) => (
+        <div key={i} className={styles.ssWarn}>{w}</div>
+      ))}
+    </div>
   )
 }
 

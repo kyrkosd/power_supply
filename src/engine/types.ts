@@ -5,11 +5,13 @@ import type { SaturationResult } from './inductor-saturation'
 import type { SnubberResult } from './snubber'
 import type { CurrentSenseResult } from './current-sense'
 import type { InputFilterResult } from './input-filter'
+import type { WindingResult } from './transformer-winding'
 
 export type { SaturationResult }
 export type { SnubberResult }
 export type { CurrentSenseResult }
 export type { InputFilterResult }
+export type { WindingResult }
 
 export type { TransferFunction }
 
@@ -45,6 +47,8 @@ export interface DesignSpec {
   inputFilterEnabled?: boolean
   inputFilterAttenuationDb?: number  // override target dB; 0 = auto from EMI
   inputFilterCmChokeMh?: number      // CM choke in mH; 0 = auto
+  // Multi-phase interleaved buck (1–6 phases, default 1).
+  phases?: number
 }
 
 /** Computed values for one flyback secondary winding. */
@@ -90,18 +94,35 @@ export interface DesignResult {
   clampVoltage?: number // V
   secondaryOutputResults?: SecondaryOutputResult[]
   losses?: {
-    primaryCopper: number
-    secondaryCopper: number
-    core: number
-    mosfet: number
-    diode: number
-    clamp: number
+    // Flyback/forward loss breakdown
+    primaryCopper?: number
+    secondaryCopper?: number
+    core?: number
+    clamp?: number
+    // Buck loss breakdown (matches LossBreakdown.tsx keys)
+    mosfet_conduction?: number
+    mosfet_switching?: number
+    mosfet_gate?: number
+    inductor_copper?: number
+    inductor_core?: number
+    diode_conduction?: number
+    capacitor_esr?: number
+    // Legacy single key kept for compatibility
+    mosfet?: number
+    diode?: number
     total: number
   }
+  // Multi-phase interleaved buck fields
+  phases?: number
+  phase_inductance?: number    // H — per-phase inductor value
+  phase_peak_current?: number  // A — per-phase peak current
+  output_ripple_cancel?: number // 0–1 ripple cancellation factor (0 = perfect)
+  input_ripple_cancel?: number  // 0–1 Cin RMS ratio vs single-phase
   saturation_check?: SaturationResult
   snubber?: SnubberResult         // RCD clamp design (flyback and forward only)
   current_sense?: CurrentSenseResult  // current sense element design (when controlMode === 'current')
   input_filter?: InputFilterResult    // EMI input filter design (when inputFilterEnabled)
+  winding_result?: WindingResult      // transformer winding design (flyback and forward only)
   // Forward-specific fields
   outputInductance?: number // H - separate from magnetizing
   resetVoltage?: number // V - reset winding voltage

@@ -77,9 +77,16 @@ function formatResistance(value: number) {
 }
 
 function createBuckSchematic(spec: DesignSpec, result: DesignResult | null): SchematicDefinition {
+  const N = Math.max(1, Math.min(6, Math.round(spec.phases ?? 1)))
   const duty = result?.dutyCycle ?? Math.min(Math.max(spec.vout / spec.vinMax, 0.01), 0.99)
+  // Ripple cancellation factor for annotation (Erickson §12.3)
+  const ND = N * duty
+  const delta = ND - Math.floor(ND)
+  const K_ripple = N > 1
+    ? (delta < 1e-6 || delta > 1 - 1e-6 ? 0 : Math.min((delta * (1 - delta)) / (N * duty * (1 - duty)), 1))
+    : 1
   const inductanceLabel = result
-    ? `${formatU(result.inductance * 1e6, 2, 'µH')}`
+    ? `${formatU(result.inductance * 1e6, 2, 'µH')}${N > 1 ? '/ph' : ''}`
     : '—'
   const capacitanceLabel = result
     ? `${formatU(result.capacitance * 1e6, 1, 'µF')}`
@@ -136,10 +143,12 @@ function createBuckSchematic(spec: DesignSpec, result: DesignResult | null): Sch
       y: 58,
       width: 92,
       height: 112,
-      label: 'Q1',
-      value: `D=${duty.toFixed(2)}`,
+      label: N > 1 ? `Q1–Q${N}` : 'Q1',
+      value: `D=${duty.toFixed(2)}${N > 1 ? ` ×${N}` : ''}`,
       status: switchStatus,
-      meta: 'High-side MOSFET',
+      meta: N > 1
+        ? `${N} high-side MOSFETs interleaved at 360°/${N} = ${(360 / N).toFixed(0)}° phase shift`
+        : 'High-side MOSFET',
     },
     {
       id: 'D1',
@@ -148,8 +157,8 @@ function createBuckSchematic(spec: DesignSpec, result: DesignResult | null): Sch
       y: 186,
       width: 92,
       height: 72,
-      label: 'D1',
-      value: 'Freewheel diode',
+      label: N > 1 ? `D1–D${N}` : 'D1',
+      value: N > 1 ? `Freewheel ×${N}` : 'Freewheel diode',
       status: 'normal',
     },
     {
@@ -159,9 +168,12 @@ function createBuckSchematic(spec: DesignSpec, result: DesignResult | null): Sch
       y: 74,
       width: 80,
       height: 116,
-      label: 'L',
+      label: N > 1 ? `L1–L${N}` : 'L',
       value: inductanceLabel,
       status: inductorStatus,
+      meta: N > 1
+        ? `Per-phase inductance. Ripple cancellation K=${K_ripple.toFixed(2)} (0=perfect).`
+        : undefined,
     },
     {
       id: 'Cout',
@@ -1163,7 +1175,9 @@ export function SchematicView(): React.ReactElement {
         <SchematicRenderer definition={schematic} viewBox={viewBox} />
       </div>
       <div className={styles.description}>
-        {TOPOLOGY_DESCRIPTIONS[topology] ?? 'Circuit schematic for the selected topology.'}
+        {topology === 'buck' && (spec.phases ?? 1) > 1
+          ? `${spec.phases}-Phase Interleaved Buck. ${spec.phases} switches phase-shifted by ${(360 / (spec.phases ?? 1)).toFixed(0)}° — ripple cancels at the output, reducing Cout and spreading thermal load across ${spec.phases} inductors.`
+          : (TOPOLOGY_DESCRIPTIONS[topology] ?? 'Circuit schematic for the selected topology.')}
       </div>
     </div>
   )

@@ -7,11 +7,14 @@ import coresData from '../../data/cores.json'
 
 export interface CoreData {
   type: string
-  Ae: number  // m²
-  Aw: number  // m²
-  le: number  // m
-  Ve: number  // m³
-  AL: number  // nH/N²
+  Ae: number       // m²
+  Aw: number       // m²
+  le: number       // m
+  Ve: number       // m³
+  AL: number       // nH/N²
+  MLT_mm: number           // mean length per turn, mm
+  bobbin_width_mm: number  // usable winding width, mm
+  bobbin_height_mm: number // usable winding height, mm
 }
 
 // ── Core selection ────────────────────────────────────────────────────────────
@@ -29,4 +32,12 @@ export function selectCore(areaProduct: number): CoreData | null {
   return suitable.reduce((min, core) =>
     (core.Ae * core.Aw < min.Ae * min.Aw) ? core : min
   )
+}
+
+/**
+ * Look up a core by its type string (e.g. "EE25").
+ * @returns Matching core entry or null if not found
+ */
+export function getCoreByType(type: string): CoreData | null {
+  return cores.find(c => c.type === type) ?? null
 }

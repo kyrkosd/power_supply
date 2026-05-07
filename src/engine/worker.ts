@@ -3,8 +3,10 @@ import { runTransientSimulation } from './transient'
 import { runMonteCarlo } from './monte-carlo'
 import { designCurrentSense } from './current-sense'
 import { estimateEMI } from './emi'
-import { designInputFilter, DEFAULT_INPUT_FILTER_OPTIONS } from './input-filter'
+import { designInputFilter } from './input-filter'
 import type { InputFilterOptions } from './input-filter'
+import { designWinding } from './transformer-winding'
+import { getCoreByType } from './topologies/core-selector'
 import type { EMIResult } from './topologies/types'
 import type { DesignSpec, DesignResult } from './types'
 import type { WaveformSet, TransientResult, TransientMode } from './topologies/types'
@@ -88,6 +90,14 @@ function scheduleCompute(payload: ComputePayload): void {
         }
         const inputFilter = designInputFilter(topology, spec, result, emiResult, filterOpts)
         result = { ...result, input_filter: inputFilter }
+      }
+      // Transformer winding design (flyback and forward only)
+      if ((topology === 'flyback' || topology === 'forward') && result.coreType) {
+        const core = getCoreByType(result.coreType)
+        if (core) {
+          const winding = designWinding(topology, spec, result, core)
+          result = { ...result, winding_result: winding }
+        }
       }
       const waveforms = generateWaveforms(topology, spec)
       const timing_ms = performance.now() - start

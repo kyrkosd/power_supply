@@ -391,17 +391,17 @@ export async function generateReport(params: ReportParams): Promise<Blob> {
   drawTable(doc, compRows, M, y, CW)
   y += compRows.length * 6.5 + 14
 
-  // Flyback loss table (result.losses is populated for flyback)
-  if (result.losses) {
+  // Transformer loss table (flyback/forward only — requires primaryCopper field)
+  if (result.losses && result.losses.primaryCopper != null) {
     sectionRule(doc, 'Transformer Loss Breakdown', M, y)
     y += 8
     const lossRows: Row[] = [
       ['Primary copper loss',   `${result.losses.primaryCopper.toFixed(3)} W`],
-      ['Secondary copper loss', `${result.losses.secondaryCopper.toFixed(3)} W`],
-      ['Core loss',             `${result.losses.core.toFixed(3)} W`],
-      ['MOSFET loss',           `${result.losses.mosfet.toFixed(3)} W`],
-      ['Diode loss',            `${result.losses.diode.toFixed(3)} W`],
-      ['Clamp loss',            `${result.losses.clamp.toFixed(3)} W`],
+      ['Secondary copper loss', `${(result.losses.secondaryCopper ?? 0).toFixed(3)} W`],
+      ['Core loss',             `${(result.losses.core ?? 0).toFixed(3)} W`],
+      ['MOSFET loss',           `${(result.losses.mosfet ?? 0).toFixed(3)} W`],
+      ['Diode loss',            `${(result.losses.diode ?? 0).toFixed(3)} W`],
+      ['Clamp loss',            `${(result.losses.clamp ?? 0).toFixed(3)} W`],
       ['Total losses',          `${result.losses.total.toFixed(3)} W`],
     ]
     drawTable(doc, lossRows, M, y, CW)

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useMemo } from 'react'
 import { select } from 'd3-selection'
-import { scaleLog, scaleLinear } from 'd3-scale'
+import { scaleLog } from 'd3-scale'
 import { axisBottom, axisLeft } from 'd3-axis'
 import { line } from 'd3-shape'
 import { useDesignStore } from '../../../store/design-store'

@@ -1,10 +1,20 @@
-// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
-// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
 import { DesignSpec, DesignResult, Topology } from '../types'
 import type { WaveformSet } from '../topologies/types'
 import { analyzeBuckControlLoop } from '../control-loop'
 import { checkSaturation } from '../inductor-saturation'
 import type { StateSpaceModel } from './types'
+
+// Buck converter device-assumption constants used for loss estimation.
+// Match DEVICE_ASSUMPTIONS in LossBreakdown.tsx so the bar chart and computed
+// result are internally consistent (both read from result.losses).
+const RDS_ON = 0.02      // Ω  — typical 30–60 V FET
+const T_RISE  = 25e-9    // s  — rise time
+const T_FALL  = 25e-9    // s  — fall time
+const QG      = 12e-9    // C  — gate charge (Vgs = 5 V)
+const VF      = 0.7      // V  — freewheeling diode Vf
+const DCR     = 0.045    // Ω  — inductor DCR
+const ESR     = 0.02     // Ω  — output capacitor ESR
+const CORE_FACTOR = 0.02 // —  — Steinmetz core-loss coefficient (simplified)
 
 // Buck (step-down) converter steady-state design equations.
 // Assumes CCM (Continuous Conduction Mode) and ideal switch/diode.
@@ -14,57 +24,172 @@ export const buckTopology: Topology = {
 
   compute(spec: DesignSpec): DesignResult {
     const { vinMax, vout, iout, fsw, rippleRatio, voutRippleMax } = spec
+    const N = Math.max(1, Math.min(6, Math.round(spec.phases ?? 1)))
 
     const dutyCycle = Math.min(Math.max(vout / vinMax, 0.01), 0.99)
     const ripple = Math.max(rippleRatio, 0.05)
-    const deltaIL = ripple * iout
-    const inductance = (vout * (1 - dutyCycle)) / (deltaIL * fsw)
-
+    // Single-phase baseline values used by waveform generator and state-space model
+    const deltaIL_single = ripple * iout
+    const L_single = (vout * (1 - dutyCycle)) / (deltaIL_single * fsw)
     const rippleVoltage = Math.max(voutRippleMax, 0.01 * vout)
-    const capacitance = deltaIL / (8 * fsw * rippleVoltage)
+    const C_single = deltaIL_single / (8 * fsw * rippleVoltage)
+    const peak_single = iout + deltaIL_single / 2
 
-    const peakCurrent = iout + deltaIL / 2
-    
-    // CCM/DCM boundary detection
-    // For buck: Iout_crit = ΔIL / 2 = (Vout × (1 - D)) / (2 × L × fsw)
-    const ccm_dcm_boundary = deltaIL / 2
+    // ── Multi-phase ripple cancellation ──────────────────────────────────────
+    // Erickson & Maksimovic §12.3 — N-phase interleaved buck
+    // δ = frac(N×D); K_out = δ(1−δ) / (N×D×(1−D))
+    const ND = N * dutyCycle
+    const delta = ND - Math.floor(ND)
+    let K_out: number
+    if (delta < 1e-6 || delta > 1 - 1e-6) {
+      K_out = 0.0  // near-perfect cancellation
+    } else {
+      K_out = (delta * (1 - delta)) / (N * dutyCycle * (1 - dutyCycle))
+    }
+    K_out = Math.min(K_out, 1.0)
+
+    // Floor K to avoid degenerate (near-zero) inductance at perfect-cancellation duty points
+    const K_floor = Math.max(K_out, 0.05)
+
+    // Per-phase inductance: sized so that, after N-phase cancellation, the output
+    // ripple equals the single-phase target. L_phase = L_single × K_out (smaller).
+    // At N=1 K_out=1 → L_phase = L_single exactly.
+    const L_phase = L_single * K_floor
+    // Per-phase ripple current: ΔiL_phase = ΔiL_single / K_floor (larger per phase,
+    // but cancels at the output). Directly from L_phase formula.
+    const deltaIL_phase = (vout * (1 - dutyCycle)) / (L_phase * fsw)
+
+    // Per-phase DC current and peak
+    const I_phase_avg = iout / N
+    const peak_phase = I_phase_avg + deltaIL_phase / 2
+
+    // Output capacitor: residual ripple appears at N×fsw effective frequency.
+    // Cout_multi = Cout_single / N (same ΔVout spec at N× higher ripple frequency).
+    const C_multi = Math.max(C_single / N, C_single * 0.02)
+
+    const inductance  = L_phase
+    const capacitance = N === 1 ? C_single : C_multi
+    const peakCurrent = peak_phase
+
+    // ── CCM/DCM boundary ─────────────────────────────────────────────────────
+    const ccm_dcm_boundary = deltaIL_phase / 2
+    const warnings: string[] = []
     let operating_mode: 'CCM' | 'DCM' | 'boundary' = 'CCM'
-    const dcm_warnings: string[] = []
-    
-    if (iout > 1.2 * ccm_dcm_boundary) {
+
+    if (I_phase_avg > 1.2 * ccm_dcm_boundary) {
       operating_mode = 'CCM'
-    } else if (iout < ccm_dcm_boundary) {
+    } else if (I_phase_avg < ccm_dcm_boundary) {
       operating_mode = 'DCM'
-      dcm_warnings.push('Operating in DCM. Equations assume CCM — results may be inaccurate. Increase inductance or load current to enter CCM.')
+      warnings.push('Operating in DCM. Equations assume CCM — results may be inaccurate. Increase inductance or load current to enter CCM.')
     } else {
       operating_mode = 'boundary'
-      dcm_warnings.push('Near CCM/DCM boundary. Performance may be unpredictable at light loads.')
+      warnings.push('Near CCM/DCM boundary. Performance may be unpredictable at light loads.')
+    }
+
+    // ── Multi-phase warnings ─────────────────────────────────────────────────
+    if (N > 1) {
+      const ripple_ratio_phase = deltaIL_phase / I_phase_avg
+      if (ripple_ratio_phase > 1.5) {
+        warnings.push(`Per-phase ripple ratio is ${(ripple_ratio_phase * 100).toFixed(0)} %. Consider increasing fsw or operating nearer a cancellation duty point.`)
+      }
+      if (N > 4) {
+        warnings.push(`${N}-phase design: current sharing requires matched inductors (±2 % tolerance) or active balancing.`)
+      }
+      if (K_out < 0.05) {
+        warnings.push(`Near-perfect ripple cancellation at this duty cycle (K = ${K_out.toFixed(3)}). Cout is sized at floor — verify at all Vin/Iout corners.`)
+      }
     }
 
     const loop = analyzeBuckControlLoop(spec, { dutyCycle, inductance, capacitance, peakCurrent, warnings: [] })
+    const saturation_check = checkSaturation(peakCurrent, I_phase_avg)
+    if (saturation_check.warning) warnings.push(saturation_check.warning)
 
-    const saturation_check = checkSaturation(peakCurrent, iout)
-    if (saturation_check.warning) dcm_warnings.push(saturation_check.warning)
+    // ── Loss estimation ──────────────────────────────────────────────────────
+    // Using DEVICE_ASSUMPTIONS constants (see top of file).
+    // For N-phase, per-phase quantities scale by N; totals shown are the whole converter.
+    const I_L_rms   = Math.sqrt(I_phase_avg ** 2 + deltaIL_phase ** 2 / 12)
+    const Ic_out_rms = (K_out * deltaIL_phase) / (2 * Math.sqrt(3))
+
+    // MOSFET conduction: N HS-FETs each conducting D fraction at I_phase_avg
+    // P = N × Rds × I_phase² × D = Rds × Iout² × D / N
+    const mosfet_conduction = RDS_ON * iout ** 2 * dutyCycle / N
+
+    // MOSFET switching: N switches, each at I_phase_peak
+    // TI SLUA618 eq. 3: P_sw = 0.5 × Vin × Ipeak × (tr + tf) × fsw
+    const mosfet_switching = N * 0.5 * vinMax * peak_phase * (T_RISE + T_FALL) * fsw
+
+    // Gate drive: N drivers
+    const mosfet_gate = N * QG * vinMax * fsw
+
+    // Inductor copper: N inductors
+    const inductor_copper = N * DCR * I_L_rms ** 2
+
+    // Inductor core: simplified Steinmetz per phase
+    const inductor_core = N * CORE_FACTOR * I_phase_avg * deltaIL_phase
+
+    // Freewheeling diode / sync-rect: total current same regardless of N
+    const diode_conduction = VF * iout * (1 - dutyCycle)
+
+    // Output capacitor ESR loss (reduced by N-phase cancellation)
+    const capacitor_esr = Ic_out_rms ** 2 * ESR
+
+    const total = mosfet_conduction + mosfet_switching + mosfet_gate +
+                  inductor_copper + inductor_core + diode_conduction + capacitor_esr
+
+    const pout = vout * iout
+    const efficiency = pout <= 0 ? 0 : pout / (pout + total)
+
+    const multiPhaseFields: Partial<DesignResult> = N > 1 ? {
+      phases:             N,
+      phase_inductance:   L_phase,
+      phase_peak_current: peak_phase,
+      output_ripple_cancel: K_out,
+      input_ripple_cancel:  1 / N,
+    } : {}
 
     return {
       dutyCycle,
       inductance,
       capacitance,
       peakCurrent,
+      efficiency,
       ccm_dcm_boundary,
       operating_mode,
       saturation_check,
-      warnings: [...dcm_warnings, ...loop.warnings]
+      losses: {
+        mosfet_conduction,
+        mosfet_switching,
+        mosfet_gate,
+        inductor_copper,
+        inductor_core,
+        diode_conduction,
+        capacitor_esr,
+        total,
+      },
+      warnings: [...warnings, ...loop.warnings],
+      ...multiPhaseFields,
     }
   },
 
   generateWaveforms(spec: DesignSpec): WaveformSet {
     const { vinMax, vout, iout, fsw, rippleRatio, voutRippleMax } = spec
+    // Waveforms show a single representative phase
     const dutyCycle = Math.min(Math.max(vout / vinMax, 0.01), 0.99)
+    const N = Math.max(1, Math.min(6, Math.round(spec.phases ?? 1)))
     const ripple = Math.max(rippleRatio, 0.05)
-    const deltaIL = ripple * iout
-    const iLmin = iout - deltaIL / 2
-    const iLmax = iout + deltaIL / 2
+    const deltaIL_single = ripple * iout
+    const L_single = (vout * (1 - dutyCycle)) / (deltaIL_single * fsw)
+    const ND = N * dutyCycle
+    const delta = ND - Math.floor(ND)
+    let K_out = (delta < 1e-6 || delta > 1 - 1e-6)
+      ? 0
+      : (delta * (1 - delta)) / (N * dutyCycle * (1 - dutyCycle))
+    K_out = Math.min(K_out, 1)
+    const K_floor = Math.max(K_out, 0.05)
+    const L_phase = L_single * K_floor
+    const deltaIL = (vout * (1 - dutyCycle)) / (L_phase * fsw)
+    const iLmin = iout / N - deltaIL / 2
+    const iLmax = iout / N + deltaIL / 2
 
     const cycles = 2
     const pointsPerCycle = 200
@@ -80,7 +205,7 @@ export const buckTopology: Topology = {
     const output_ripple = new Float64Array(n)
     const diode_current = new Float64Array(n)
 
-    for (let idx = 0; idx < n; idx += 1) {
+    for (let idx = 0; idx < n; idx++) {
       const t = idx * dt
       const phase = t % period
       const onTime = dutyCycle * period
@@ -96,39 +221,27 @@ export const buckTopology: Topology = {
       switch_node[idx] = isOn ? vinMax : 0
       diode_current[idx] = isOn ? 0 : iL
 
-      const triangular = ((iL - iout) / (deltaIL / 2)) * capAmplitude
+      const triangular = ((iL - iout / N) / (deltaIL / 2)) * capAmplitude
       const rectangular = (isOn ? 1 : -1) * esrAmplitude
       output_ripple[idx] = triangular + rectangular
     }
 
-    return {
-      time,
-      inductor_current,
-      switch_node,
-      output_ripple,
-      diode_current,
-    }
+    return { time, inductor_current, switch_node, output_ripple, diode_current }
   },
 
   getStateSpaceModel(spec: DesignSpec, result: DesignResult, current_vin: number, current_iout: number): StateSpaceModel {
-    const res = result as DesignResult & { inductance?: number; capacitance?: number; inductor?: { value: number }; output_cap?: { value: number } };
-    const L = res.inductance || res.inductor?.value || 10e-6;
-    const C = res.capacitance || res.output_cap?.value || 10e-6;
-    const DCR = 0.01;
-    const Vd = 0.5;
-    const R = current_iout > 0.001 ? spec.vout / current_iout : 10000;
+    const res = result as DesignResult & { inductance?: number; capacitance?: number; inductor?: { value: number }; output_cap?: { value: number } }
+    const L = res.inductance || res.inductor?.value || 10e-6
+    const C = res.capacitance || res.output_cap?.value || 10e-6
+    const DCR_val = 0.01
+    const Vd = 0.5
+    const R = current_iout > 0.001 ? spec.vout / current_iout : 10000
 
     return {
-      A1: [
-        [-DCR / L, -1 / L],
-        [1 / C, -1 / (C * R)]
-      ],
+      A1: [[-DCR_val / L, -1 / L], [1 / C, -1 / (C * R)]],
       B1: [[current_vin / L], [0]],
-      A2: [
-        [-DCR / L, -1 / L],
-        [1 / C, -1 / (C * R)]
-      ],
-      B2: [[-Vd / L], [0]]
-    };
-  }
+      A2: [[-DCR_val / L, -1 / L], [1 / C, -1 / (C * R)]],
+      B2: [[-Vd / L], [0]],
+    }
+  },
 }

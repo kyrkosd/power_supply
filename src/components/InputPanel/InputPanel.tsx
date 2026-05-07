@@ -433,11 +433,34 @@ export function InputPanel(): React.ReactElement {
           </details>
         )}
 
-        {/* ── Advanced (buck only — control loop settings) ── */}
+        {/* ── Advanced (buck only — control loop settings + multi-phase) ── */}
         {topology === 'buck' && (
           <details className={styles.advancedSection}>
             <summary className={styles.advancedTitle}>Advanced</summary>
             <div className={styles.advancedBody}>
+              <div className={styles.advancedRow}>
+                <label className={styles.advancedLabel}>
+                  Phases
+                  <Tooltip
+                    content="Number of interleaved phases (1–6). Each phase is a complete buck stage phase-shifted by 360°/N. More phases → smaller per-phase L, smaller Cout, lower conduction losses — at the cost of N switches and N inductors. Perfect ripple cancellation occurs at D = k/N."
+                    side="right"
+                  >
+                    <span className={styles.infoIcon}>ⓘ</span>
+                  </Tooltip>
+                </label>
+                <select
+                  className={styles.advancedSelect}
+                  value={spec.phases ?? 1}
+                  onChange={(e) => updateSpec({ phases: Number(e.target.value) })}
+                >
+                  <option value={1}>1 phase (standard)</option>
+                  <option value={2}>2 phases</option>
+                  <option value={3}>3 phases</option>
+                  <option value={4}>4 phases</option>
+                  <option value={5}>5 phases</option>
+                  <option value={6}>6 phases</option>
+                </select>
+              </div>
               <div className={styles.advancedRow}>
                 <label className={styles.advancedLabel}>
                   Control mode

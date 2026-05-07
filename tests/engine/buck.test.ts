@@ -60,6 +60,118 @@ describe('Buck topology — edge cases', () => {
   })
 })
 
+// ── Multi-phase interleaved buck ─────────────────────────────────────────────
+// Reference design: 12 V → 3 V / 10 A, fsw = 200 kHz, rippleRatio = 0.3
+// D = 0.25, N = 2 → δ = frac(N×D) = 0.5
+// K_out = 0.5×0.5 / (2×0.25×0.75) = 2/3 — Erickson & Maksimovic §12.3
+// L_single = 3×0.75/(3×200k) = 3.75 µH; L_phase = L_single×K_out = 2.5 µH
+// ΔiL_phase = 3×0.75/(2.5µH×200k) = 4.5 A; I_phase = 5 A; peak_phase = 7.25 A
+// C_single = 3/(8×200k×0.05) = 37.5 µF; C_multi = C_single/N = 18.75 µF
+
+const specSingle: DesignSpec = {
+  vinMin: 10, vinMax: 12, vout: 3, iout: 10, fsw: 200_000,
+  rippleRatio: 0.3, ambientTemp: 25, voutRippleMax: 0.05, efficiency: 0.9,
+  phases: 1,
+}
+
+const spec2ph: DesignSpec = { ...specSingle, phases: 2 }
+
+describe('Buck topology — multi-phase interleaved (N=2)', () => {
+  const r1 = buckTopology.compute(specSingle)
+  const r2 = buckTopology.compute(spec2ph)
+
+  it('N=1 gives same duty cycle as N=2 (D = Vout/Vinmax)', () => {
+    expect(r1.dutyCycle).toBeCloseTo(0.25, 6)
+    expect(r2.dutyCycle).toBeCloseTo(0.25, 6)
+  })
+
+  it('N=1 with phases=1 is backward-compatible — matches no-phases result', () => {
+    const rDefault = buckTopology.compute({ ...specSingle, phases: undefined })
+    expect(r1.inductance).toBeCloseTo(rDefault.inductance, 9)
+    expect(r1.capacitance).toBeCloseTo(rDefault.capacitance, 9)
+    expect(r1.peakCurrent).toBeCloseTo(rDefault.peakCurrent, 9)
+  })
+
+  it('N=2 per-phase inductance ≈ 2.5 µH (L_single × K_out = 3.75 × 2/3)', () => {
+    // Relative tolerance: |actual - expected| / expected < 0.1 %
+    const expected_L_phase = 2.5e-6
+    expect(Math.abs(r2.inductance - expected_L_phase) / expected_L_phase).toBeLessThan(0.001)
+  })
+
+  it('N=2 per-phase inductance is smaller than N=1 inductance', () => {
+    // K_out = 2/3 < 1 → L_phase < L_single
+    expect(r2.inductance).toBeLessThan(r1.inductance)
+  })
+
+  it('N=2 output capacitance ≈ 18.75 µF (C_single / N)', () => {
+    const expected_C = 18.75e-6
+    expect(Math.abs(r2.capacitance - expected_C) / expected_C).toBeLessThan(0.001)
+  })
+
+  it('N=2 output capacitance is smaller than N=1 (ripple at 2×fsw effective)', () => {
+    expect(r2.capacitance).toBeLessThan(r1.capacitance)
+  })
+
+  it('N=2 per-phase peak current ≈ 7.25 A (Iout/N + ΔiL_phase/2)', () => {
+    const expected_peak = 7.25
+    expect(Math.abs(r2.peakCurrent - expected_peak) / expected_peak).toBeLessThan(0.001)
+  })
+
+  it('N=2 per-phase peak current is significantly lower than N=1 (36→7.25 A)', () => {
+    // N=1 peak ≈ 11.5 A; N=2 peak ≈ 7.25 A
+    expect(r2.peakCurrent).toBeLessThan(r1.peakCurrent)
+  })
+
+  it('N=2 stores phases = 2 in result', () => {
+    expect(r2.phases).toBe(2)
+  })
+
+  it('N=1 does not set phases field (no multi-phase overhead)', () => {
+    expect(r1.phases).toBeUndefined()
+  })
+
+  it('N=2 output_ripple_cancel ≈ 2/3 (K_out at D=0.25, N=2)', () => {
+    const K_expected = 2 / 3
+    expect(Math.abs(r2.output_ripple_cancel! - K_expected) / K_expected).toBeLessThan(0.001)
+  })
+
+  it('N=2 input_ripple_cancel = 0.5 (1/N)', () => {
+    expect(r2.input_ripple_cancel).toBeCloseTo(0.5, 6)
+  })
+
+  it('N=2 phase_peak_current matches peakCurrent', () => {
+    expect(r2.phase_peak_current).toBeCloseTo(r2.peakCurrent, 6)
+  })
+
+  it('N=2 total losses are lower than N=1 (conduction scales as 1/N)', () => {
+    expect(r2.losses!.total).toBeLessThan(r1.losses!.total)
+  })
+
+  it('N=2 MOSFET conduction loss is exactly half of N=1 (P = Rds×Iout²×D/N)', () => {
+    // mosfet_conduction_N1 = 0.02 × 100 × 0.25 = 0.5 W
+    // mosfet_conduction_N2 = 0.02 × 100 × 0.25 / 2 = 0.25 W
+    const ratio = r2.losses!.mosfet_conduction! / r1.losses!.mosfet_conduction!
+    expect(ratio).toBeCloseTo(0.5, 6)
+  })
+
+  it('N=2 efficiency is higher than N=1 (lower total losses)', () => {
+    expect(r2.efficiency!).toBeGreaterThan(r1.efficiency!)
+  })
+
+  it('N=1 losses object has all required LossBreakdown keys', () => {
+    const keys = ['mosfet_conduction', 'mosfet_switching', 'mosfet_gate',
+                  'inductor_copper', 'inductor_core', 'diode_conduction', 'capacitor_esr']
+    for (const k of keys) {
+      expect(typeof (r1.losses as Record<string, unknown>)[k]).toBe('number')
+    }
+  })
+
+  it('N=2 operating mode is CCM (I_phase > boundary)', () => {
+    // I_phase = 5 A, ccm_dcm_boundary = ΔiL_phase/2 = 2.25 A; 5 > 1.2×2.25 = 2.7
+    expect(r2.operating_mode).toBe('CCM')
+  })
+})
+
 describe('Buck topology — CCM/DCM boundary detection', () => {
   it('calculates CCM/DCM boundary current correctly', () => {
     const result = buckTopology.compute(spec)
