@@ -10,6 +10,7 @@ import { MonteCarloTab } from './tabs/MonteCarloTab'
 import { EfficiencyMapTab } from './tabs/EfficiencyMapTab'
 import { LayoutTab } from './tabs/LayoutTab'
 import { TransientTab } from './tabs/TransientTab'
+import { InputFilterTab } from './tabs/InputFilterTab'
 import styles from './TabPanel.module.css'
 
 const TABS: { id: ActiveVizTab; label: string }[] = [
@@ -20,6 +21,7 @@ const TABS: { id: ActiveVizTab; label: string }[] = [
   { id: 'transient',      label: 'Transient' },
   { id: 'monte-carlo',    label: 'Monte Carlo' },
   { id: 'efficiency-map', label: 'Efficiency Map' },
+  { id: 'input-filter',   label: 'Input Filter' },
   { id: 'layout',         label: 'Layout' },
 ]
 
@@ -48,6 +50,7 @@ export function TabPanel(): React.ReactElement {
         {activeVizTab === 'transient'       && <TransientTab />}
         {activeVizTab === 'monte-carlo'    && <MonteCarloTab />}
         {activeVizTab === 'efficiency-map' && <EfficiencyMapTab />}
+        {activeVizTab === 'input-filter'   && <InputFilterTab />}
         {activeVizTab === 'layout'         && <LayoutTab />}
       </div>
     </div>

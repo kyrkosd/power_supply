@@ -3,9 +3,13 @@
 import type { WaveformSet, TransferFunction, StateSpaceModel } from './topologies/types'
 import type { SaturationResult } from './inductor-saturation'
 import type { SnubberResult } from './snubber'
+import type { CurrentSenseResult } from './current-sense'
+import type { InputFilterResult } from './input-filter'
 
 export type { SaturationResult }
 export type { SnubberResult }
+export type { CurrentSenseResult }
+export type { InputFilterResult }
 
 export type { TransferFunction }
 
@@ -33,6 +37,14 @@ export interface DesignSpec {
   controlMode?: 'voltage' | 'current'
   // Leakage inductance as fraction of Lm (flyback/forward RCD clamp). Default: 0.02 (2 %).
   leakageRatio?: number
+  // Current sense method (only used when controlMode === 'current').
+  senseMethod?: 'resistor' | 'rdson'
+  // Peak sense voltage target in mV for resistor method. Default: 150 mV.
+  vsenseTargetMv?: number
+  // Input EMI filter options.
+  inputFilterEnabled?: boolean
+  inputFilterAttenuationDb?: number  // override target dB; 0 = auto from EMI
+  inputFilterCmChokeMh?: number      // CM choke in mH; 0 = auto
 }
 
 /** Computed values for one flyback secondary winding. */
@@ -88,6 +100,8 @@ export interface DesignResult {
   }
   saturation_check?: SaturationResult
   snubber?: SnubberResult         // RCD clamp design (flyback and forward only)
+  current_sense?: CurrentSenseResult  // current sense element design (when controlMode === 'current')
+  input_filter?: InputFilterResult    // EMI input filter design (when inputFilterEnabled)
   // Forward-specific fields
   outputInductance?: number // H - separate from magnetizing
   resetVoltage?: number // V - reset winding voltage

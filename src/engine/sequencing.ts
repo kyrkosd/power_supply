@@ -3,7 +3,7 @@
 //             ON Semiconductor AND9166 — Sequencing Considerations for Multi-Rail Supplies
 //             TI SLVA236A eq. 4 — PG delay from soft-start and settling time
 
-import type { DesignSpec, DesignResult } from './types'
+import type { DesignSpec } from './types'
 import type { TransientResult } from './topologies/types'
 
 // ── Public types ──────────────────────────────────────────────────────────────

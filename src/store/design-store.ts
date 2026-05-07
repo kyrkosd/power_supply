@@ -20,7 +20,7 @@ export type { FeedbackOptions } from '../engine/feedback'
 export type { SoftStartOptions } from '../engine/soft-start'
 
 export type { TopologyId } from './workbenchStore'
-export type ActiveVizTab = 'waveforms' | 'bode' | 'losses' | 'thermal' | 'monte-carlo' | 'ltspice-comparison' | 'transient' | 'emi' | 'efficiency-map' | 'layout'
+export type ActiveVizTab = 'waveforms' | 'bode' | 'losses' | 'thermal' | 'monte-carlo' | 'ltspice-comparison' | 'transient' | 'emi' | 'efficiency-map' | 'layout' | 'input-filter'
 
 export interface MCRunRequest {
   iterations: number

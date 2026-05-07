@@ -330,6 +330,22 @@ export function LossBreakdown(): React.ReactElement {
           <span className={styles.summaryValue}>{formatWatts(totals.total)}</span>
         </div>
       </div>
+      {result.current_sense && result.current_sense.rsense_power > 0 && (
+        <div className={styles.summaryRow} style={{ borderTop: '1px solid var(--border)', paddingTop: '8px', marginTop: '4px' }}>
+          <div className={styles.summaryItem}>
+            <span className={styles.summaryLabel}>Rsense loss</span>
+            <span className={styles.summaryValue}>{formatWatts(result.current_sense.rsense_power)}</span>
+          </div>
+          <div className={styles.summaryItem}>
+            <span className={styles.summaryLabel}>Rsense</span>
+            <span className={styles.summaryValue}>{(result.current_sense.rsense * 1000).toFixed(2)} mΩ</span>
+          </div>
+          <div className={styles.summaryItem}>
+            <span className={styles.summaryLabel}>Package</span>
+            <span className={styles.summaryValue}>{result.current_sense.rsense_package}</span>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

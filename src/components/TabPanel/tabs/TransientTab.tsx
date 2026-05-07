@@ -5,7 +5,7 @@ import { axisBottom, axisLeft } from 'd3-axis'
 import { line } from 'd3-shape'
 import { extent } from 'd3-array'
 import { useDesignStore } from '../../../store/design-store'
-import type { TransientMode, TransientResult } from '../../../engine/topologies/types'
+import type { TransientMode } from '../../../engine/topologies/types'
 import styles from './TransientTab.module.css'
 
 // Only buck has getStateSpaceModel implemented

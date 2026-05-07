@@ -279,6 +279,27 @@ export function generateBOM(
                   `Inrush without SS: ${ss.peak_inrush_a.toFixed(0)} A`,
   })
 
+  // ── Rsense — Current sense resistor (PCM only) ────────────────────────────
+  if (result.current_sense?.method === 'resistor') {
+    const cs = result.current_sense
+    const notes: string[] = [
+      `Vsense: ${(cs.vsense_peak * 1000).toFixed(1)} mV pk`,
+      `Power: ${(cs.rsense_power * 1000).toFixed(0)} mW`,
+    ]
+    if (cs.kelvin_connection_required) notes.push('Kelvin (4-wire) connections required')
+    rows.push({
+      ref:          'Rsense',
+      component:    'Resistor (Current Sense)',
+      value:        `${(cs.rsense * 1000).toFixed(2)} mΩ`,
+      rating:       `P≥${(cs.rsense_power * 1000).toFixed(0)} mW; low TCR (≤ 50 ppm/°C); ${cs.rsense_package}`,
+      pkg:          cs.rsense_package,
+      manufacturer: '-',
+      partNumber:   '-',
+      qty:          1,
+      notes:        notes.join('; '),
+    })
+  }
+
   // ── Rfb1 / Rfb2 — Feedback voltage divider ───────────────────────────────
   const ISOLATED = topology === 'flyback' || topology === 'forward'
   if (!ISOLATED) {
@@ -306,6 +327,23 @@ export function generateBOM(
       qty:          1,
       notes:        `Lower FB divider; FB→GND. Vref: ${fb.vref} V; Idiv: ${(fb.divider_current * 1e6).toFixed(0)} µA`,
     })
+  }
+
+  // ── Input EMI filter components ───────────────────────────────────────────
+  if (result.input_filter) {
+    for (const c of result.input_filter.components) {
+      rows.push({
+        ref:          c.ref,
+        component:    c.type,
+        value:        c.value,
+        rating:       `V: ${c.voltage_rating}; I: ${c.current_rating}`,
+        pkg:          '-',
+        manufacturer: '-',
+        partNumber:   '-',
+        qty:          1,
+        notes:        'EMI input filter',
+      })
+    }
   }
 
   return [CSV_HEADER, ...rows.map(rowToCsv)].join('\r\n')

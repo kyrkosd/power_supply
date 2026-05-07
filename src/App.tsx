@@ -82,6 +82,7 @@ export default function App(): React.ReactElement {
   const transientRunRequest       = useDesignStore((s) => s.transientRunRequest)
   const clearTransientRunRequest  = useDesignStore((s) => s.clearTransientRunRequest)
   const setTransientResult        = useDesignStore((s) => s.setTransientResult)
+  const setEmiResult              = useDesignStore((s) => s.setEmiResult)
 
   const workerRef = useRef<Worker | null>(null)
 
@@ -110,6 +111,7 @@ export default function App(): React.ReactElement {
       const msg = event.data
       if (msg?.type === 'RESULT' && msg.payload) {
         setResult(msg.payload.result, msg.payload.waveforms)
+        if (msg.payload.emiResult) setEmiResult(msg.payload.emiResult)
       } else if (msg?.type === 'MC_RESULT' && msg.payload) {
         setMcResult(msg.payload)
       } else if (msg?.type === 'EFFICIENCY_MAP_RESULT' && msg.payload) {
@@ -128,7 +130,7 @@ export default function App(): React.ReactElement {
       worker.terminate()
       workerRef.current = null
     }
-  }, [setResult, setMcResult, setEfficiencyMapResult, setTransientResult])
+  }, [setResult, setMcResult, setEfficiencyMapResult, setTransientResult, setEmiResult])
 
   // Engine worker — dispatch design computation on spec/topology change
   // Skip when validation errors exist; cancelComputing clears the spinner.

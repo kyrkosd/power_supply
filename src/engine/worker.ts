@@ -1,6 +1,11 @@
 import { compute, generateWaveforms, getTopology, getStateSpaceModelFn } from './index'
 import { runTransientSimulation } from './transient'
 import { runMonteCarlo } from './monte-carlo'
+import { designCurrentSense } from './current-sense'
+import { estimateEMI } from './emi'
+import { designInputFilter, DEFAULT_INPUT_FILTER_OPTIONS } from './input-filter'
+import type { InputFilterOptions } from './input-filter'
+import type { EMIResult } from './topologies/types'
 import type { DesignSpec, DesignResult } from './types'
 import type { WaveformSet, TransientResult, TransientMode } from './topologies/types'
 import type { TopologyId } from '../store/workbenchStore'
@@ -38,7 +43,7 @@ type WorkerRequest =
 
 type ResultResponse = {
   type: 'RESULT'
-  payload: { result: DesignResult; waveforms: WaveformSet | null; timing_ms: number }
+  payload: { result: DesignResult; waveforms: WaveformSet | null; timing_ms: number; emiResult: EMIResult | null }
 }
 type MCResultResponse = {
   type: 'MC_RESULT'
@@ -68,10 +73,25 @@ function scheduleCompute(payload: ComputePayload): void {
     latestPayload = null
     const start = performance.now()
     try {
-      const result = compute(topology, spec)
+      let result = compute(topology, spec)
+      if (spec.controlMode === 'current') {
+        const cs = designCurrentSense(topology, spec, result, spec.senseMethod ?? 'resistor', spec.vsenseTargetMv ?? 150)
+        result = { ...result, current_sense: cs }
+      }
+      // EMI + optional input filter
+      const emiResult: EMIResult = estimateEMI(topology, spec, result)
+      if (spec.inputFilterEnabled) {
+        const filterOpts: InputFilterOptions = {
+          enabled: true,
+          attenuation_override_db: spec.inputFilterAttenuationDb ?? 0,
+          cm_choke_h: (spec.inputFilterCmChokeMh ?? 0) / 1000,
+        }
+        const inputFilter = designInputFilter(topology, spec, result, emiResult, filterOpts)
+        result = { ...result, input_filter: inputFilter }
+      }
       const waveforms = generateWaveforms(topology, spec)
       const timing_ms = performance.now() - start
-      const response: ResultResponse = { type: 'RESULT', payload: { result, waveforms, timing_ms } }
+      const response: ResultResponse = { type: 'RESULT', payload: { result, waveforms, timing_ms, emiResult } }
       if (waveforms) {
         self.postMessage(response, {
           transfer: [

@@ -457,6 +457,51 @@ export function InputPanel(): React.ReactElement {
                   <option value="current">Current Mode (PCM)</option>
                 </select>
               </div>
+              {(spec.controlMode ?? 'voltage') === 'current' && (
+                <>
+                  <div className={styles.advancedRow}>
+                    <label className={styles.advancedLabel}>
+                      Sense method
+                      <Tooltip
+                        content="Resistor: dedicated low-ohm shunt; accurate, low temperature drift. Rds(on): uses the MOSFET on-resistance; lossless but ±30 % accuracy variation from 25 °C to 100 °C. Use resistor for tight current limiting; Rds(on) for efficiency-critical designs."
+                        side="right"
+                      >
+                        <span className={styles.infoIcon}>ⓘ</span>
+                      </Tooltip>
+                    </label>
+                    <select
+                      className={styles.advancedSelect}
+                      value={spec.senseMethod ?? 'resistor'}
+                      onChange={(e) => updateSpec({ senseMethod: e.target.value as 'resistor' | 'rdson' })}
+                    >
+                      <option value="resistor">Sense Resistor</option>
+                      <option value="rdson">Rds(on) (lossless)</option>
+                    </select>
+                  </div>
+                  {(spec.senseMethod ?? 'resistor') === 'resistor' && (
+                    <div className={styles.advancedRow}>
+                      <label className={styles.advancedLabel}>
+                        Vsense target (mV)
+                        <Tooltip
+                          content="Peak voltage across the sense resistor at maximum load. Higher = better SNR and noise immunity but more Rsense dissipation. Typical range: 100–200 mV. Below 50 mV: poor noise margin. Above 300 mV: excessive resistor losses."
+                          side="right"
+                        >
+                          <span className={styles.infoIcon}>ⓘ</span>
+                        </Tooltip>
+                      </label>
+                      <input
+                        type="number"
+                        className={styles.advancedSelect}
+                        min={20}
+                        max={500}
+                        step={10}
+                        value={spec.vsenseTargetMv ?? 150}
+                        onChange={(e) => updateSpec({ vsenseTargetMv: Math.max(20, Math.min(500, Number(e.target.value))) })}
+                      />
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           </details>
         )}
@@ -619,6 +664,84 @@ export function InputPanel(): React.ReactElement {
                 <span className={styles.advancedUnit}>µA</span>
               </div>
             </div>
+          </div>
+        </details>
+
+        {/* ── Input EMI Filter ── */}
+        <details className={styles.advancedSection}>
+          <summary className={styles.advancedTitle}>
+            Input EMI Filter
+            <Tooltip
+              content="Designs a CM/DM input EMI filter to meet CISPR 32 Class B conducted emissions. Checks Middlebrook negative-impedance stability (filter must not destabilise the converter). Enable to see the filter schematic and impedance plot in the Input Filter tab."
+              side="right"
+            >
+              <span className={styles.infoIcon}>ⓘ</span>
+            </Tooltip>
+          </summary>
+          <div className={styles.advancedBody}>
+            <div className={styles.advancedRow}>
+              <label className={styles.advancedLabel}>
+                Enable filter design
+              </label>
+              <select
+                className={styles.advancedSelect}
+                value={(spec.inputFilterEnabled ?? false) ? 'on' : 'off'}
+                onChange={(e) => updateSpec({ inputFilterEnabled: e.target.value === 'on' })}
+              >
+                <option value="off">Off</option>
+                <option value="on">On</option>
+              </select>
+            </div>
+            {(spec.inputFilterEnabled ?? false) && (
+              <>
+                <div className={styles.advancedRow}>
+                  <label className={styles.advancedLabel}>
+                    Attenuation target (dB)
+                    <Tooltip
+                      content="Override the auto-calculated required attenuation. 0 = auto (derived from EMI analysis). Typical: 30–60 dB. Higher values → larger/lower-resonance filter."
+                      side="right"
+                    >
+                      <span className={styles.infoIcon}>ⓘ</span>
+                    </Tooltip>
+                  </label>
+                  <div className={styles.advancedInputGroup}>
+                    <input
+                      type="number"
+                      className={styles.advancedNumberInput}
+                      min={0}
+                      max={80}
+                      step={5}
+                      value={spec.inputFilterAttenuationDb ?? 0}
+                      onChange={(e) => updateSpec({ inputFilterAttenuationDb: Math.max(0, Math.min(80, Number(e.target.value))) })}
+                    />
+                    <span className={styles.advancedUnit}>dB</span>
+                  </div>
+                </div>
+                <div className={styles.advancedRow}>
+                  <label className={styles.advancedLabel}>
+                    CM choke (mH)
+                    <Tooltip
+                      content="Common-mode choke inductance. 0 = auto-selected based on switching frequency. Range: 1–47 mH. Larger choke → better CM attenuation but bigger footprint."
+                      side="right"
+                    >
+                      <span className={styles.infoIcon}>ⓘ</span>
+                    </Tooltip>
+                  </label>
+                  <div className={styles.advancedInputGroup}>
+                    <input
+                      type="number"
+                      className={styles.advancedNumberInput}
+                      min={0}
+                      max={47}
+                      step={1}
+                      value={spec.inputFilterCmChokeMh ?? 0}
+                      onChange={(e) => updateSpec({ inputFilterCmChokeMh: Math.max(0, Math.min(47, Number(e.target.value))) })}
+                    />
+                    <span className={styles.advancedUnit}>mH</span>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </details>
 

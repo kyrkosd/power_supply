@@ -209,11 +209,46 @@ function createBuckSchematic(spec: DesignSpec, result: DesignResult | null): Sch
     },
   ]
 
+  const showRsense = result?.current_sense?.method === 'resistor'
+  const rsenseLabel = showRsense
+    ? `${(result!.current_sense!.rsense * 1000).toFixed(2)} mΩ`
+    : ''
+
+  if (showRsense) {
+    // Rsense sits in the low-side return path: diode node → Rsense → GND.
+    // Rsense terminals: left (46, 274), right (134, 274). GND moves to (46, 280).
+    nodes.push({ id: 'gndSense', x: 46, y: 280 })
+    components.push({
+      id: 'Rsense',
+      type: 'resistor',
+      x: 46,
+      y: 262,
+      width: 88,
+      height: 20,
+      label: 'Rsense',
+      value: rsenseLabel,
+      status: 'normal',
+      meta: 'Current sense (PCM)',
+    })
+    // Replace GroundLeft with one placed under Rsense left terminal.
+    const gl = components.find((c) => c.id === 'GroundLeft')
+    if (gl) { gl.x = 34; gl.y = 278 }
+  }
+
+  const wire4WithRsense: SchematicWire[] = showRsense
+    ? [
+        // Diode node down to Rsense right terminal
+        { id: 'wire4a', points: [nodes[2], { x: 250, y: 266 }, { x: 134, y: 266 }, { x: 134, y: 272 }] },
+        // Rsense left terminal down to GND
+        { id: 'wire4b', points: [{ x: 46, y: 272 }, { x: 46, y: 276 }] },
+      ]
+    : [{ id: 'wire4', points: [nodes[2], { x: 250, y: 266 }, nodes[5]] }]
+
   const wires: SchematicWire[] = [
     { id: 'wire1', points: [nodes[0], { x: 158, y: 102 }, nodes[1]] },
     { id: 'wire2', points: [nodes[1], { x: 350, y: 102 }, nodes[3]] },
     { id: 'wire3', points: [nodes[1], { x: 250, y: 166 }, nodes[2]] },
-    { id: 'wire4', points: [nodes[2], { x: 250, y: 266 }, nodes[5]] },
+    ...wire4WithRsense,
     { id: 'wire5', points: [nodes[3], { x: 510, y: 102 }, nodes[4]] },
     { id: 'wire6', points: [nodes[4], { x: 700, y: 102 }] },
     { id: 'wire7', points: [nodes[4], { x: 620, y: 210 }, nodes[6]] },

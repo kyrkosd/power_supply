@@ -16,6 +16,7 @@ import { checkSaturation } from '../../engine/inductor-saturation'
 import { estimateLifetime, type CapLifetimeResult } from '../../engine/cap-lifetime'
 import { designFeedback, fmtResistor, type FeedbackResult } from '../../engine/feedback'
 import { designSoftStart, type SoftStartResult } from '../../engine/soft-start'
+import type { CurrentSenseResult } from '../../engine/current-sense'
 import { Tooltip } from '../Tooltip/Tooltip'
 import styles from './ComponentSuggestions.module.css'
 
@@ -472,6 +473,14 @@ export function ComponentSuggestions() {
         <SoftStartDisplay ss={softStart} onTransientClick={() => setActiveVizTab('transient')} />
       </div>
 
+      {/* ── Current Sensing ─────────────────────────────────────────── */}
+      {(spec.controlMode ?? 'voltage') === 'current' && result.current_sense && (
+        <div className={styles.section}>
+          <div className={styles.sectionTitle}>Current Sensing</div>
+          <CurrentSensingDisplay cs={result.current_sense} />
+        </div>
+      )}
+
       {/* ── Feedback Network ────────────────────────────────────────── */}
       <div className={styles.section}>
         <div className={styles.sectionTitle}>Feedback Network</div>
@@ -640,6 +649,78 @@ function SoftStartDisplay({ ss, onTransientClick }: { ss: SoftStartResult; onTra
       <button className={styles.ssTransientLink} onClick={onTransientClick}>
         → Transient tab for startup simulation
       </button>
+    </div>
+  )
+}
+
+// ── Current sensing display sub-component ────────────────────────────────
+
+function snrColor(db: number): string {
+  if (db >= 20) return '#4ade80'
+  if (db >= 14) return '#f59e0b'
+  return '#ef4444'
+}
+
+function CurrentSensingDisplay({ cs }: { cs: CurrentSenseResult }) {
+  return (
+    <div className={styles.card} style={{ padding: '12px' }}>
+      <div className={styles.fbRow}>
+        <span className={styles.fbLabel}>Method</span>
+        <span className={styles.fbValue}>
+          {cs.method === 'resistor' ? 'Sense Resistor' : 'Rds(on)'}
+        </span>
+      </div>
+      {cs.method === 'resistor' && (
+        <>
+          <div className={styles.fbRow}>
+            <span className={styles.fbLabel}>Rsense</span>
+            <span className={styles.fbValue}>{(cs.rsense * 1000).toFixed(2)} mΩ</span>
+          </div>
+          <div className={styles.fbRow}>
+            <span className={styles.fbLabel}>Package</span>
+            <span className={styles.fbValue}>{cs.rsense_package}</span>
+          </div>
+          <div className={styles.fbRow}>
+            <span className={styles.fbLabel}>Rsense power</span>
+            <span className={styles.fbValue}>{fmtPower(cs.rsense_power)}</span>
+          </div>
+          <div className={styles.fbRow}>
+            <span className={styles.fbLabel}>Kelvin connections</span>
+            <span className={styles.fbValue} style={{ color: cs.kelvin_connection_required ? '#f59e0b' : '#4ade80' }}>
+              {cs.kelvin_connection_required ? 'Required' : 'Not required'}
+            </span>
+          </div>
+        </>
+      )}
+      {cs.method === 'rdson' && (
+        <div className={styles.fbRow}>
+          <span className={styles.fbLabel}>Temp accuracy</span>
+          <span className={styles.fbValue} style={{ color: '#f59e0b' }}>
+            ±{cs.rdson_temp_error_pct.toFixed(0)} % (25–100 °C)
+          </span>
+        </div>
+      )}
+      <div className={styles.fbRow}>
+        <span className={styles.fbLabel}>Vsense peak</span>
+        <span className={styles.fbValue}>{(cs.vsense_peak * 1000).toFixed(1)} mV</span>
+      </div>
+      <div className={styles.fbRow}>
+        <span className={styles.fbLabel}>Vsense valley</span>
+        <span className={styles.fbValue}>{(cs.vsense_valley * 1000).toFixed(1)} mV</span>
+      </div>
+      <div className={styles.fbRow}>
+        <span className={styles.fbLabel}>SNR @ 10 % load</span>
+        <span className={styles.fbValue} style={{ color: snrColor(cs.snr_at_light_load) }}>
+          {cs.snr_at_light_load.toFixed(1)} dB
+        </span>
+      </div>
+      <div className={styles.fbRow}>
+        <span className={styles.fbLabel}>Slope comp ramp</span>
+        <span className={styles.fbValue}>{(cs.slope_comp_ramp / 1e6).toFixed(2)} V/µs</span>
+      </div>
+      {cs.warnings.map((w, i) => (
+        <div key={i} className={styles.ssWarn}>{w}</div>
+      ))}
     </div>
   )
 }
