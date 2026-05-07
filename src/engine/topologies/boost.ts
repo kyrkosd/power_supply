@@ -3,6 +3,7 @@
 import { complex, abs, arg, add, multiply, divide, type Complex } from 'mathjs'
 import { DesignSpec, DesignResult, Topology } from '../types'
 import { checkSaturation } from '../inductor-saturation'
+import { buildDesignResult } from './result-utils'
 
 function normalizeDuty(duty: number): number {
   return Math.min(Math.max(duty, 0.01), 0.99)
@@ -153,7 +154,7 @@ export const boostTopology: Topology = {
     const pout = vout * iout
     const efficiency = pout <= 0 ? 0 : pout / (pout + total)
 
-    return {
+    return buildDesignResult({
       dutyCycle,
       inductance,
       capacitance,
@@ -175,7 +176,7 @@ export const boostTopology: Topology = {
         total,
       },
       warnings,
-    }
+    })
   },
 
   getTransferFunction(spec, result) {

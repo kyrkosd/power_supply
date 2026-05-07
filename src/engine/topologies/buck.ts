@@ -2,6 +2,7 @@ import { DesignSpec, DesignResult, Topology } from '../types'
 import type { WaveformSet } from '../topologies/types'
 import { analyzeBuckControlLoop } from '../control-loop'
 import { checkSaturation } from '../inductor-saturation'
+import { buildDesignResult } from './result-utils'
 import type { StateSpaceModel } from './types'
 
 // Buck converter device-assumption constants used for loss estimation.
@@ -174,7 +175,7 @@ export const buckTopology: Topology = {
       input_ripple_cancel:  1 / N,
     } : {}
 
-    return {
+    return buildDesignResult({
       dutyCycle,
       inductance,
       capacitance,
@@ -196,8 +197,8 @@ export const buckTopology: Topology = {
         total,
       },
       warnings: [...warnings, ...loop.warnings],
-      ...multiPhaseFields,
-    }
+      extra: multiPhaseFields,
+    })
   },
 
   generateWaveforms(spec: DesignSpec): WaveformSet {
