@@ -1,0 +1,410 @@
+/* ── Backdrop ──────────────────────────────────────────────────────────────── */
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 400;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 24px 16px;
+  overflow-y: auto;
+}
+
+/* ── Panel ─────────────────────────────────────────────────────────────────── */
+
+.panel {
+  background: #141624;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 8px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.65);
+  width: 100%;
+  max-width: 920px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: slideIn 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(-12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Header ────────────────────────────────────────────────────────────────── */
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px 11px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  flex-shrink: 0;
+}
+
+.headerTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary, #e2e8f0);
+  flex: 1;
+}
+
+.headerSubtitle {
+  font-size: 11px;
+  color: var(--text-muted, #94a3b8);
+}
+
+.headerClose {
+  background: none;
+  border: none;
+  color: var(--text-muted, #94a3b8);
+  cursor: pointer;
+  font-size: 18px;
+  padding: 3px 7px;
+  border-radius: 4px;
+  line-height: 1;
+  transition: color 0.15s, background 0.15s;
+}
+
+.headerClose:hover {
+  color: var(--text-primary, #e2e8f0);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* ── Body ──────────────────────────────────────────────────────────────────── */
+
+.body {
+  padding: 14px 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ── Config row ────────────────────────────────────────────────────────────── */
+
+.configRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.configGroup {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.configLabel {
+  font-size: 11px;
+  color: var(--text-muted, #94a3b8);
+  white-space: nowrap;
+}
+
+.configSelect {
+  background: var(--bg-surface, #1e2235);
+  color: var(--text-primary, #e2e8f0);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-family: var(--font-ui, system-ui);
+  cursor: pointer;
+  outline: none;
+}
+
+.configSelect:focus { border-color: rgba(50, 201, 230, 0.5); }
+
+.configInput {
+  background: var(--bg-surface, #1e2235);
+  color: var(--text-primary, #e2e8f0);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-family: 'Consolas', 'Courier New', monospace;
+  width: 72px;
+  outline: none;
+  text-align: right;
+}
+
+.configInput:focus { border-color: rgba(50, 201, 230, 0.5); }
+
+.configInputSmall {
+  width: 52px;
+}
+
+.configUnit {
+  font-size: 11px;
+  color: rgba(148, 163, 184, 0.6);
+  font-family: 'Consolas', 'Courier New', monospace;
+}
+
+.spacer { flex: 1; }
+
+.runBtn {
+  background: rgba(50, 201, 230, 0.12);
+  color: #32c9e6;
+  border: 1px solid rgba(50, 201, 230, 0.35);
+  border-radius: 4px;
+  padding: 5px 14px;
+  font-size: 12px;
+  font-family: var(--font-ui, system-ui);
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.runBtn:hover:not(:disabled) {
+  background: rgba(50, 201, 230, 0.2);
+  border-color: rgba(50, 201, 230, 0.6);
+}
+
+.runBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.exportBtn {
+  background: none;
+  color: var(--text-muted, #94a3b8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-family: var(--font-ui, system-ui);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.exportBtn:hover:not(:disabled) {
+  color: var(--text-primary, #e2e8f0);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.exportBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ── Progress bar ──────────────────────────────────────────────────────────── */
+
+.progressWrap {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 3px;
+  height: 4px;
+  overflow: hidden;
+}
+
+.progressBar {
+  height: 100%;
+  background: linear-gradient(90deg, #32c9e6, #22c55e);
+  border-radius: 3px;
+  transition: width 0.15s ease;
+}
+
+.progressLabel {
+  font-size: 10px;
+  color: var(--text-muted, #94a3b8);
+  text-align: right;
+  margin-top: 3px;
+  font-family: 'Consolas', 'Courier New', monospace;
+}
+
+/* ── Metrics checkboxes ────────────────────────────────────────────────────── */
+
+.metricsRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+}
+
+.metricsLabel {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted, #94a3b8);
+  flex-shrink: 0;
+  margin-right: 4px;
+}
+
+.metricCheck {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.metricCheck input[type='checkbox'] {
+  accent-color: #32c9e6;
+  cursor: pointer;
+}
+
+.metricCheckLabel {
+  font-size: 11px;
+  color: var(--text-muted, #94a3b8);
+  font-family: 'Consolas', 'Courier New', monospace;
+  transition: color 0.12s;
+}
+
+.metricCheck:hover .metricCheckLabel {
+  color: var(--text-primary, #e2e8f0);
+}
+
+.metricDot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ── Chart ─────────────────────────────────────────────────────────────────── */
+
+.chartOuter {
+  position: relative;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 6px;
+  overflow: visible;
+}
+
+.chartSvg {
+  display: block;
+  width: 100%;
+  height: 210px;
+}
+
+/* ── Hover legend ──────────────────────────────────────────────────────────── */
+
+.hoverLegend {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 4px;
+  min-height: 30px;
+}
+
+.hoverItem {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 11px;
+}
+
+.hoverDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.hoverKey {
+  color: var(--text-muted, #94a3b8);
+}
+
+.hoverVal {
+  color: var(--text-primary, #e2e8f0);
+  font-weight: 600;
+}
+
+.hoverParamLabel {
+  font-size: 10px;
+  color: rgba(148, 163, 184, 0.5);
+  font-family: 'Consolas', 'Courier New', monospace;
+  margin-right: 4px;
+}
+
+/* ── Empty/loading state ───────────────────────────────────────────────────── */
+
+.emptyState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 160px;
+  color: var(--text-muted, #94a3b8);
+  font-size: 12px;
+  text-align: center;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.emptyHint {
+  font-size: 11px;
+  color: rgba(148, 163, 184, 0.5);
+}
+
+/* ── Table ─────────────────────────────────────────────────────────────────── */
+
+.tableWrap {
+  max-height: 240px;
+  overflow-y: auto;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 6px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 11px;
+}
+
+.table thead {
+  position: sticky;
+  top: 0;
+  background: rgba(20, 22, 36, 0.97);
+  z-index: 1;
+}
+
+.table th {
+  text-align: right;
+  padding: 5px 10px;
+  color: var(--text-muted, #94a3b8);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  white-space: nowrap;
+  font-weight: 600;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+}
+
+.table th:first-child {
+  text-align: left;
+}
+
+.table td {
+  text-align: right;
+  padding: 3px 10px;
+  color: var(--text-primary, #e2e8f0);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.table td:first-child {
+  text-align: left;
+  color: #32c9e6;
+}
+
+.table tr.currentRow td {
+  background: rgba(50, 201, 230, 0.06);
+}
+
+.table tr:last-child td {
+  border-bottom: none;
+}
+
+.table .nullVal {
+  color: rgba(148, 163, 184, 0.3);
+}

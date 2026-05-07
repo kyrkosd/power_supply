@@ -1,0 +1,178 @@
+/* ── Results Table ─────────────────────────────────────────────────────────── */
+
+.container {
+  padding: 10px 12px 16px;
+  height: 100%;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+}
+
+.emptyState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-muted, #94a3b8);
+  font-size: 12px;
+  text-align: center;
+}
+
+.groupTitle {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--text-muted, #94a3b8);
+  padding: 10px 0 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  margin-bottom: 2px;
+}
+
+.groupTitle:first-child {
+  padding-top: 0;
+}
+
+/* ── Row ───────────────────────────────────────────────────────────────────── */
+
+.row {
+  display: flex;
+  align-items: center;
+  padding: 5px 4px;
+  border-radius: 4px;
+  gap: 6px;
+  transition: background 0.12s;
+}
+
+.row.clickable {
+  cursor: pointer;
+}
+
+.row.clickable:hover {
+  background: rgba(50, 201, 230, 0.06);
+}
+
+.row.clickable:hover .label {
+  color: var(--text-primary, #e2e8f0);
+}
+
+.row.active {
+  background: rgba(50, 201, 230, 0.10);
+}
+
+.label {
+  flex: 1;
+  font-size: 12px;
+  color: var(--text-muted, #94a3b8);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color 0.12s;
+}
+
+.symbol {
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 11px;
+  color: #8fb9ff;
+  width: 24px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.symbol sub {
+  font-size: 0.72em;
+  vertical-align: -0.2em;
+}
+
+.value {
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary, #e2e8f0);
+  white-space: nowrap;
+  text-align: right;
+  min-width: 80px;
+}
+
+.value.warning {
+  color: #f59e0b;
+}
+
+.value.error {
+  color: #ef4444;
+}
+
+.exploreBtn {
+  background: none;
+  border: 1px solid rgba(50, 201, 230, 0.25);
+  border-radius: 3px;
+  color: rgba(50, 201, 230, 0.65);
+  cursor: pointer;
+  font-size: 10px;
+  padding: 1px 5px;
+  line-height: 1.4;
+  flex-shrink: 0;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+  font-family: 'Consolas', 'Courier New', monospace;
+}
+
+.exploreBtn:hover {
+  background: rgba(50, 201, 230, 0.12);
+  color: #32c9e6;
+  border-color: rgba(50, 201, 230, 0.5);
+}
+
+.row.active .exploreBtn {
+  background: rgba(50, 201, 230, 0.18);
+  color: #32c9e6;
+  border-color: rgba(50, 201, 230, 0.6);
+}
+
+/* ── Mode badge ────────────────────────────────────────────────────────────── */
+
+.modeBadge {
+  display: inline-block;
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+.modeBadge.ccm {
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+}
+
+.modeBadge.dcm {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+.modeBadge.boundary {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+}
+
+/* ── Warning section ───────────────────────────────────────────────────────── */
+
+.warnings {
+  margin-top: 10px;
+}
+
+.warningItem {
+  background: rgba(245, 158, 11, 0.07);
+  border-left: 2px solid rgba(245, 158, 11, 0.5);
+  border-radius: 0 4px 4px 0;
+  padding: 5px 8px;
+  font-size: 11px;
+  color: #d4a83b;
+  margin-bottom: 4px;
+  line-height: 1.4;
+}
+
+.warningItem.error {
+  background: rgba(239, 68, 68, 0.07);
+  border-left-color: rgba(239, 68, 68, 0.5);
+  color: #f87171;
+}

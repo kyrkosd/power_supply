@@ -13,9 +13,26 @@ import type { WaveformSet, TransientResult, TransientMode } from './topologies/t
 import type { TopologyId } from '../store/workbenchStore'
 import type { MonteCarloConfig, MonteCarloResult } from './monte-carlo'
 
+export type SweepParam = 'vin' | 'vout' | 'iout' | 'fsw' | 'ripple_ratio' | 'ambient_temp'
+
 interface ComputePayload {
   topology: TopologyId
   spec: DesignSpec
+}
+
+interface SweepPayload {
+  topology: TopologyId
+  baseSpec: DesignSpec
+  sweepParam: SweepParam
+  min: number
+  max: number
+  steps: number
+}
+
+export interface SweepPoint {
+  paramValue: number
+  result: DesignResult | null
+  phaseMargin: number | null
 }
 
 interface MCComputePayload {
@@ -42,6 +59,7 @@ type WorkerRequest =
   | { type: 'MC_COMPUTE'; payload: MCComputePayload }
   | { type: 'EFFICIENCY_MAP'; payload: EfficiencyMapPayload }
   | { type: 'TRANSIENT_COMPUTE'; payload: TransientPayload }
+  | { type: 'SWEEP_COMPUTE'; payload: SweepPayload }
 
 type ResultResponse = {
   type: 'RESULT'
@@ -59,6 +77,8 @@ type TransientResultResponse = {
   type: 'TRANSIENT_RESULT'
   payload: TransientResult
 }
+type SweepProgressResponse = { type: 'SWEEP_PROGRESS'; payload: { current: number; total: number } }
+type SweepResultResponse = { type: 'SWEEP_RESULT'; payload: { sweepParam: SweepParam; points: SweepPoint[] } }
 type ErrorResponse = { type: 'ERROR'; payload: { message: string } }
 
 const DEBOUNCE_MS = 8
@@ -159,6 +179,40 @@ function computeEfficiencyMap(payload: EfficiencyMapPayload): EfficiencyMapRespo
   return { type: 'EFFICIENCY_MAP_RESULT', payload: { matrix, vinPoints, ioutPoints } }
 }
 
+// ── Sweep helpers ─────────────────────────────────────────────────────────────
+
+function applyParam(spec: DesignSpec, param: SweepParam, value: number): DesignSpec {
+  switch (param) {
+    case 'vin':          return { ...spec, vinMin: value, vinMax: value }
+    case 'vout':         return { ...spec, vout: value }
+    case 'iout':         return { ...spec, iout: value }
+    case 'fsw':          return { ...spec, fsw: value }
+    case 'ripple_ratio': return { ...spec, rippleRatio: value }
+    case 'ambient_temp': return { ...spec, ambientTemp: value }
+  }
+}
+
+function computeSweepPM(
+  topo: import('./types').Topology,
+  spec: DesignSpec,
+  result: DesignResult,
+): number | null {
+  if (!topo.getTransferFunction) return null
+  try {
+    const tf = topo.getTransferFunction(spec, result)
+    let prevMag = tf.evaluate(100).magnitude_db
+    for (let i = 1; i <= 400; i++) {
+      const f = 100 * Math.pow(1e4, i / 400) // log sweep 100 Hz → 1 MHz
+      const { magnitude_db, phase_deg } = tf.evaluate(f)
+      if (prevMag >= 0 && magnitude_db < 0) return phase_deg + 180
+      prevMag = magnitude_db
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
 self.addEventListener('message', (event: MessageEvent<WorkerRequest>) => {
   const message = event.data
   if (!message?.type) return
@@ -193,6 +247,39 @@ self.addEventListener('message', (event: MessageEvent<WorkerRequest>) => {
       const response: ErrorResponse = { type: 'ERROR', payload: { message: msg } }
       self.postMessage(response)
     }
+    return
+  }
+
+  if (message.type === 'SWEEP_COMPUTE') {
+    const { topology: topoId, baseSpec, sweepParam, min, max, steps } = message.payload
+    const topo = getTopology(topoId)
+    const vals = linspace(min, max, Math.max(2, steps))
+    const pts: SweepPoint[] = []
+    let i = 0
+
+    function doChunk(): void {
+      const end = Math.min(i + 5, vals.length)
+      while (i < end) {
+        const v = vals[i]
+        const varSpec = applyParam(baseSpec, sweepParam, v)
+        try {
+          const result = compute(topoId, varSpec)
+          pts.push({ paramValue: v, result, phaseMargin: computeSweepPM(topo, varSpec, result) })
+        } catch {
+          pts.push({ paramValue: v, result: null, phaseMargin: null })
+        }
+        i++
+      }
+      const progress: SweepProgressResponse = { type: 'SWEEP_PROGRESS', payload: { current: i, total: vals.length } }
+      self.postMessage(progress)
+      if (i < vals.length) {
+        setTimeout(doChunk, 0)
+      } else {
+        const done: SweepResultResponse = { type: 'SWEEP_RESULT', payload: { sweepParam, points: pts } }
+        self.postMessage(done)
+      }
+    }
+    doChunk()
     return
   }
 

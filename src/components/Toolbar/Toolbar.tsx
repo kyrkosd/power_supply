@@ -48,6 +48,7 @@ export function Toolbar(): React.ReactElement {
     feedbackOptions, softStartOptions,
     setIsSequencing,
     setIsSettingsOpen,
+    setIsSweepOpen,
   } = useDesignStore()
 
   const [isExporting, setIsExporting] = useState(false)
@@ -197,6 +198,13 @@ export function Toolbar(): React.ReactElement {
             title="Power sequencing analysis for multi-rail systems"
           >
             ⏱ Sequencing
+          </button>
+          <button
+            className={styles.btn}
+            onClick={() => setIsSweepOpen(true)}
+            title="Parameter sweep — see how every output varies across an input range"
+          >
+            ∿ Sweep
           </button>
           <button
             className={styles.btn}

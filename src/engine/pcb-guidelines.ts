@@ -523,15 +523,9 @@ if (losses) {
   let diodeLoss = 0
   let coreLoss = 0
 
-  if (isTransformerLosses(losses)) {
-    mosfetLoss = losses.mosfet ?? 0
-    diodeLoss = losses.diode ?? 0
-    coreLoss = losses.core ?? 0
-  } else if (isSwitchingLosses(losses)) {
-    mosfetLoss = (losses.mosfet_conduction ?? 0) + (losses.mosfet_switching ?? 0)
-    diodeLoss = losses.diode_conduction ?? 0
-    coreLoss = losses.inductor_core ?? 0
-  }
+  mosfetLoss = (losses.mosfet ?? 0) + (losses.mosfet_conduction ?? 0) + (losses.mosfet_switching ?? 0)
+  diodeLoss  = (losses.diode ?? 0) + (losses.diode_conduction ?? 0)
+  coreLoss   = (losses.core ?? 0) + (losses.inductor_core ?? 0)
 
   if (mosfetLoss > 0.1) {
     const mosfetVia = thermalVia('Q1 (MOSFET)', mosfetLoss, `${mosfetLoss.toFixed(1)} W conduction + switching losses`)

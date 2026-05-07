@@ -20,7 +20,11 @@ export type { FeedbackOptions } from '../engine/feedback'
 export type { SoftStartOptions } from '../engine/soft-start'
 
 export type { TopologyId } from './workbenchStore'
-export type ActiveVizTab = 'waveforms' | 'bode' | 'losses' | 'thermal' | 'monte-carlo' | 'ltspice-comparison' | 'transient' | 'emi' | 'efficiency-map' | 'layout' | 'input-filter'
+export type ActiveVizTab = 'waveforms' | 'bode' | 'losses' | 'thermal' | 'monte-carlo' | 'ltspice-comparison' | 'transient' | 'emi' | 'efficiency-map' | 'layout' | 'input-filter' | 'results'
+export type SweepParam = 'vin' | 'vout' | 'iout' | 'fsw' | 'ripple_ratio' | 'ambient_temp'
+export interface SweepPoint { paramValue: number; result: DesignResult | null; phaseMargin: number | null }
+export interface SweepResult { sweepParam: SweepParam; points: SweepPoint[] }
+export interface SweepRequest { topology: TopologyId; baseSpec: DesignSpec; sweepParam: SweepParam; min: number; max: number; steps: number }
 
 export interface MCRunRequest {
   iterations: number
@@ -122,6 +126,22 @@ export interface DesignStoreState {
   setEmiResult: (res: EMIResult | null) => void
   setActiveVizTab: (tab: ActiveVizTab) => void
 
+  activeEquationId: string | null
+  setActiveEquationId: (id: string | null) => void
+
+  // Parameter sweep
+  isSweepOpen: boolean
+  setIsSweepOpen: (open: boolean) => void
+  sweepLoading: boolean
+  sweepProgress: number
+  sweepProgressTotal: number
+  sweepResult: SweepResult | null
+  sweepRequest: SweepRequest | null
+  requestSweep: (req: SweepRequest) => void
+  clearSweepRequest: () => void
+  setSweepResult: (r: SweepResult | null) => void
+  setSweepProgress: (current: number, total: number) => void
+
   selectedComponents: SelectedComponents
   setSelectedComponent: <K extends keyof SelectedComponents>(key: K, value: SelectedComponents[K]) => void
 
@@ -214,6 +234,17 @@ export const useDesignStore = create<DesignStoreState>(
     isSettingsOpen: false,
     digiKeyEnabled: false,
 
+    // Equation explorer state
+    activeEquationId: null,
+
+    // Sweep analysis state
+    isSweepOpen: false,
+    sweepLoading: false,
+    sweepProgress: 0,
+    sweepProgressTotal: 0,
+    sweepResult: null,
+    sweepRequest: null,
+
     saveToComparison: () => {
       const { topology, spec, result } = get()
       if (!result) return
@@ -296,6 +327,14 @@ export const useDesignStore = create<DesignStoreState>(
       set({ emiResult }),
 
     setActiveVizTab: (activeVizTab) => set({ activeVizTab }),
+
+    setActiveEquationId: (activeEquationId) => set({ activeEquationId }),
+
+    setIsSweepOpen: (open) => set({ isSweepOpen: open }),
+    requestSweep: (req) => set({ sweepRequest: req, sweepLoading: true, sweepResult: null, sweepProgress: 0, sweepProgressTotal: 0 }),
+    clearSweepRequest: () => set({ sweepRequest: null }),
+    setSweepResult: (r) => set({ sweepResult: r, sweepLoading: false }),
+    setSweepProgress: (current, total) => set({ sweepProgress: current, sweepProgressTotal: total }),
 
     setNotes: (notes) => set({ notes, isModified: true }),
 

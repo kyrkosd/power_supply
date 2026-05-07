@@ -12,6 +12,8 @@ import { useDesignStore, type ActiveVizTab } from './store/design-store'
 import { DesignComparison } from './components/ComparisonView/DesignComparison'
 import { SequencingView } from './components/SequencingView/SequencingView'
 import { Settings } from './components/Settings/Settings'
+import { EquationExplorer } from './components/EquationExplorer/EquationExplorer'
+import { SweepView } from './components/SweepView/SweepView'
 import { validateSpec } from './engine/validation'
 import styles from './App.module.css'
 
@@ -83,6 +85,10 @@ export default function App(): React.ReactElement {
   const clearTransientRunRequest  = useDesignStore((s) => s.clearTransientRunRequest)
   const setTransientResult        = useDesignStore((s) => s.setTransientResult)
   const setEmiResult              = useDesignStore((s) => s.setEmiResult)
+  const sweepRequest              = useDesignStore((s) => s.sweepRequest)
+  const clearSweepRequest         = useDesignStore((s) => s.clearSweepRequest)
+  const setSweepResult            = useDesignStore((s) => s.setSweepResult)
+  const setSweepProgress          = useDesignStore((s) => s.setSweepProgress)
 
   const workerRef = useRef<Worker | null>(null)
 
@@ -118,6 +124,10 @@ export default function App(): React.ReactElement {
         setEfficiencyMapResult(msg.payload)
       } else if (msg?.type === 'TRANSIENT_RESULT' && msg.payload) {
         setTransientResult(msg.payload)
+      } else if (msg?.type === 'SWEEP_PROGRESS' && msg.payload) {
+        setSweepProgress(msg.payload.current, msg.payload.total)
+      } else if (msg?.type === 'SWEEP_RESULT' && msg.payload) {
+        setSweepResult(msg.payload)
       } else if (msg?.type === 'ERROR' && msg.payload) {
         console.error('Engine worker error:', msg.payload.message)
       }
@@ -130,7 +140,7 @@ export default function App(): React.ReactElement {
       worker.terminate()
       workerRef.current = null
     }
-  }, [setResult, setMcResult, setEfficiencyMapResult, setTransientResult, setEmiResult])
+  }, [setResult, setMcResult, setEfficiencyMapResult, setTransientResult, setEmiResult, setSweepResult, setSweepProgress])
 
   // Engine worker — dispatch design computation on spec/topology change
   // Skip when validation errors exist; cancelComputing clears the spinner.
@@ -168,12 +178,21 @@ export default function App(): React.ReactElement {
     clearTransientRunRequest()
   }, [transientRunRequest, clearTransientRunRequest])
 
+  // Engine worker — dispatch parameter sweep when requested
+  useEffect(() => {
+    if (!sweepRequest) return
+    workerRef.current?.postMessage({ type: 'SWEEP_COMPUTE', payload: sweepRequest })
+    clearSweepRequest()
+  }, [sweepRequest, clearSweepRequest])
+
   return (
     <div className={styles.shell}>
       <FirstRunWelcome />
       <DesignComparison />
       <SequencingView />
       <Settings />
+      <EquationExplorer />
+      <SweepView />
       <Toolbar />
       <div className={styles.workspace}>
         <aside className={styles.sidebar}>
