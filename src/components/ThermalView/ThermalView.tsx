@@ -22,6 +22,28 @@ interface ThermalComponent {
   tjMax: number  // °C — rated max junction temperature
 }
 
+interface TransformerLosses {
+  primaryCopper?: number
+  secondaryCopper?: number
+  mosfet?: number
+  diode?: number
+  clamp?: number
+}
+
+interface SwitchingLosses {
+  mosfet_conduction?: number
+  mosfet_switching?: number
+  diode_conduction?: number
+}
+
+function isTransformerLosses(losses: any): losses is TransformerLosses {
+  return 'primaryCopper' in losses || 'secondaryCopper' in losses || 'mosfet' in losses || 'diode' in losses || 'clamp' in losses
+}
+
+function isSwitchingLosses(losses: any): losses is SwitchingLosses {
+  return 'mosfet_conduction' in losses || 'mosfet_switching' in losses || 'diode_conduction' in losses
+}
+
 export function ThermalView() {
   const { result, spec, updateSpec } = useDesignStore()
   const [mosfetPkg, setMosfetPkg] = useState<MosfetPackageId>('DPAK')
@@ -43,12 +65,26 @@ export function ThermalView() {
   const pkg = MOSFET_PACKAGES.find((p) => p.id === mosfetPkg)!
 
   // Handle both loss structures: simplified (flyback/forward) and 9-component (buck/boost/etc)
-  const losses = result.losses as any
-  const primaryCopper = losses.primaryCopper ?? 0
-  const secondaryCopper = losses.secondaryCopper ?? 0
-  const mosfetLoss = losses.mosfet ?? (losses.mosfet_conduction + losses.mosfet_switching) ?? 0
-  const diodeLoss = losses.diode ?? losses.diode_conduction ?? 0
-  const clampLoss = losses.clamp ?? 0
+    const losses = result.losses
+
+  let primaryCopper = 0
+  let secondaryCopper = 0
+  let mosfetLoss = 0
+  let diodeLoss = 0
+  let clampLoss = 0
+
+  if (losses) {
+    if (isTransformerLosses(losses)) {
+      primaryCopper = losses.primaryCopper ?? 0
+      secondaryCopper = losses.secondaryCopper ?? 0
+      mosfetLoss = losses.mosfet ?? 0
+      diodeLoss = losses.diode ?? 0
+      clampLoss = losses.clamp ?? 0
+    } else if (isSwitchingLosses(losses)) {
+      mosfetLoss = (losses.mosfet_conduction ?? 0) + (losses.mosfet_switching ?? 0)
+      diodeLoss = losses.diode_conduction ?? 0
+    }
+  }
 
   // DCR-based inductor loss estimate: P = I²_rms × DCR
   // Assume DCR ≈ 0.05 Ω for a typical SMD power inductor (conservative)
