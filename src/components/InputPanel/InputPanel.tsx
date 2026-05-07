@@ -463,6 +463,25 @@ export function InputPanel(): React.ReactElement {
               </div>
               <div className={styles.advancedRow}>
                 <label className={styles.advancedLabel}>
+                  Rectification
+                  <Tooltip
+                    content="Synchronous: replaces the freewheeling diode with a low-side MOSFET (Q2). Eliminates 0.7 V diode drop → higher efficiency at heavy load. At light load, gate drive overhead exceeds diode savings — crossover typically at 10–20 % of full load. Requires dead-time control to prevent shoot-through."
+                    side="right"
+                  >
+                    <span className={styles.infoIcon}>ⓘ</span>
+                  </Tooltip>
+                </label>
+                <select
+                  className={styles.advancedSelect}
+                  value={spec.rectification ?? 'diode'}
+                  onChange={(e) => updateSpec({ rectification: e.target.value as 'diode' | 'synchronous' })}
+                >
+                  <option value="diode">Diode (async)</option>
+                  <option value="synchronous">Synchronous FET</option>
+                </select>
+              </div>
+              <div className={styles.advancedRow}>
+                <label className={styles.advancedLabel}>
                   Control mode
                   <Tooltip
                     content="Voltage mode: Type-II compensator, LC double pole in plant. Current mode (PCM): inner current loop removes the inductor pole — single-pole plant, simpler compensation, better line rejection but requires slope comp when D > 50 %."
@@ -525,6 +544,34 @@ export function InputPanel(): React.ReactElement {
                   )}
                 </>
               )}
+            </div>
+          </details>
+        )}
+
+        {/* ── Advanced (boost / buck-boost / sepic — sync rectification) ── */}
+        {(topology === 'boost' || topology === 'buck-boost' || topology === 'sepic') && (
+          <details className={styles.advancedSection}>
+            <summary className={styles.advancedTitle}>Advanced</summary>
+            <div className={styles.advancedBody}>
+              <div className={styles.advancedRow}>
+                <label className={styles.advancedLabel}>
+                  Rectification
+                  <Tooltip
+                    content="Synchronous: replaces the freewheeling diode with a low-side MOSFET (Q2). Eliminates 0.7 V diode drop → higher efficiency at heavy load. At light load, gate drive overhead exceeds diode savings — crossover typically at 10–20 % of full load."
+                    side="right"
+                  >
+                    <span className={styles.infoIcon}>ⓘ</span>
+                  </Tooltip>
+                </label>
+                <select
+                  className={styles.advancedSelect}
+                  value={spec.rectification ?? 'diode'}
+                  onChange={(e) => updateSpec({ rectification: e.target.value as 'diode' | 'synchronous' })}
+                >
+                  <option value="diode">Diode (async)</option>
+                  <option value="synchronous">Synchronous FET</option>
+                </select>
+              </div>
             </div>
           </details>
         )}

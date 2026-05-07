@@ -39,10 +39,10 @@ export const boostTopology: Topology = {
   name: 'Boost (Step-Up)',
 
   compute(spec: DesignSpec): DesignResult {
-    const { vinMin, vout, iout, fsw, rippleRatio, voutRippleMax, efficiency } = spec
+    const { vinMin, vout, iout, fsw, rippleRatio, voutRippleMax, efficiency: etaSpec } = spec
 
     // 1. Duty cycle: D = 1 - (Vin × η) / Vout
-    const rawDuty = 1 - (vinMin * Math.min(Math.max(efficiency, 0.5), 1)) / vout
+    const rawDuty = 1 - (vinMin * Math.min(Math.max(etaSpec, 0.5), 1)) / vout
     const dutyCycle = normalizeDuty(rawDuty)
 
     // 2. Inductor: L = Vin × D / (fsw × ΔIL)
@@ -94,14 +94,86 @@ export const boostTopology: Topology = {
     const saturation_check = checkSaturation(peakCurrent, inputCurrent)
     if (saturation_check.warning) warnings.push(saturation_check.warning)
 
+    // ── Loss estimation ──────────────────────────────────────────────────────
+    // Device assumptions (match LossBreakdown.tsx DEVICE_ASSUMPTIONS)
+    const RDS_ON   = 0.02    // Ω  — control FET
+    const T_RISE   = 25e-9   // s
+    const T_FALL   = 25e-9   // s
+    const QG       = 12e-9   // C
+    const VF       = 0.7     // V  — boost diode
+    const DCR      = 0.045   // Ω
+    const ESR      = 0.02    // Ω
+    const CORE_F   = 0.02    // —
+
+    // Sync FET device assumptions
+    const RDS_SYNC = 0.008   // Ω
+    const T_DEAD   = 30e-9   // s
+    const COSS_S   = 100e-12 // F
+    const QG_S     = 15e-9   // C
+    const VF_BODY  = 0.7     // V
+
+    const syncMode = spec.rectification === 'synchronous'
+    const I_L_rms  = Math.sqrt(inputCurrent ** 2 + deltaIL ** 2 / 12)
+
+    // Control MOSFET: conducts during D (switch on, diode off)
+    // Boost switch carries inductor current (= input current) for duty D
+    // TI SLVA618 eq. 3
+    const mosfet_conduction = RDS_ON * I_L_rms ** 2 * dutyCycle
+    const mosfet_switching  = 0.5 * vinMin * peakCurrent * (T_RISE + T_FALL) * fsw
+    const mosfet_gate       = QG * vout * fsw
+
+    const inductor_copper = DCR * I_L_rms ** 2
+    const inductor_core   = CORE_F * inputCurrent * deltaIL
+
+    // Output diode / sync FET: conducts during (1-D)
+    // Boost output diode carries iout during (1-D); full output current
+    const diode_conduction = syncMode ? 0 : VF * iout * (1 - dutyCycle)
+
+    // Sync: N=1 boost, sync FET replaces output diode
+    // P_sync = Rds_sync × I_rms_sync² where I_rms_sync = I_L_rms during (1-D)
+    const sync_conduction = syncMode
+      ? RDS_SYNC * I_L_rms ** 2 * (1 - dutyCycle)
+      : 0
+
+    // Dead-time + Coss + gate overhead (2 transitions per period)
+    const sync_dead_time = syncMode
+      ? (VF_BODY * inputCurrent * 2 * T_DEAD * fsw
+       + 0.5 * COSS_S * vout ** 2 * fsw
+       + QG_S * vout * fsw)
+      : 0
+
+    // Output cap ESR: pulsed diode current in boost
+    const Ic_rms      = iout * Math.sqrt(dutyCycle / (1 - dutyCycle))
+    const capacitor_esr = Ic_rms ** 2 * ESR
+
+    const total = mosfet_conduction + mosfet_switching + mosfet_gate +
+                  inductor_copper + inductor_core + diode_conduction +
+                  sync_conduction + sync_dead_time + capacitor_esr
+
+    const pout = vout * iout
+    const efficiency = pout <= 0 ? 0 : pout / (pout + total)
+
     return {
       dutyCycle,
       inductance,
       capacitance,
       peakCurrent,
+      efficiency,
       ccm_dcm_boundary,
       operating_mode,
       saturation_check,
+      losses: {
+        mosfet_conduction,
+        mosfet_switching,
+        mosfet_gate,
+        inductor_copper,
+        inductor_core,
+        diode_conduction,
+        sync_conduction,
+        sync_dead_time,
+        capacitor_esr,
+        total,
+      },
       warnings,
     }
   },

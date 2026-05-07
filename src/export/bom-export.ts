@@ -140,20 +140,41 @@ export function generateBOM(
       : 'No match in database — check requirements',
   })
 
-  // ── D1 — Schottky rectifier (output / secondary) ──────────────────────
-  rows.push({
-    ref:          'D1',
-    component:    'Schottky Diode',
-    value:        '-',
-    rating:       `Vr≥${diodeVr.toFixed(0)} V; If≥${spec.iout.toFixed(1)} A`,
-    pkg:          '-',
-    manufacturer: '-',
-    partNumber:   '-',
-    qty:          1,
-    notes:        topology === 'flyback' || topology === 'forward'
-      ? 'Secondary-side rectifier'
-      : 'Synchronous-capable; can replace with sync MOSFET',
-  })
+  const NON_ISOLATED_TOPOLOGIES = new Set(['buck', 'boost', 'buck-boost', 'sepic'])
+  const isSyncMode = spec.rectification === 'synchronous' && NON_ISOLATED_TOPOLOGIES.has(topology)
+
+  // ── D1 — Schottky rectifier (or Q2 in sync mode) ─────────────────────
+  if (isSyncMode) {
+    // Sync mode: D1 is replaced by Q2 low-side FET; show Q2 row instead
+    const syncFet = suggestMosfets(mosfetVds).slice().sort((a, b) => a.rds_on_mohm - b.rds_on_mohm)[0] ?? null
+    rows.push({
+      ref:          'Q2',
+      component:    'MOSFET (Sync)',
+      value:        '-',
+      rating:       `Vds≥${mosfetVds.toFixed(0)} V; Rds≤8 mΩ; Id≥${spec.iout.toFixed(1)} A`,
+      pkg:          syncFet?.package ?? '-',
+      manufacturer: syncFet?.manufacturer ?? '-',
+      partNumber:   syncFet?.part_number ?? '-',
+      qty:          spec.phases ?? 1,
+      notes:        syncFet
+        ? `Low-side sync FET: Rds=${syncFet.rds_on_mohm} mΩ; Qg=${syncFet.qg_nc} nC — optimise for low Rds_on`
+        : 'Low-side sync FET — no match in database; check Rds_on < 10 mΩ',
+    })
+  } else {
+    rows.push({
+      ref:          'D1',
+      component:    'Schottky Diode',
+      value:        '-',
+      rating:       `Vr≥${diodeVr.toFixed(0)} V; If≥${spec.iout.toFixed(1)} A`,
+      pkg:          '-',
+      manufacturer: '-',
+      partNumber:   '-',
+      qty:          1,
+      notes:        topology === 'flyback' || topology === 'forward'
+        ? 'Secondary-side rectifier'
+        : 'Asynchronous; replace with sync MOSFET to improve light-load efficiency',
+    })
+  }
 
   // ── D2 — Forward converter freewheeling diode ─────────────────────────
   if (topology === 'forward') {

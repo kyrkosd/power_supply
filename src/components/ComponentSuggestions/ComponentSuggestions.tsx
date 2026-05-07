@@ -85,6 +85,14 @@ export function ComponentSuggestions() {
   const inductor  = suggestInductors(result.inductance * 1e6, result.peakCurrent)[0]
   const capacitor = suggestCapacitors(result.capacitance * 1e6, spec.vout * 1.5)[0]
   const mosfet    = suggestMosfets(mosfetVdsRequired(topology, spec.vinMax, spec.vout))[0]
+  // Sync FET: same Vds rating, optimise for low Rds (not low Qg) — sort ascending Rds
+  const syncMode  = spec.rectification === 'synchronous'
+  const NON_ISOLATED = new Set(['buck', 'boost', 'buck-boost', 'sepic'])
+  const syncMosfet = (syncMode && NON_ISOLATED.has(topology))
+    ? suggestMosfets(mosfetVdsRequired(topology, spec.vinMax, spec.vout))
+        .slice()
+        .sort((a, b) => a.rds_on_mohm - b.rds_on_mohm)[0]
+    : null
 
   const gateDrive: GateDriveResult | null = mosfet
     ? computeGateDrive(spec, result, mosfet)
@@ -216,6 +224,35 @@ export function ComponentSuggestions() {
               }}
             />
           )}
+        </div>
+      )}
+
+      {/* ── Sync FET (Q2) — synchronous rectification only ──────── */}
+      {syncMosfet && (
+        <div className={styles.section}>
+          <div className={styles.sectionTitle}>
+            Sync FET (Q2)
+            <Tooltip
+              content={
+                <div>
+                  <strong>Low-Side Sync MOSFET (Q2)</strong><br />
+                  Replaces freewheeling diode — eliminates 0.7 V Vf drop.<br />
+                  Optimised for lowest Rds_on (not Qg): gate drive overhead is<br />
+                  less critical for the sync FET since it switches at zero-current<br />
+                  (body diode commutates first during dead time).<br />
+                  <small style={{ color: 'var(--text-secondary)' }}>Vds same as Q1; sorted by lowest Rds_on</small>
+                </div>
+              }
+              side="right"
+            >
+              <span className={styles.infoIcon}>ⓘ</span>
+            </Tooltip>
+          </div>
+          <MosfetCard
+            data={syncMosfet}
+            isSelected={false}
+            onSelect={() => {/* sync FET selection not persisted in store yet */}}
+          />
         </div>
       )}
 

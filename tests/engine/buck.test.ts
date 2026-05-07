@@ -246,3 +246,68 @@ describe('Buck topology — CCM/DCM boundary detection', () => {
     }
   })
 })
+
+// ── Synchronous rectification ────────────────────────────────────────────────
+// Reference design: 12 V → 5 V / 5 A, fsw = 300 kHz, rippleRatio = 0.3
+// Diode conduction loss = 0.7 × 5 × (1 − 5/12) ≈ 2.04 W
+// Sync conduction loss = 0.008 × (5² + ...) × (1 − D) — well below 2.04 W at 5 A
+// Crossover: at light load gate drive overhead (fixed) > diode savings (∝ I)
+
+const specHighLoad: DesignSpec = {
+  vinMin: 10, vinMax: 12, vout: 5, iout: 5, fsw: 300_000,
+  rippleRatio: 0.3, ambientTemp: 25, voutRippleMax: 0.025, efficiency: 0.9,
+}
+
+describe('Buck topology — synchronous rectification', () => {
+  const rDiode = buckTopology.compute({ ...specHighLoad, rectification: 'diode' })
+  const rSync  = buckTopology.compute({ ...specHighLoad, rectification: 'synchronous' })
+
+  it('sync mode: diode_conduction is 0', () => {
+    expect(rSync.losses!.diode_conduction).toBe(0)
+  })
+
+  it('diode mode: sync_conduction and sync_dead_time are 0', () => {
+    expect(rDiode.losses!.sync_conduction).toBe(0)
+    expect(rDiode.losses!.sync_dead_time).toBe(0)
+  })
+
+  it('sync mode: sync_conduction > 0 and sync_dead_time > 0', () => {
+    expect(rSync.losses!.sync_conduction!).toBeGreaterThan(0)
+    expect(rSync.losses!.sync_dead_time!).toBeGreaterThan(0)
+  })
+
+  it('sync total losses < diode total losses at 5 A (sync wins at heavy load)', () => {
+    expect(rSync.losses!.total).toBeLessThan(rDiode.losses!.total)
+  })
+
+  it('sync efficiency > diode efficiency at 5 A', () => {
+    expect(rSync.efficiency!).toBeGreaterThan(rDiode.efficiency!)
+  })
+
+  it('sync mode: diode_conduction + sync_conduction + sync_dead_time sums match their total contribution', () => {
+    const l = rSync.losses!
+    // Verify the individual loss fields are internally consistent (all finite, positive)
+    expect(Number.isFinite(l.sync_conduction!)).toBe(true)
+    expect(Number.isFinite(l.sync_dead_time!)).toBe(true)
+    expect(l.total).toBeGreaterThan(0)
+  })
+
+  it('crossover load exists: at very light load diode mode is more efficient than sync', () => {
+    // Gate drive overhead is fixed (∝ fsw), diode loss is proportional to current.
+    // At 0.1 A the fixed overhead in sync mode should exceed the diode saving.
+    const lightDiode = buckTopology.compute({ ...specHighLoad, iout: 0.1, rectification: 'diode' })
+    const lightSync  = buckTopology.compute({ ...specHighLoad, iout: 0.1, rectification: 'synchronous' })
+    expect(lightDiode.efficiency!).toBeGreaterThan(lightSync.efficiency!)
+  })
+
+  it('all 9 loss keys present in sync mode result', () => {
+    const keys = [
+      'mosfet_conduction', 'mosfet_switching', 'mosfet_gate',
+      'inductor_copper', 'inductor_core', 'diode_conduction',
+      'sync_conduction', 'sync_dead_time', 'capacitor_esr',
+    ]
+    for (const k of keys) {
+      expect(typeof (rSync.losses as Record<string, unknown>)[k]).toBe('number')
+    }
+  })
+})

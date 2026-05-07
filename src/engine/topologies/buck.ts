@@ -16,6 +16,13 @@ const DCR     = 0.045    // Ω  — inductor DCR
 const ESR     = 0.02     // Ω  — output capacitor ESR
 const CORE_FACTOR = 0.02 // —  — Steinmetz core-loss coefficient (simplified)
 
+// Synchronous rectification device assumptions (low-side sync FET, optimised for low Rds).
+const RDS_ON_SYNC = 0.008  // Ω  — sync FET, lower than control FET
+const T_DEAD      = 30e-9  // s  — dead time per transition (30 ns typical)
+const COSS_SYNC   = 100e-12 // F — output capacitance sync FET
+const QG_SYNC     = 15e-9  // C  — gate charge sync FET (Vgs = 5 V)
+const VF_BODY     = 0.7    // V  — body diode Vf during dead time
+
 // Buck (step-down) converter steady-state design equations.
 // Assumes CCM (Continuous Conduction Mode) and ideal switch/diode.
 export const buckTopology: Topology = {
@@ -33,7 +40,6 @@ export const buckTopology: Topology = {
     const L_single = (vout * (1 - dutyCycle)) / (deltaIL_single * fsw)
     const rippleVoltage = Math.max(voutRippleMax, 0.01 * vout)
     const C_single = deltaIL_single / (8 * fsw * rippleVoltage)
-    const peak_single = iout + deltaIL_single / 2
 
     // ── Multi-phase ripple cancellation ──────────────────────────────────────
     // Erickson & Maksimovic §12.3 — N-phase interleaved buck
@@ -127,14 +133,35 @@ export const buckTopology: Topology = {
     // Inductor core: simplified Steinmetz per phase
     const inductor_core = N * CORE_FACTOR * I_phase_avg * deltaIL_phase
 
+    const syncMode = spec.rectification === 'synchronous'
+
     // Freewheeling diode / sync-rect: total current same regardless of N
-    const diode_conduction = VF * iout * (1 - dutyCycle)
+    // In sync mode the diode is replaced by a low-side MOSFET — no Vf drop.
+    const diode_conduction = syncMode ? 0 : VF * iout * (1 - dutyCycle)
+
+    // Synchronous FET losses (zero in diode mode):
+    // Conduction: N sync FETs each carrying I_phase during (1-D)
+    // P_sync = N × Rds_sync × I_phase_rms² × (1-D) — Erickson §4.3
+    const sync_conduction = syncMode
+      ? N * RDS_ON_SYNC * (I_L_rms ** 2) * (1 - dutyCycle)
+      : 0
+
+    // Overhead: body diode dead-time (2 transitions) + Coss + Q2 gate drive
+    // P_dead = N × VF_body × I_phase_avg × 2 × t_dead × fsw
+    // P_coss = N × 0.5 × Coss × Vin² × fsw
+    // P_gate = N × Qg_sync × Vin × fsw
+    const sync_dead_time = syncMode
+      ? N * (VF_BODY * I_phase_avg * 2 * T_DEAD * fsw
+           + 0.5 * COSS_SYNC * vinMax ** 2 * fsw
+           + QG_SYNC * vinMax * fsw)
+      : 0
 
     // Output capacitor ESR loss (reduced by N-phase cancellation)
     const capacitor_esr = Ic_out_rms ** 2 * ESR
 
     const total = mosfet_conduction + mosfet_switching + mosfet_gate +
-                  inductor_copper + inductor_core + diode_conduction + capacitor_esr
+                  inductor_copper + inductor_core + diode_conduction +
+                  sync_conduction + sync_dead_time + capacitor_esr
 
     const pout = vout * iout
     const efficiency = pout <= 0 ? 0 : pout / (pout + total)
@@ -163,6 +190,8 @@ export const buckTopology: Topology = {
         inductor_copper,
         inductor_core,
         diode_conduction,
+        sync_conduction,
+        sync_dead_time,
         capacitor_esr,
         total,
       },

@@ -274,7 +274,7 @@ export function designWinding(
   const extraRms: number[] = []
 
   if (topology === 'flyback' && result.secondaryOutputResults && spec.secondary_outputs) {
-    result.secondaryOutputResults.forEach((sr, i) => {
+    result.secondaryOutputResults.forEach((sr) => {
       const N_k  = Np / sr.ns
       const irms = flybackSecondaryRms(result.peakCurrent, N_k, D)
       extraSections.push(buildSection(sr.ns, irms, delta, MLT_m, bw_mm))

@@ -49,6 +49,9 @@ export interface DesignSpec {
   inputFilterCmChokeMh?: number      // CM choke in mH; 0 = auto
   // Multi-phase interleaved buck (1–6 phases, default 1).
   phases?: number
+  // Synchronous rectification: replace freewheeling diode with low-side FET.
+  // Applies to non-isolated topologies only (buck, boost, buck-boost, sepic).
+  rectification?: 'diode' | 'synchronous'
 }
 
 /** Computed values for one flyback secondary winding. */
@@ -107,6 +110,9 @@ export interface DesignResult {
     inductor_core?: number
     diode_conduction?: number
     capacitor_esr?: number
+    // Synchronous rectification loss keys (zero in diode mode)
+    sync_conduction?: number    // Q2 Rds×(1-D) conduction loss
+    sync_dead_time?: number     // Q2 body diode dead-time + Coss + gate drive
     // Legacy single key kept for compatibility
     mosfet?: number
     diode?: number

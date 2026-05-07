@@ -110,18 +110,51 @@ export const buckBoostTopology: Topology = {
     const diodeVrMax = vinMax + voutMag
     const diodeIfAvg = iout
 
-    // 6. Loss breakdown (same parameter estimates used across all non-isolated topologies)
+    // 6. Loss breakdown (device assumptions match LossBreakdown.tsx DEVICE_ASSUMPTIONS)
+    // TI SLUA618 eq. 3 for switching loss.
+    const RDS_ON   = 0.02    // Ω  — control FET
+    const T_RISE   = 25e-9   // s
+    const T_FALL   = 25e-9   // s
+    const QG       = 12e-9   // C
+    const VF       = 0.7     // V
+    const DCR      = 0.045   // Ω
+    const ESR      = 0.02    // Ω
+    const CORE_F   = 0.02    // —
+
+    // Sync FET assumptions
+    const RDS_SYNC = 0.008   // Ω
+    const T_DEAD   = 30e-9   // s
+    const COSS_S   = 100e-12 // F
+    const QG_S     = 15e-9   // C
+    const VF_BODY  = 0.7     // V
+
+    const syncMode = spec.rectification === 'synchronous'
     const I_sw_rms = IL_rms * Math.sqrt(dutyCycle)
-    const mosfet_conduction = I_sw_rms ** 2 * 0.02       // 20 mΩ Rds_on
-    const mosfet_switching = 0.5 * mosfetVdsMax * IL_peak * 50e-9 * fsw  // 25 ns rise + 25 ns fall
-    const mosfet_gate = 12e-9 * vinMin * fsw              // 12 nC Qg
-    const inductor_copper = IL_rms ** 2 * 0.045           // 45 mΩ DCR
-    const inductor_core = 0.02 * IL_dc * deltaIL          // Steinmetz placeholder
-    const diode_conduction = 0.7 * diodeIfAvg             // 0.7 V Vf, Schottky estimate
-    const capacitor_esr = I_cout_rms ** 2 * 0.02          // 20 mΩ output-cap ESR
+
+    const mosfet_conduction = RDS_ON * I_sw_rms ** 2
+    // TI SLUA618 eq. 3: P_sw = 0.5 × Vds × Ipeak × (tr + tf) × fsw
+    const mosfet_switching  = 0.5 * mosfetVdsMax * IL_peak * (T_RISE + T_FALL) * fsw
+    const mosfet_gate       = QG * vinMin * fsw
+    const inductor_copper   = DCR * IL_rms ** 2
+    const inductor_core     = CORE_F * IL_dc * deltaIL
+
+    const diode_conduction  = syncMode ? 0 : VF * diodeIfAvg * (1 - dutyCycle)
+
+    // Sync: freewheeling FET during (1-D)
+    const sync_conduction   = syncMode
+      ? RDS_SYNC * IL_rms ** 2 * (1 - dutyCycle)
+      : 0
+    const sync_dead_time    = syncMode
+      ? (VF_BODY * IL_dc * 2 * T_DEAD * fsw
+       + 0.5 * COSS_S * mosfetVdsMax ** 2 * fsw
+       + QG_S * mosfetVdsMax * fsw)
+      : 0
+
+    const capacitor_esr     = I_cout_rms ** 2 * ESR
 
     const totalLoss = mosfet_conduction + mosfet_switching + mosfet_gate +
-                      inductor_copper + inductor_core + diode_conduction + capacitor_esr
+                      inductor_copper + inductor_core + diode_conduction +
+                      sync_conduction + sync_dead_time + capacitor_esr
     const pout = voutMag * iout
     const calcEfficiency = pout <= 0 ? 0 : pout / (pout + totalLoss)
 
@@ -199,12 +232,15 @@ export const buckBoostTopology: Topology = {
       },
       efficiency: calcEfficiency,
       losses: {
-        primaryCopper: inductor_copper,
-        secondaryCopper: 0,
-        core: inductor_core,
-        mosfet: mosfet_conduction + mosfet_switching + mosfet_gate,
-        diode: diode_conduction,
-        clamp: capacitor_esr,
+        mosfet_conduction,
+        mosfet_switching,
+        mosfet_gate,
+        inductor_copper,
+        inductor_core,
+        diode_conduction,
+        sync_conduction,
+        sync_dead_time,
+        capacitor_esr,
         total: totalLoss,
       },
       mosfetVdsMax,

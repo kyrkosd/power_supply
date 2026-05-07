@@ -44,15 +44,59 @@ export const sepicTopology: Topology = {
     const mosfetVdsMax = vinMax + vout // Vds_max = Vin + Vout
     const diodeVrMax = vinMax + vout   // Vr_max = Vin + Vout
 
-    // 8. Losses
-    const inputInductorLoss = inputCurrentAvg ** 2 * 0.05 // Ω DCR
-    const outputInductorLoss = iout ** 2 * 0.05 // Ω DCR
-    const couplingCapEsrLoss = couplingCapRmsCurrent ** 2 * 0.1 // ESR
-    const outputCapEsrLoss = outputCapRmsCurrent ** 2 * 0.05 // ESR
-    const mosfetLoss = 2.5 // W
-    const diodeLoss = 1.5 // W
-    const totalLoss = inputInductorLoss + outputInductorLoss + couplingCapEsrLoss +
-                      outputCapEsrLoss + mosfetLoss + diodeLoss
+    // 8. Losses — device assumptions match LossBreakdown.tsx DEVICE_ASSUMPTIONS
+    // TI SLUA618 eq. 3 for switching loss; Erickson §3.3 for conduction.
+    const RDS_ON   = 0.02    // Ω  — control FET
+    const T_RISE   = 25e-9   // s
+    const T_FALL   = 25e-9   // s
+    const QG       = 12e-9   // C
+    const VF       = 0.7     // V
+    const DCR      = 0.045   // Ω  — per inductor
+    const ESR_CAP  = 0.02    // Ω  — output cap ESR
+    const CORE_F   = 0.02    // —
+
+    // Sync FET assumptions
+    const RDS_SYNC = 0.008   // Ω
+    const T_DEAD   = 30e-9   // s
+    const COSS_S   = 100e-12 // F
+    const QG_S     = 15e-9   // C
+    const VF_BODY  = 0.7     // V
+
+    const syncMode = spec.rectification === 'synchronous'
+
+    // SEPIC switch carries L1+L2 current (both inductors in series during ON)
+    const I_sw_avg = inputCurrentAvg + iout
+    const IL1_rms  = Math.sqrt(inputCurrentAvg ** 2 + deltaIL1 ** 2 / 12)
+    const I_sw_rms = IL1_rms * Math.sqrt(dutyCycle)   // simplified single-FET
+
+    // MOSFET losses — switch node voltage = Vin + Vout = mosfetVdsMax
+    const mosfet_conduction = RDS_ON * I_sw_rms ** 2
+    const mosfet_switching  = 0.5 * mosfetVdsMax * peakInputCurrent * (T_RISE + T_FALL) * fsw
+    const mosfet_gate       = QG * vinNom * fsw
+
+    // Both inductors have DCR copper loss
+    const inductor_copper   = DCR * (IL1_rms ** 2 + iout ** 2)
+    const inductor_core     = CORE_F * (inputCurrentAvg * deltaIL1 + iout * (0.4 * iout))
+
+    const diode_conduction  = syncMode ? 0 : VF * iout * (1 - dutyCycle)
+
+    // Sync FET during (1-D): carries output current
+    const sync_conduction   = syncMode
+      ? RDS_SYNC * iout ** 2 * (1 - dutyCycle)
+      : 0
+    const sync_dead_time    = syncMode
+      ? (VF_BODY * I_sw_avg * 2 * T_DEAD * fsw
+       + 0.5 * COSS_S * mosfetVdsMax ** 2 * fsw
+       + QG_S * mosfetVdsMax * fsw)
+      : 0
+
+    // Capacitor ESR: coupling cap + output cap
+    const capacitor_esr     = couplingCapRmsCurrent ** 2 * 0.1
+                            + outputCapRmsCurrent ** 2 * ESR_CAP
+
+    const totalLoss = mosfet_conduction + mosfet_switching + mosfet_gate +
+                      inductor_copper + inductor_core + diode_conduction +
+                      sync_conduction + sync_dead_time + capacitor_esr
 
     // CCM/DCM boundary detection
     // For SEPIC: Iout_crit = ΔIL1 × (1-D) / 2
@@ -101,14 +145,17 @@ export const sepicTopology: Topology = {
       mosfetVdsMax,
       diodeVrMax,
       losses: {
-        primaryCopper: inputInductorLoss,
-        secondaryCopper: outputInductorLoss,
-        core: 0.5, // Core loss estimate
-        mosfet: mosfetLoss,
-        diode: diodeLoss,
-        clamp: couplingCapEsrLoss + outputCapEsrLoss, // ESR losses
-        total: totalLoss
-      }
+        mosfet_conduction,
+        mosfet_switching,
+        mosfet_gate,
+        inductor_copper,
+        inductor_core,
+        diode_conduction,
+        sync_conduction,
+        sync_dead_time,
+        capacitor_esr,
+        total: totalLoss,
+      },
     }
   }
 }

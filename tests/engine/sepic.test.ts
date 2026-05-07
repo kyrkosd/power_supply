@@ -54,9 +54,9 @@ describe('SEPIC topology', () => {
   it('provides comprehensive loss breakdown', () => {
     expect(result.losses).toBeDefined()
     expect(result.losses!.total).toBeGreaterThan(0)
-    expect(result.losses!.primaryCopper).toBeGreaterThan(0) // L1 loss
-    expect(result.losses!.secondaryCopper).toBeGreaterThan(0) // L2 loss
-    expect(result.losses!.clamp).toBeGreaterThan(0) // ESR losses
+    expect(result.losses!.inductor_copper).toBeGreaterThan(0) // L1 + L2 DCR
+    expect(result.losses!.mosfet_conduction).toBeGreaterThan(0)
+    expect(result.losses!.capacitor_esr).toBeGreaterThan(0) // ESR losses
   })
 
   it('raises warnings for extreme duty cycles', () => {

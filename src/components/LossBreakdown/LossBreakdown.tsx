@@ -18,6 +18,8 @@ type LossKey =
   | 'inductor_copper'
   | 'inductor_core'
   | 'diode_conduction'
+  | 'sync_conduction'
+  | 'sync_dead_time'
   | 'capacitor_esr'
 
 interface LossBreakdownValues {
@@ -27,6 +29,8 @@ interface LossBreakdownValues {
   inductor_copper: number
   inductor_core: number
   diode_conduction: number
+  sync_conduction: number
+  sync_dead_time: number
   capacitor_esr: number
   total: number
   efficiency: number
@@ -37,12 +41,14 @@ const LOSS_SEGMENTS: Array<{
   label: string
   color: string
 }> = [
-  { key: 'mosfet_conduction', label: 'MOSFET conduction', color: '#1f4f8b' },
-  { key: 'mosfet_switching', label: 'MOSFET switching', color: '#3f72ff' },
-  { key: 'mosfet_gate', label: 'MOSFET gate drive', color: '#8fb9ff' },
+  { key: 'mosfet_conduction', label: 'Q1 conduction', color: '#1f4f8b' },
+  { key: 'mosfet_switching', label: 'Q1 switching', color: '#3f72ff' },
+  { key: 'mosfet_gate', label: 'Q1 gate drive', color: '#8fb9ff' },
   { key: 'inductor_copper', label: 'Inductor copper/DCR', color: '#f88f1f' },
   { key: 'inductor_core', label: 'Inductor core loss', color: '#ffb76b' },
   { key: 'diode_conduction', label: 'Diode conduction', color: '#d9382f' },
+  { key: 'sync_conduction', label: 'Q2 conduction (sync)', color: '#22c55e' },
+  { key: 'sync_dead_time', label: 'Q2 overhead (sync)', color: '#86efac' },
   { key: 'capacitor_esr', label: 'Capacitor ESR', color: '#7d7d7d' },
 ]
 
@@ -65,12 +71,23 @@ function formatPercent(value: number): string {
   return `${value.toFixed(0)}%`
 }
 
+// Sync FET device assumptions (mirror buck.ts constants)
+const SYNC_ASSUMPTIONS = {
+  rdsSync: 0.008,
+  tDead: 30e-9,
+  coss: 100e-12,
+  qgSync: 15e-9,
+  vfBody: 0.7,
+}
+
 // Compute buck efficiency curve for a given number of interleaved phases.
+// syncMode=true substitutes diode loss with Q2 Rds + dead-time overhead.
 // Uses same DEVICE_ASSUMPTIONS constants as buck.ts for consistency.
 function computeBuckEfficiencyCurve(
   spec: DesignSpec,
   result: DesignResult,
   phases: number,
+  syncMode = false,
 ): Array<{ loadCurrent: number; efficiency: number }> {
   const N = Math.max(1, phases)
   const D = Math.min(Math.max(spec.vout / spec.vinMax, 0.01), 0.99)
@@ -100,11 +117,19 @@ function computeBuckEfficiencyCurve(
     const mosfet_gate = N * DEVICE_ASSUMPTIONS.qg * spec.vinMax * fsw
     const inductor_copper = N * DEVICE_ASSUMPTIONS.dcr * IL_rms_phase ** 2
     const inductor_core = N * DEVICE_ASSUMPTIONS.coreFactor * I_phase * deltaIL_phase
-    const diode_conduction = DEVICE_ASSUMPTIONS.vf * loadCurrent * (1 - D)
+
+    const diode_loss = syncMode ? 0 : DEVICE_ASSUMPTIONS.vf * loadCurrent * (1 - D)
+    const sync_loss = syncMode
+      ? N * SYNC_ASSUMPTIONS.rdsSync * IL_rms_phase ** 2 * (1 - D)
+        + N * (SYNC_ASSUMPTIONS.vfBody * I_phase * 2 * SYNC_ASSUMPTIONS.tDead * fsw
+             + 0.5 * SYNC_ASSUMPTIONS.coss * spec.vinMax ** 2 * fsw
+             + SYNC_ASSUMPTIONS.qgSync * spec.vinMax * fsw)
+      : 0
+
     const capacitor_esr = Ic_out_rms ** 2 * DEVICE_ASSUMPTIONS.esr
 
     const total = mosfet_conduction + mosfet_switching + mosfet_gate +
-                  inductor_copper + inductor_core + diode_conduction + capacitor_esr
+                  inductor_copper + inductor_core + diode_loss + sync_loss + capacitor_esr
     const pout = spec.vout * loadCurrent
     return {
       loadCurrent,
@@ -115,7 +140,8 @@ function computeBuckEfficiencyCurve(
 
 function createEfficiencyCurve(spec: DesignSpec, result: DesignResult, topology: string) {
   if (topology !== 'buck') return []
-  return computeBuckEfficiencyCurve(spec, result, 1)
+  const syncMode = spec.rectification === 'synchronous'
+  return computeBuckEfficiencyCurve(spec, result, 1, syncMode)
 }
 
 export function LossBreakdown(): React.ReactElement {
@@ -148,7 +174,17 @@ export function LossBreakdown(): React.ReactElement {
     if (!result || topology !== 'buck') return []
     const N = result.phases ?? 1
     if (N <= 1) return []
-    return computeBuckEfficiencyCurve(spec, result, N)
+    const syncMode = spec.rectification === 'synchronous'
+    return computeBuckEfficiencyCurve(spec, result, N, syncMode)
+  }, [spec, result, topology])
+
+  // Sync comparison curve: show opposite rectification mode as dashed overlay (buck only)
+  const efficiencyCurveAltRect = useMemo(() => {
+    if (!result || topology !== 'buck') return []
+    const N = result.phases ?? 1
+    const isSync = spec.rectification === 'synchronous'
+    // Show the other mode as a comparison
+    return computeBuckEfficiencyCurve(spec, result, N, !isSync)
   }, [spec, result, topology])
 
   const operatingPoint = useMemo(() => {
@@ -169,7 +205,7 @@ export function LossBreakdown(): React.ReactElement {
     const chartWidth = width - margin.left - margin.right
     const chartHeight = height - margin.top - margin.bottom
 
-    const allPoints = [...efficiencyCurve, ...efficiencyCurveNPhase]
+    const allPoints = [...efficiencyCurve, ...efficiencyCurveNPhase, ...efficiencyCurveAltRect]
     const xDomain = [efficiencyCurve[0].loadCurrent, efficiencyCurve[efficiencyCurve.length - 1].loadCurrent]
     const yDomain = [
       Math.max(0, min(allPoints, (d) => d.efficiency)! - 2),
@@ -204,43 +240,50 @@ export function LossBreakdown(): React.ReactElement {
       .y((d) => yScale(d.efficiency))
       .curve(curveMonotoneX)
 
-    // Single-phase reference curve (dashed gray) when N > 1
-    if (efficiencyCurveNPhase.length > 0) {
-      root.append('path')
-        .datum(efficiencyCurve)
-        .attr('fill', 'none')
-        .attr('stroke', '#64748b')
-        .attr('stroke-width', 1.5)
-        .attr('stroke-dasharray', '4 3')
-        .attr('d', lineGenerator)
+    const isSync = spec.rectification === 'synchronous'
+    const N = result.phases ?? 1
+    const legendX = chartWidth - 140
+    let legendY = 6
 
-      // N-phase curve (solid, highlighted)
-      root.append('path')
-        .datum(efficiencyCurveNPhase)
-        .attr('fill', 'none')
-        .attr('stroke', '#32c9e6')
-        .attr('stroke-width', 2.5)
-        .attr('d', lineGenerator)
-
-      // Legend
-      const N = result.phases ?? 1
-      const legendX = chartWidth - 130
-      root.append('line').attr('x1', legendX).attr('x2', legendX + 20).attr('y1', 6).attr('y2', 6)
-        .attr('stroke', '#64748b').attr('stroke-width', 1.5).attr('stroke-dasharray', '4 3')
-      root.append('text').attr('x', legendX + 24).attr('y', 10).attr('fill', 'var(--text-muted)').attr('font-size', '10px').text('1-phase')
-      root.append('line').attr('x1', legendX).attr('x2', legendX + 20).attr('y1', 20).attr('y2', 20)
-        .attr('stroke', '#32c9e6').attr('stroke-width', 2.5)
-      root.append('text').attr('x', legendX + 24).attr('y', 24).attr('fill', 'var(--text-muted)').attr('font-size', '10px').text(`${N}-phase`)
-    } else {
-      root.append('path')
-        .datum(efficiencyCurve)
-        .attr('fill', 'none')
-        .attr('stroke', '#32c9e6')
-        .attr('stroke-width', 2.5)
-        .attr('d', lineGenerator)
+    const addLegendEntry = (stroke: string, dash: string | null, w: number, label: string) => {
+      root.append('line').attr('x1', legendX).attr('x2', legendX + 20)
+        .attr('y1', legendY).attr('y2', legendY)
+        .attr('stroke', stroke).attr('stroke-width', w)
+        .attr('stroke-dasharray', dash ?? '')
+      root.append('text').attr('x', legendX + 24).attr('y', legendY + 4)
+        .attr('fill', 'var(--text-muted)').attr('font-size', '10px').text(label)
+      legendY += 14
     }
 
-    const activeCurve = efficiencyCurveNPhase.length > 0 ? efficiencyCurveNPhase : efficiencyCurve
+    // Alternate rectification reference (dashed)
+    if (efficiencyCurveAltRect.length > 0) {
+      root.append('path').datum(efficiencyCurveAltRect)
+        .attr('fill', 'none').attr('stroke', '#d9382f')
+        .attr('stroke-width', 1.5).attr('stroke-dasharray', '4 3')
+        .attr('d', lineGenerator)
+      addLegendEntry('#d9382f', '4 3', 1.5, isSync ? 'Diode' : 'Sync')
+    }
+
+    // Multi-phase baseline reference when N > 1 (single-phase dashed gray)
+    if (efficiencyCurveNPhase.length > 0) {
+      root.append('path').datum(efficiencyCurve)
+        .attr('fill', 'none').attr('stroke', '#64748b')
+        .attr('stroke-width', 1.5).attr('stroke-dasharray', '4 3')
+        .attr('d', lineGenerator)
+      addLegendEntry('#64748b', '4 3', 1.5, '1-phase')
+    }
+
+    // Primary curve (solid, highlighted)
+    const primaryCurve = efficiencyCurveNPhase.length > 0 ? efficiencyCurveNPhase : efficiencyCurve
+    root.append('path').datum(primaryCurve)
+      .attr('fill', 'none').attr('stroke', '#32c9e6')
+      .attr('stroke-width', 2.5).attr('d', lineGenerator)
+    const primaryLabel = efficiencyCurveNPhase.length > 0
+      ? `${N}-phase${isSync ? ' sync' : ''}`
+      : (isSync ? 'Sync FET' : 'Diode')
+    addLegendEntry('#32c9e6', null, 2.5, primaryLabel)
+
+    const activeCurve = primaryCurve
     if (operatingPoint) {
       const opEff = activeCurve[activeCurve.length - 1]?.efficiency ?? operatingPoint.efficiency
       root.append('circle')
@@ -265,7 +308,7 @@ export function LossBreakdown(): React.ReactElement {
       .attr('fill', 'var(--text-muted)')
       .attr('font-size', '11px')
       .text('Efficiency vs Load')
-  }, [efficiencyCurve, efficiencyCurveNPhase, operatingPoint, result])
+  }, [efficiencyCurve, efficiencyCurveNPhase, efficiencyCurveAltRect, operatingPoint, result, spec.rectification])
 
   if (!result) {
     return (

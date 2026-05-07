@@ -78,6 +78,7 @@ function formatResistance(value: number) {
 
 function createBuckSchematic(spec: DesignSpec, result: DesignResult | null): SchematicDefinition {
   const N = Math.max(1, Math.min(6, Math.round(spec.phases ?? 1)))
+  const syncMode = spec.rectification === 'synchronous'
   const duty = result?.dutyCycle ?? Math.min(Math.max(spec.vout / spec.vinMax, 0.01), 0.99)
   // Ripple cancellation factor for annotation (Erickson §12.3)
   const ND = N * duty
@@ -152,14 +153,17 @@ function createBuckSchematic(spec: DesignSpec, result: DesignResult | null): Sch
     },
     {
       id: 'D1',
-      type: 'diode',
+      type: syncMode ? 'switch' : 'diode',
       x: 200,
       y: 186,
       width: 92,
       height: 72,
-      label: N > 1 ? `D1–D${N}` : 'D1',
-      value: N > 1 ? `Freewheel ×${N}` : 'Freewheel diode',
+      label: syncMode ? (N > 1 ? `Q2–Q${N + 1}` : 'Q2') : (N > 1 ? `D1–D${N}` : 'D1'),
+      value: syncMode
+        ? `Rds=8mΩ${N > 1 ? ` ×${N}` : ''}`
+        : (N > 1 ? `Freewheel ×${N}` : 'Freewheel diode'),
       status: 'normal',
+      meta: syncMode ? 'Low-side sync FET (replaces freewheeling diode)' : undefined,
     },
     {
       id: 'L',
@@ -272,6 +276,7 @@ function createBuckSchematic(spec: DesignSpec, result: DesignResult | null): Sch
 }
 
 function createBoostSchematic(spec: DesignSpec, result: DesignResult | null): SchematicDefinition {
+  const syncMode = spec.rectification === 'synchronous'
   const duty = result?.dutyCycle ?? Math.min(Math.max(1 - spec.vinMin / spec.vout, 0.01), 0.99)
   const inductanceLabel = result ? `${formatU(result.inductance * 1e6, 2, 'µH')}` : '—'
   const capacitanceLabel = result ? `${formatU(result.capacitance * 1e6, 1, 'µF')}` : '—'
@@ -328,14 +333,15 @@ function createBoostSchematic(spec: DesignSpec, result: DesignResult | null): Sc
     },
     {
       id: 'D1',
-      type: 'diode',
+      type: syncMode ? 'switch' : 'diode',
       x: 340,
       y: 186,
       width: 92,
       height: 72,
-      label: 'D1',
-      value: 'Boost diode',
+      label: syncMode ? 'Q2' : 'D1',
+      value: syncMode ? 'Sync FET (Rds=8mΩ)' : 'Boost diode',
       status: 'normal',
+      meta: syncMode ? 'Low-side sync FET' : undefined,
     },
     {
       id: 'Cout',
@@ -410,6 +416,7 @@ function createBoostSchematic(spec: DesignSpec, result: DesignResult | null): Sc
 }
 
 function createBuckBoostSchematic(spec: DesignSpec, result: DesignResult | null): SchematicDefinition {
+  const syncMode = spec.rectification === 'synchronous'
   const duty = result?.dutyCycle ?? Math.min(Math.max(Math.abs(spec.vout) / (spec.vinMin + Math.abs(spec.vout)), 0.01), 0.99)
   const inductanceLabel = result ? `${formatU(result.inductance * 1e6, 2, 'µH')}` : '—'
   const capacitanceLabel = result ? `${formatU(result.capacitance * 1e6, 1, 'µF')}` : '—'
@@ -466,14 +473,15 @@ function createBuckBoostSchematic(spec: DesignSpec, result: DesignResult | null)
     },
     {
       id: 'D1',
-      type: 'diode',
+      type: syncMode ? 'switch' : 'diode',
       x: 330,
       y: 186,
       width: 92,
       height: 72,
-      label: 'D1',
-      value: 'Output diode',
+      label: syncMode ? 'Q2' : 'D1',
+      value: syncMode ? 'Sync FET (Rds=8mΩ)' : 'Output diode',
       status: 'normal',
+      meta: syncMode ? 'Low-side sync FET' : undefined,
     },
     {
       id: 'Cout',
