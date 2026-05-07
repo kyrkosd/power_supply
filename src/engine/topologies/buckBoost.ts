@@ -3,6 +3,24 @@
 import { complex, abs, arg, add, multiply, divide, type Complex } from 'mathjs'
 import { DesignSpec, DesignResult, Topology, TransferFunction } from '../types'
 import { checkSaturation } from '../inductor-saturation'
+import { DEVICE_ASSUMPTIONS } from '../device-assumptions'
+import { buildLosses } from './result-utils'
+
+const {
+  rds_on: RDS_ON,
+  t_rise: T_RISE,
+  t_fall: T_FALL,
+  qg: QG,
+  vf: VF,
+  dcr: DCR,
+  esr: ESR,
+  core_factor: CORE_F,
+  rds_on_sync: RDS_SYNC,
+  t_dead: T_DEAD,
+  coss_sync: COSS_S,
+  qg_sync: QG_S,
+  vf_body: VF_BODY,
+} = DEVICE_ASSUMPTIONS
 
 function normalizeDuty(duty: number): number {
   return Math.min(Math.max(duty, 0.01), 0.99)
@@ -110,24 +128,6 @@ export const buckBoostTopology: Topology = {
     const diodeVrMax = vinMax + voutMag
     const diodeIfAvg = iout
 
-    // 6. Loss breakdown (device assumptions match LossBreakdown.tsx DEVICE_ASSUMPTIONS)
-    // TI SLUA618 eq. 3 for switching loss.
-    const RDS_ON   = 0.02    // Ω  — control FET
-    const T_RISE   = 25e-9   // s
-    const T_FALL   = 25e-9   // s
-    const QG       = 12e-9   // C
-    const VF       = 0.7     // V
-    const DCR      = 0.045   // Ω
-    const ESR      = 0.02    // Ω
-    const CORE_F   = 0.02    // —
-
-    // Sync FET assumptions
-    const RDS_SYNC = 0.008   // Ω
-    const T_DEAD   = 30e-9   // s
-    const COSS_S   = 100e-12 // F
-    const QG_S     = 15e-9   // C
-    const VF_BODY  = 0.7     // V
-
     const syncMode = spec.rectification === 'synchronous'
     const I_sw_rms = IL_rms * Math.sqrt(dutyCycle)
 
@@ -152,11 +152,10 @@ export const buckBoostTopology: Topology = {
 
     const capacitor_esr     = I_cout_rms ** 2 * ESR
 
-    const totalLoss = mosfet_conduction + mosfet_switching + mosfet_gate +
-                      inductor_copper + inductor_core + diode_conduction +
-                      sync_conduction + sync_dead_time + capacitor_esr
     const pout = voutMag * iout
-    const calcEfficiency = pout <= 0 ? 0 : pout / (pout + totalLoss)
+    const calcEfficiency = pout <= 0 ? 0 : pout / (pout + mosfet_conduction + mosfet_switching + mosfet_gate +
+                      inductor_copper + inductor_core + diode_conduction +
+                      sync_conduction + sync_dead_time + capacitor_esr)
 
     // 7. Design rule checks
     const warnings: string[] = []
@@ -231,7 +230,7 @@ export const buckBoostTopology: Topology = {
         ripple_current: I_cout_rms,
       },
       efficiency: calcEfficiency,
-      losses: {
+      losses: buildLosses(
         mosfet_conduction,
         mosfet_switching,
         mosfet_gate,
@@ -241,8 +240,7 @@ export const buckBoostTopology: Topology = {
         sync_conduction,
         sync_dead_time,
         capacitor_esr,
-        total: totalLoss,
-      },
+      ),
       mosfetVdsMax,
       diodeVrMax,
       warnings,

@@ -392,17 +392,37 @@ export async function generateReport(params: ReportParams): Promise<Blob> {
   y += compRows.length * 6.5 + 14
 
   // Transformer loss table (flyback/forward only — requires primaryCopper field)
-  if (result.losses && result.losses.primaryCopper != null) {
+  if (result.losses && (result.losses as any).primaryCopper != null) {
     sectionRule(doc, 'Transformer Loss Breakdown', M, y)
     y += 8
+    const losses = result.losses as any
     const lossRows: Row[] = [
-      ['Primary copper loss',   `${result.losses.primaryCopper.toFixed(3)} W`],
-      ['Secondary copper loss', `${(result.losses.secondaryCopper ?? 0).toFixed(3)} W`],
-      ['Core loss',             `${(result.losses.core ?? 0).toFixed(3)} W`],
-      ['MOSFET loss',           `${(result.losses.mosfet ?? 0).toFixed(3)} W`],
-      ['Diode loss',            `${(result.losses.diode ?? 0).toFixed(3)} W`],
-      ['Clamp loss',            `${(result.losses.clamp ?? 0).toFixed(3)} W`],
-      ['Total losses',          `${result.losses.total.toFixed(3)} W`],
+      ['Primary copper loss',   `${(losses.primaryCopper ?? 0).toFixed(3)} W`],
+      ['Secondary copper loss', `${(losses.secondaryCopper ?? 0).toFixed(3)} W`],
+      ['Core loss',             `${(losses.core ?? 0).toFixed(3)} W`],
+      ['MOSFET loss',           `${(losses.mosfet ?? 0).toFixed(3)} W`],
+      ['Diode loss',            `${(losses.diode ?? 0).toFixed(3)} W`],
+      ['Clamp loss',            `${(losses.clamp ?? 0).toFixed(3)} W`],
+      ['Total losses',          `${losses.total.toFixed(3)} W`],
+    ]
+    drawTable(doc, lossRows, M, y, CW)
+    y += lossRows.length * 6.5 + 14
+  } else if (result.losses && (result.losses as any).mosfet_conduction != null) {
+    // 9-component loss breakdown (buck, boost, buckBoost, sepic)
+    sectionRule(doc, 'Loss Breakdown', M, y)
+    y += 8
+    const losses = result.losses as any
+    const lossRows: Row[] = [
+      ['MOSFET conduction',     `${(losses.mosfet_conduction ?? 0).toFixed(3)} W`],
+      ['MOSFET switching',      `${(losses.mosfet_switching ?? 0).toFixed(3)} W`],
+      ['Gate drive',            `${(losses.mosfet_gate ?? 0).toFixed(3)} W`],
+      ['Inductor copper',       `${(losses.inductor_copper ?? 0).toFixed(3)} W`],
+      ['Inductor core',         `${(losses.inductor_core ?? 0).toFixed(3)} W`],
+      ['Diode conduction',      `${(losses.diode_conduction ?? 0).toFixed(3)} W`],
+      ['Sync conduction',       `${(losses.sync_conduction ?? 0).toFixed(3)} W`],
+      ['Sync dead-time',        `${(losses.sync_dead_time ?? 0).toFixed(3)} W`],
+      ['Capacitor ESR',         `${(losses.capacitor_esr ?? 0).toFixed(3)} W`],
+      ['Total losses',          `${losses.total.toFixed(3)} W`],
     ]
     drawTable(doc, lossRows, M, y, CW)
     y += lossRows.length * 6.5 + 14

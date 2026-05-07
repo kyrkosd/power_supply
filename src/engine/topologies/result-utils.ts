@@ -14,6 +14,34 @@ export interface PowerConverterLosses {
   total: number
 }
 
+export function buildLosses(
+  mosfet_conduction: number,
+  mosfet_switching: number,
+  mosfet_gate: number,
+  inductor_copper: number,
+  inductor_core: number,
+  diode_conduction: number,
+  sync_conduction: number,
+  sync_dead_time: number,
+  capacitor_esr: number,
+): PowerConverterLosses {
+  const total = mosfet_conduction + mosfet_switching + mosfet_gate +
+                inductor_copper + inductor_core + diode_conduction +
+                sync_conduction + sync_dead_time + capacitor_esr
+  return {
+    mosfet_conduction,
+    mosfet_switching,
+    mosfet_gate,
+    inductor_copper,
+    inductor_core,
+    diode_conduction,
+    sync_conduction,
+    sync_dead_time,
+    capacitor_esr,
+    total,
+  }
+}
+
 export function buildDesignResult(params: {
   dutyCycle: number
   inductance: number

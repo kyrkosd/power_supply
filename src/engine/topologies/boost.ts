@@ -3,7 +3,24 @@
 import { complex, abs, arg, add, multiply, divide, type Complex } from 'mathjs'
 import { DesignSpec, DesignResult, Topology } from '../types'
 import { checkSaturation } from '../inductor-saturation'
-import { buildDesignResult } from './result-utils'
+import { DEVICE_ASSUMPTIONS } from '../device-assumptions'
+import { buildDesignResult, buildLosses } from './result-utils'
+
+const {
+  rds_on: RDS_ON,
+  t_rise: T_RISE,
+  t_fall: T_FALL,
+  qg: QG,
+  vf: VF,
+  dcr: DCR,
+  esr: ESR,
+  core_factor: CORE_F,
+  rds_on_sync: RDS_SYNC,
+  t_dead: T_DEAD,
+  coss_sync: COSS_S,
+  qg_sync: QG_S,
+  vf_body: VF_BODY,
+} = DEVICE_ASSUMPTIONS
 
 function normalizeDuty(duty: number): number {
   return Math.min(Math.max(duty, 0.01), 0.99)
@@ -62,9 +79,9 @@ export const boostTopology: Topology = {
     // For boost: Iout_crit = ΔIL × (1-D) / 2
     const ccm_dcm_boundary = deltaIL * (1 - dutyCycle) / 2
     let operating_mode: 'CCM' | 'DCM' | 'boundary' = 'CCM'
-    
+
     const warnings: string[] = []
-    
+
     if (iout > 1.2 * ccm_dcm_boundary) {
       operating_mode = 'CCM'
     } else if (iout < ccm_dcm_boundary) {
@@ -74,7 +91,7 @@ export const boostTopology: Topology = {
       operating_mode = 'boundary'
       warnings.push('Near CCM/DCM boundary. Performance may be unpredictable at light loads.')
     }
-    
+
     if (dutyCycle >= 0.9) {
       warnings.push('Boost duty cycle exceeds 90% and may reduce efficiency and control margin.')
     }
@@ -94,24 +111,6 @@ export const boostTopology: Topology = {
 
     const saturation_check = checkSaturation(peakCurrent, inputCurrent)
     if (saturation_check.warning) warnings.push(saturation_check.warning)
-
-    // ── Loss estimation ──────────────────────────────────────────────────────
-    // Device assumptions (match LossBreakdown.tsx DEVICE_ASSUMPTIONS)
-    const RDS_ON   = 0.02    // Ω  — control FET
-    const T_RISE   = 25e-9   // s
-    const T_FALL   = 25e-9   // s
-    const QG       = 12e-9   // C
-    const VF       = 0.7     // V  — boost diode
-    const DCR      = 0.045   // Ω
-    const ESR      = 0.02    // Ω
-    const CORE_F   = 0.02    // —
-
-    // Sync FET device assumptions
-    const RDS_SYNC = 0.008   // Ω
-    const T_DEAD   = 30e-9   // s
-    const COSS_S   = 100e-12 // F
-    const QG_S     = 15e-9   // C
-    const VF_BODY  = 0.7     // V
 
     const syncMode = spec.rectification === 'synchronous'
     const I_L_rms  = Math.sqrt(inputCurrent ** 2 + deltaIL ** 2 / 12)
@@ -147,12 +146,11 @@ export const boostTopology: Topology = {
     const Ic_rms      = iout * Math.sqrt(dutyCycle / (1 - dutyCycle))
     const capacitor_esr = Ic_rms ** 2 * ESR
 
-    const total = mosfet_conduction + mosfet_switching + mosfet_gate +
-                  inductor_copper + inductor_core + diode_conduction +
-                  sync_conduction + sync_dead_time + capacitor_esr
-
     const pout = vout * iout
-    const efficiency = pout <= 0 ? 0 : pout / (pout + total)
+    const totalLoss = mosfet_conduction + mosfet_switching + mosfet_gate +
+                      inductor_copper + inductor_core + diode_conduction +
+                      sync_conduction + sync_dead_time + capacitor_esr
+    const efficiency = pout <= 0 ? 0 : pout / (pout + totalLoss)
 
     return buildDesignResult({
       dutyCycle,
@@ -163,7 +161,7 @@ export const boostTopology: Topology = {
       ccm_dcm_boundary,
       operating_mode,
       saturation_check,
-      losses: {
+      losses: buildLosses(
         mosfet_conduction,
         mosfet_switching,
         mosfet_gate,
@@ -173,8 +171,7 @@ export const boostTopology: Topology = {
         sync_conduction,
         sync_dead_time,
         capacitor_esr,
-        total,
-      },
+      ),
       warnings,
     })
   },

@@ -42,23 +42,30 @@ export function ThermalView() {
   const ambientTemp = spec.ambientTemp
   const pkg = MOSFET_PACKAGES.find((p) => p.id === mosfetPkg)!
 
+  // Handle both loss structures: simplified (flyback/forward) and 9-component (buck/boost/etc)
+  const losses = result.losses as any
+  const primaryCopper = losses.primaryCopper ?? 0
+  const secondaryCopper = losses.secondaryCopper ?? 0
+  const mosfetLoss = losses.mosfet ?? (losses.mosfet_conduction + losses.mosfet_switching) ?? 0
+  const diodeLoss = losses.diode ?? losses.diode_conduction ?? 0
+  const clampLoss = losses.clamp ?? 0
+
   // DCR-based inductor loss estimate: P = I²_rms × DCR
   // Assume DCR ≈ 0.05 Ω for a typical SMD power inductor (conservative)
   const inductorDcr = 0.05 // Ω — Erickson & Maksimovic, chap. 13 typical
-  const inductorPower =
-    result.losses.primaryCopper + result.losses.secondaryCopper + inductorDcr
+  const inductorPower = primaryCopper + secondaryCopper + inductorDcr
 
   const components: ThermalComponent[] = [
     {
       name: 'MOSFET',
-      powerLoss: result.losses.mosfet || 0,
+      powerLoss: mosfetLoss,
       rthJa: pkg.rthJa,
       rthJc: pkg.rthJc,
       tjMax: 150,
     },
     {
       name: 'Diode',
-      powerLoss: result.losses.diode || 0,
+      powerLoss: diodeLoss,
       rthJa: 40, // D2PAK diode typical
       rthJc: 3,
       tjMax: 150,
@@ -72,7 +79,7 @@ export function ThermalView() {
     },
     {
       name: 'Output Cap',
-      powerLoss: result.losses.clamp ? result.losses.clamp * 0.1 : 0.05,
+      powerLoss: clampLoss ? clampLoss * 0.1 : 0.05,
       rthJa: 20,
       rthJc: 15,
       tjMax: 105,

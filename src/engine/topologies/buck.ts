@@ -2,27 +2,25 @@ import { DesignSpec, DesignResult, Topology } from '../types'
 import type { WaveformSet } from '../topologies/types'
 import { analyzeBuckControlLoop } from '../control-loop'
 import { checkSaturation } from '../inductor-saturation'
-import { buildDesignResult } from './result-utils'
+import { DEVICE_ASSUMPTIONS } from '../device-assumptions'
+import { buildDesignResult, buildLosses } from './result-utils'
 import type { StateSpaceModel } from './types'
 
-// Buck converter device-assumption constants used for loss estimation.
-// Match DEVICE_ASSUMPTIONS in LossBreakdown.tsx so the bar chart and computed
-// result are internally consistent (both read from result.losses).
-const RDS_ON = 0.02      // Ω  — typical 30–60 V FET
-const T_RISE  = 25e-9    // s  — rise time
-const T_FALL  = 25e-9    // s  — fall time
-const QG      = 12e-9    // C  — gate charge (Vgs = 5 V)
-const VF      = 0.7      // V  — freewheeling diode Vf
-const DCR     = 0.045    // Ω  — inductor DCR
-const ESR     = 0.02     // Ω  — output capacitor ESR
-const CORE_FACTOR = 0.02 // —  — Steinmetz core-loss coefficient (simplified)
-
-// Synchronous rectification device assumptions (low-side sync FET, optimised for low Rds).
-const RDS_ON_SYNC = 0.008  // Ω  — sync FET, lower than control FET
-const T_DEAD      = 30e-9  // s  — dead time per transition (30 ns typical)
-const COSS_SYNC   = 100e-12 // F — output capacitance sync FET
-const QG_SYNC     = 15e-9  // C  — gate charge sync FET (Vgs = 5 V)
-const VF_BODY     = 0.7    // V  — body diode Vf during dead time
+const {
+  rds_on: RDS_ON,
+  t_rise: T_RISE,
+  t_fall: T_FALL,
+  qg: QG,
+  vf: VF,
+  dcr: DCR,
+  esr: ESR,
+  core_factor: CORE_FACTOR,
+  rds_on_sync: RDS_ON_SYNC,
+  t_dead: T_DEAD,
+  coss_sync: COSS_SYNC,
+  qg_sync: QG_SYNC,
+  vf_body: VF_BODY,
+} = DEVICE_ASSUMPTIONS
 
 // Buck (step-down) converter steady-state design equations.
 // Assumes CCM (Continuous Conduction Mode) and ideal switch/diode.
@@ -160,12 +158,11 @@ export const buckTopology: Topology = {
     // Output capacitor ESR loss (reduced by N-phase cancellation)
     const capacitor_esr = Ic_out_rms ** 2 * ESR
 
-    const total = mosfet_conduction + mosfet_switching + mosfet_gate +
-                  inductor_copper + inductor_core + diode_conduction +
-                  sync_conduction + sync_dead_time + capacitor_esr
-
     const pout = vout * iout
-    const efficiency = pout <= 0 ? 0 : pout / (pout + total)
+    const totalLoss = mosfet_conduction + mosfet_switching + mosfet_gate +
+                      inductor_copper + inductor_core + diode_conduction +
+                      sync_conduction + sync_dead_time + capacitor_esr
+    const efficiency = pout <= 0 ? 0 : pout / (pout + totalLoss)
 
     const multiPhaseFields: Partial<DesignResult> = N > 1 ? {
       phases:             N,
@@ -184,7 +181,7 @@ export const buckTopology: Topology = {
       ccm_dcm_boundary,
       operating_mode,
       saturation_check,
-      losses: {
+      losses: buildLosses(
         mosfet_conduction,
         mosfet_switching,
         mosfet_gate,
@@ -194,8 +191,7 @@ export const buckTopology: Topology = {
         sync_conduction,
         sync_dead_time,
         capacitor_esr,
-        total,
-      },
+      ),
       warnings: [...warnings, ...loop.warnings],
       extra: multiPhaseFields,
     })

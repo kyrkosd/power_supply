@@ -518,18 +518,27 @@ export function generateLayoutGuidelines(
   const thermal_vias: ThermalVia[] = []
 
   if (losses) {
-    const mosfetVia = thermalVia('Q1 (MOSFET)', losses.mosfet, `${losses.mosfet.toFixed(1)} W conduction + switching losses`)
-    if (mosfetVia) thermal_vias.push(mosfetVia)
+    // Handle both loss structures: 9-component (buck/boost/buckBoost/sepic) and simplified (flyback/forward)
+    const mosfetLoss = (losses as any).mosfet ?? ((losses as any).mosfet_conduction + (losses as any).mosfet_switching)
+    const diodeLoss = (losses as any).diode ?? (losses as any).diode_conduction
+    const coreLoss = (losses as any).core ?? (losses as any).inductor_core
 
-    const diodeVia = thermalVia('D1 (output diode)', losses.diode, `${losses.diode.toFixed(1)} W forward-conduction losses`)
-    if (diodeVia) thermal_vias.push(diodeVia)
+    if (mosfetLoss > 0.1) {
+      const mosfetVia = thermalVia('Q1 (MOSFET)', mosfetLoss, `${mosfetLoss.toFixed(1)} W conduction + switching losses`)
+      if (mosfetVia) thermal_vias.push(mosfetVia)
+    }
 
-    if ((topology === 'flyback' || topology === 'forward') && losses.core > 0.5) {
+    if (diodeLoss > 0.1) {
+      const diodeVia = thermalVia('D1 (output diode)', diodeLoss, `${diodeLoss.toFixed(1)} W forward-conduction losses`)
+      if (diodeVia) thermal_vias.push(diodeVia)
+    }
+
+    if ((topology === 'flyback' || topology === 'forward') && coreLoss > 0.5) {
       thermal_vias.push({
         component: 'T1 (transformer)',
-        via_count: Math.ceil(losses.core / WATTS_PER_VIA),
+        via_count: Math.ceil(coreLoss / WATTS_PER_VIA),
         via_diameter_mm: VIA_DIAM_MM,
-        reason: `${losses.core.toFixed(1)} W core loss; use a copper pour under the core mounting pads.`,
+        reason: `${coreLoss.toFixed(1)} W core loss; use a copper pour under the core mounting pads.`,
       })
     }
   }
