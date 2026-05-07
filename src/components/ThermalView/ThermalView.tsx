@@ -36,11 +36,13 @@ interface SwitchingLosses {
   diode_conduction?: number
 }
 
-function isTransformerLosses(losses: any): losses is TransformerLosses {
+type LossBreakdown = TransformerLosses | SwitchingLosses
+
+function isTransformerLosses(losses: LossBreakdown): losses is TransformerLosses {
   return 'primaryCopper' in losses || 'secondaryCopper' in losses || 'mosfet' in losses || 'diode' in losses || 'clamp' in losses
 }
 
-function isSwitchingLosses(losses: any): losses is SwitchingLosses {
+function isSwitchingLosses(losses: LossBreakdown): losses is SwitchingLosses {
   return 'mosfet_conduction' in losses || 'mosfet_switching' in losses || 'diode_conduction' in losses
 }
 
