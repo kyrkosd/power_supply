@@ -43,7 +43,6 @@ function formatHz(hz: number): string {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function ResultsTable(): React.ReactElement {
-  const spec              = useDesignStore((s) => s.spec)
   const result            = useDesignStore((s) => s.result)
   const activeEquationId  = useDesignStore((s) => s.activeEquationId)
   const setActiveEquation = useDesignStore((s) => s.setActiveEquationId)

@@ -1,7 +1,7 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useDesignStore } from '../../store/design-store'
-import { findEquation, EQUATIONS, type EquationEntry, type EquationVar } from '../../engine/equation-metadata'
+import { findEquation, EQUATIONS, type EquationEntry } from '../../engine/equation-metadata'
 import styles from './EquationExplorer.module.css'
 
 // ── Formula text renderer — converts 'V_out' → V<sub>out</sub> ──────────────
