@@ -392,52 +392,87 @@ export async function generateReport(params: ReportParams): Promise<Blob> {
   y += compRows.length * 6.5 + 14
 
   // Transformer loss table (flyback/forward only — requires primaryCopper field)
-  if (result.losses && (result.losses as any).primaryCopper != null) {
-    sectionRule(doc, 'Transformer Loss Breakdown', M, y)
-    y += 8
-    const losses = result.losses as any
-    const lossRows: Row[] = [
-      ['Primary copper loss',   `${(losses.primaryCopper ?? 0).toFixed(3)} W`],
-      ['Secondary copper loss', `${(losses.secondaryCopper ?? 0).toFixed(3)} W`],
-      ['Core loss',             `${(losses.core ?? 0).toFixed(3)} W`],
-      ['MOSFET loss',           `${(losses.mosfet ?? 0).toFixed(3)} W`],
-      ['Diode loss',            `${(losses.diode ?? 0).toFixed(3)} W`],
-      ['Clamp loss',            `${(losses.clamp ?? 0).toFixed(3)} W`],
-      ['Total losses',          `${losses.total.toFixed(3)} W`],
-    ]
-    drawTable(doc, lossRows, M, y, CW)
-    y += lossRows.length * 6.5 + 14
-  } else if (result.losses && (result.losses as any).mosfet_conduction != null) {
-    // 9-component loss breakdown (buck, boost, buckBoost, sepic)
-    sectionRule(doc, 'Loss Breakdown', M, y)
-    y += 8
-    const losses = result.losses as any
-    const lossRows: Row[] = [
-      ['MOSFET conduction',     `${(losses.mosfet_conduction ?? 0).toFixed(3)} W`],
-      ['MOSFET switching',      `${(losses.mosfet_switching ?? 0).toFixed(3)} W`],
-      ['Gate drive',            `${(losses.mosfet_gate ?? 0).toFixed(3)} W`],
-      ['Inductor copper',       `${(losses.inductor_copper ?? 0).toFixed(3)} W`],
-      ['Inductor core',         `${(losses.inductor_core ?? 0).toFixed(3)} W`],
-      ['Diode conduction',      `${(losses.diode_conduction ?? 0).toFixed(3)} W`],
-      ['Sync conduction',       `${(losses.sync_conduction ?? 0).toFixed(3)} W`],
-      ['Sync dead-time',        `${(losses.sync_dead_time ?? 0).toFixed(3)} W`],
-      ['Capacitor ESR',         `${(losses.capacitor_esr ?? 0).toFixed(3)} W`],
-      ['Total losses',          `${losses.total.toFixed(3)} W`],
-    ]
-    drawTable(doc, lossRows, M, y, CW)
-    y += lossRows.length * 6.5 + 14
-  }
+  interface TransformerLosses {
+  primaryCopper?: number
+  secondaryCopper?: number
+  core?: number
+  mosfet?: number
+  diode?: number
+  clamp?: number
+  total: number
+}
 
-  // Design notes
-  if (notes.trim()) {
-    sectionRule(doc, 'Design Notes', M, y)
-    y += 8
-    doc.setFontSize(9)
-    doc.setFont('helvetica', 'normal')
-    setTxt(doc, C_DARK)
-    const noteLines = doc.splitTextToSize(notes.trim(), CW)
-    doc.text(noteLines, M, y)
-  }
+interface SwitchingLosses {
+  mosfet_conduction?: number
+  mosfet_switching?: number
+  mosfet_gate?: number
+  inductor_copper?: number
+  inductor_core?: number
+  diode_conduction?: number
+  sync_conduction?: number
+  sync_dead_time?: number
+  capacitor_esr?: number
+  total: number
+}
+
+type LossBreakdown = TransformerLosses | SwitchingLosses
+
+function isTransformerLosses(losses: LossBreakdown): losses is TransformerLosses {
+  return 'primaryCopper' in losses
+}
+
+function isSwitchingLosses(losses: LossBreakdown): losses is SwitchingLosses {
+  return 'mosfet_conduction' in losses
+}
+
+// ... (assuming result.losses is typed as LossBreakdown | undefined)
+
+if (result.losses && isTransformerLosses(result.losses)) {
+  sectionRule(doc, 'Transformer Loss Breakdown', M, y)
+  y += 8
+  const losses: TransformerLosses = result.losses
+  const lossRows: Row[] = [
+    ['Primary copper loss',   `${(losses.primaryCopper ?? 0).toFixed(3)} W`],
+    ['Secondary copper loss', `${(losses.secondaryCopper ?? 0).toFixed(3)} W`],
+    ['Core loss',             `${(losses.core ?? 0).toFixed(3)} W`],
+    ['MOSFET loss',           `${(losses.mosfet ?? 0).toFixed(3)} W`],
+    ['Diode loss',            `${(losses.diode ?? 0).toFixed(3)} W`],
+    ['Clamp loss',            `${(losses.clamp ?? 0).toFixed(3)} W`],
+    ['Total losses',          `${losses.total.toFixed(3)} W`],
+  ]
+  drawTable(doc, lossRows, M, y, CW)
+  y += lossRows.length * 6.5 + 14
+} else if (result.losses && isSwitchingLosses(result.losses)) {
+  // 9-component loss breakdown (buck, boost, buckBoost, sepic)
+  sectionRule(doc, 'Loss Breakdown', M, y)
+  y += 8
+  const losses: SwitchingLosses = result.losses
+  const lossRows: Row[] = [
+    ['MOSFET conduction',     `${(losses.mosfet_conduction ?? 0).toFixed(3)} W`],
+    ['MOSFET switching',      `${(losses.mosfet_switching ?? 0).toFixed(3)} W`],
+    ['Gate drive',            `${(losses.mosfet_gate ?? 0).toFixed(3)} W`],
+    ['Inductor copper',       `${(losses.inductor_copper ?? 0).toFixed(3)} W`],
+    ['Inductor core',         `${(losses.inductor_core ?? 0).toFixed(3)} W`],
+    ['Diode conduction',      `${(losses.diode_conduction ?? 0).toFixed(3)} W`],
+    ['Sync conduction',       `${(losses.sync_conduction ?? 0).toFixed(3)} W`],
+    ['Sync dead-time',        `${(losses.sync_dead_time ?? 0).toFixed(3)} W`],
+    ['Capacitor ESR',         `${(losses.capacitor_esr ?? 0).toFixed(3)} W`],
+    ['Total losses',          `${losses.total.toFixed(3)} W`],
+  ]
+  drawTable(doc, lossRows, M, y, CW)
+  y += lossRows.length * 6.5 + 14
+}
+
+// Design notes
+if (notes.trim()) {
+  sectionRule(doc, 'Design Notes', M, y)
+  y += 8
+  doc.setFontSize(9)
+  doc.setFont('helvetica', 'normal')
+  setTxt(doc, C_DARK)
+  const noteLines = doc.splitTextToSize(notes.trim(), CW)
+  doc.text(noteLines, M, y)
+}
 
   // ────────────────────────────────────────────────────────────────────────
   // Page 3 — Schematic
