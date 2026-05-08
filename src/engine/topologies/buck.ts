@@ -3,7 +3,7 @@ import type { WaveformSet } from '../topologies/types'
 import { analyzeBuckControlLoop } from '../control-loop'
 import { checkSaturation } from '../inductor-saturation'
 import { DEVICE_ASSUMPTIONS } from '../device-assumptions'
-import { buildDesignResult, buildLosses, detectCcmDcm, calcEfficiency } from './result-utils'
+import { buildDesignResult, detectCcmDcm, calcEfficiency } from './result-utils'
 import type { StateSpaceModel } from './types'
 
 const {
@@ -170,7 +170,7 @@ export const buckTopology: Topology = {
       ccm_dcm_boundary,
       operating_mode,
       saturation_check,
-      losses: buildLosses({
+      losses: {
         mosfet_conduction,
         mosfet_switching,
         mosfet_gate,
@@ -180,7 +180,7 @@ export const buckTopology: Topology = {
         sync_conduction,
         sync_dead_time,
         capacitor_esr,
-      }),
+      },
       warnings: [...warnings, ...loop.warnings],
       extra: multiPhaseFields,
     })

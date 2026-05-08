@@ -63,7 +63,7 @@ export function buildDesignResult(params: {
   ccm_dcm_boundary: number
   operating_mode: 'CCM' | 'DCM' | 'boundary'
   saturation_check: SaturationResult
-  losses: PowerConverterLosses
+  losses: Omit<PowerConverterLosses, 'total'>
   warnings: string[]
   extra?: Partial<DesignResult>
 }): DesignResult {
@@ -76,7 +76,7 @@ export function buildDesignResult(params: {
     ccm_dcm_boundary:  params.ccm_dcm_boundary,
     operating_mode:    params.operating_mode,
     saturation_check:  params.saturation_check,
-    losses:            params.losses,
+    losses:            buildLosses(params.losses),
     warnings:          params.warnings,
     ...params.extra,
   }

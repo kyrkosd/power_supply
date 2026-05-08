@@ -4,7 +4,7 @@ import { complex, abs, arg, add, multiply, divide, type Complex } from 'mathjs'
 import { DesignSpec, DesignResult, Topology } from '../types'
 import { checkSaturation } from '../inductor-saturation'
 import { RDS_ON, T_RISE, T_FALL, QG, VF, DCR, ESR, CORE_F, RDS_SYNC, T_DEAD, COSS_S, QG_S, VF_BODY } from '../device-assumptions'
-import { buildDesignResult, buildLosses, normalizeDuty, detectCcmDcm, calcEfficiency } from './result-utils'
+import { buildDesignResult, normalizeDuty, detectCcmDcm, calcEfficiency } from './result-utils'
 
 function createTransferFunction(spec: DesignSpec, result: DesignResult) {
   const D = result.dutyCycle
@@ -129,7 +129,7 @@ export const boostTopology: Topology = {
       ccm_dcm_boundary,
       operating_mode,
       saturation_check,
-      losses: buildLosses({
+      losses: {
         mosfet_conduction,
         mosfet_switching,
         mosfet_gate,
@@ -139,7 +139,7 @@ export const boostTopology: Topology = {
         sync_conduction,
         sync_dead_time,
         capacitor_esr,
-      }),
+      },
       warnings,
     })
   },
