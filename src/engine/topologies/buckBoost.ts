@@ -3,24 +3,8 @@
 import { complex, abs, arg, add, multiply, divide, type Complex } from 'mathjs'
 import { DesignSpec, DesignResult, Topology, TransferFunction } from '../types'
 import { checkSaturation } from '../inductor-saturation'
-import { DEVICE_ASSUMPTIONS } from '../device-assumptions'
+import { RDS_ON, T_RISE, T_FALL, QG, VF, DCR, ESR, CORE_F, RDS_SYNC, T_DEAD, COSS_S, QG_S, VF_BODY } from '../device-assumptions'
 import { buildLosses, normalizeDuty, detectCcmDcm, calcEfficiency } from './result-utils'
-
-const {
-  rds_on: RDS_ON,
-  t_rise: T_RISE,
-  t_fall: T_FALL,
-  qg: QG,
-  vf: VF,
-  dcr: DCR,
-  esr: ESR,
-  core_factor: CORE_F,
-  rds_on_sync: RDS_SYNC,
-  t_dead: T_DEAD,
-  coss_sync: COSS_S,
-  qg_sync: QG_S,
-  vf_body: VF_BODY,
-} = DEVICE_ASSUMPTIONS
 
 // Control-to-output transfer function for the inverting buck-boost.
 // Erickson & Maksimovic "Fundamentals of Power Electronics" 3rd ed., §8.2.2.

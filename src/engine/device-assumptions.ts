@@ -25,3 +25,18 @@ export const DEVICE_ASSUMPTIONS = {
   qg_sync: 15e-9,         // C — gate charge (Vgs = 5 V)
   vf_body: 0.7,           // V — body diode Vf during dead time
 }
+
+// Named exports used by boost, buck-boost, and SEPIC topologies.
+export const RDS_ON  = DEVICE_ASSUMPTIONS.rds_on
+export const T_RISE  = DEVICE_ASSUMPTIONS.t_rise
+export const T_FALL  = DEVICE_ASSUMPTIONS.t_fall
+export const QG      = DEVICE_ASSUMPTIONS.qg
+export const VF      = DEVICE_ASSUMPTIONS.vf
+export const DCR     = DEVICE_ASSUMPTIONS.dcr
+export const CORE_F  = DEVICE_ASSUMPTIONS.core_factor
+export const ESR     = DEVICE_ASSUMPTIONS.esr
+export const RDS_SYNC = DEVICE_ASSUMPTIONS.rds_on_sync
+export const T_DEAD  = DEVICE_ASSUMPTIONS.t_dead
+export const COSS_S  = DEVICE_ASSUMPTIONS.coss_sync
+export const QG_S    = DEVICE_ASSUMPTIONS.qg_sync
+export const VF_BODY = DEVICE_ASSUMPTIONS.vf_body
