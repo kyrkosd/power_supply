@@ -4,7 +4,7 @@ import { complex, abs, arg, add, multiply, divide, type Complex } from 'mathjs'
 import { DesignSpec, DesignResult, Topology, TransferFunction } from '../types'
 import { checkSaturation } from '../inductor-saturation'
 import { DEVICE_ASSUMPTIONS } from '../device-assumptions'
-import { buildLosses } from './result-utils'
+import { buildLosses, normalizeDuty, detectCcmDcm, calcEfficiency } from './result-utils'
 
 const {
   rds_on: RDS_ON,
@@ -21,10 +21,6 @@ const {
   qg_sync: QG_S,
   vf_body: VF_BODY,
 } = DEVICE_ASSUMPTIONS
-
-function normalizeDuty(duty: number): number {
-  return Math.min(Math.max(duty, 0.01), 0.99)
-}
 
 // Control-to-output transfer function for the inverting buck-boost.
 // Erickson & Maksimovic "Fundamentals of Power Electronics" 3rd ed., §8.2.2.
@@ -84,9 +80,9 @@ export const buckBoostTopology: Topology = {
    */
 
   compute(spec: DesignSpec): DesignResult {
-    const { vinMin, vinMax, vout, iout, fsw, rippleRatio, voutRippleMax, efficiency } = spec
+    const { vinMin, vinMax, vout, iout, fsw, rippleRatio, voutRippleMax, efficiency: etaSpec } = spec
     const voutMag = Math.abs(vout)
-    const eta = Math.min(Math.max(efficiency, 0.5), 1)
+    const eta = Math.min(Math.max(etaSpec, 0.5), 1)
 
     // 1. Duty cycle — Erickson & Maksimovic 3rd ed., Table 2-1 (CCM buck-boost)
     //    D = |Vout| / (Vin_min·η + |Vout|)   (worst-case D at minimum Vin)
@@ -153,27 +149,14 @@ export const buckBoostTopology: Topology = {
     const capacitor_esr     = I_cout_rms ** 2 * ESR
 
     const pout = voutMag * iout
-    const calcEfficiency = pout <= 0 ? 0 : pout / (pout + mosfet_conduction + mosfet_switching + mosfet_gate +
+    const totalLoss = mosfet_conduction + mosfet_switching + mosfet_gate +
                       inductor_copper + inductor_core + diode_conduction +
-                      sync_conduction + sync_dead_time + capacitor_esr)
+                      sync_conduction + sync_dead_time + capacitor_esr
+    const efficiency = calcEfficiency(pout, totalLoss)
 
     // 7. Design rule checks
-    const warnings: string[] = []
-    
-    // CCM/DCM boundary detection
-    // For buck-boost: Iout_crit = ΔIL × (1-D) / 2
     const ccm_dcm_boundary = deltaIL * (1 - dutyCycle) / 2
-    let operating_mode: 'CCM' | 'DCM' | 'boundary' = 'CCM'
-    
-    if (iout > 1.2 * ccm_dcm_boundary) {
-      operating_mode = 'CCM'
-    } else if (iout < ccm_dcm_boundary) {
-      operating_mode = 'DCM'
-      warnings.push('Operating in DCM. Equations assume CCM — results may be inaccurate. Increase inductance or load current to enter CCM.')
-    } else {
-      operating_mode = 'boundary'
-      warnings.push('Near CCM/DCM boundary. Performance may be unpredictable at light loads.')
-    }
+    const { operating_mode, warnings } = detectCcmDcm(iout, ccm_dcm_boundary)
 
     if (dutyCycle >= 0.9) {
       warnings.push('Buck-boost duty cycle exceeds 90% and may reduce control margin and efficiency.')
@@ -229,8 +212,8 @@ export const buckBoostTopology: Topology = {
         esr_max,
         ripple_current: I_cout_rms,
       },
-      efficiency: calcEfficiency,
-      losses: buildLosses(
+      efficiency,
+      losses: buildLosses({
         mosfet_conduction,
         mosfet_switching,
         mosfet_gate,
@@ -240,7 +223,7 @@ export const buckBoostTopology: Topology = {
         sync_conduction,
         sync_dead_time,
         capacitor_esr,
-      ),
+      }),
       mosfetVdsMax,
       diodeVrMax,
       warnings,

@@ -4,7 +4,7 @@ import { complex, abs, arg, add, multiply, divide, type Complex } from 'mathjs'
 import { DesignSpec, DesignResult, Topology } from '../types'
 import { checkSaturation } from '../inductor-saturation'
 import { DEVICE_ASSUMPTIONS } from '../device-assumptions'
-import { buildDesignResult, buildLosses } from './result-utils'
+import { buildDesignResult, buildLosses, normalizeDuty, detectCcmDcm, calcEfficiency } from './result-utils'
 
 const {
   rds_on: RDS_ON,
@@ -21,10 +21,6 @@ const {
   qg_sync: QG_S,
   vf_body: VF_BODY,
 } = DEVICE_ASSUMPTIONS
-
-function normalizeDuty(duty: number): number {
-  return Math.min(Math.max(duty, 0.01), 0.99)
-}
 
 function createTransferFunction(spec: DesignSpec, result: DesignResult) {
   const D = result.dutyCycle
@@ -78,19 +74,7 @@ export const boostTopology: Topology = {
     // CCM/DCM boundary detection
     // For boost: Iout_crit = ΔIL × (1-D) / 2
     const ccm_dcm_boundary = deltaIL * (1 - dutyCycle) / 2
-    let operating_mode: 'CCM' | 'DCM' | 'boundary' = 'CCM'
-
-    const warnings: string[] = []
-
-    if (iout > 1.2 * ccm_dcm_boundary) {
-      operating_mode = 'CCM'
-    } else if (iout < ccm_dcm_boundary) {
-      operating_mode = 'DCM'
-      warnings.push('Operating in DCM. Equations assume CCM — results may be inaccurate. Increase inductance or load current to enter CCM.')
-    } else {
-      operating_mode = 'boundary'
-      warnings.push('Near CCM/DCM boundary. Performance may be unpredictable at light loads.')
-    }
+    const { operating_mode, warnings } = detectCcmDcm(iout, ccm_dcm_boundary)
 
     if (dutyCycle >= 0.9) {
       warnings.push('Boost duty cycle exceeds 90% and may reduce efficiency and control margin.')
@@ -150,7 +134,7 @@ export const boostTopology: Topology = {
     const totalLoss = mosfet_conduction + mosfet_switching + mosfet_gate +
                       inductor_copper + inductor_core + diode_conduction +
                       sync_conduction + sync_dead_time + capacitor_esr
-    const efficiency = pout <= 0 ? 0 : pout / (pout + totalLoss)
+    const efficiency = calcEfficiency(pout, totalLoss)
 
     return buildDesignResult({
       dutyCycle,
@@ -161,7 +145,7 @@ export const boostTopology: Topology = {
       ccm_dcm_boundary,
       operating_mode,
       saturation_check,
-      losses: buildLosses(
+      losses: buildLosses({
         mosfet_conduction,
         mosfet_switching,
         mosfet_gate,
@@ -171,7 +155,7 @@ export const boostTopology: Topology = {
         sync_conduction,
         sync_dead_time,
         capacitor_esr,
-      ),
+      }),
       warnings,
     })
   },

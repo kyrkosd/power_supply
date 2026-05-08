@@ -3,7 +3,7 @@ import type { WaveformSet } from '../topologies/types'
 import { analyzeBuckControlLoop } from '../control-loop'
 import { checkSaturation } from '../inductor-saturation'
 import { DEVICE_ASSUMPTIONS } from '../device-assumptions'
-import { buildDesignResult, buildLosses } from './result-utils'
+import { buildDesignResult, buildLosses, detectCcmDcm, calcEfficiency } from './result-utils'
 import type { StateSpaceModel } from './types'
 
 const {
@@ -78,18 +78,7 @@ export const buckTopology: Topology = {
 
     // ── CCM/DCM boundary ─────────────────────────────────────────────────────
     const ccm_dcm_boundary = deltaIL_phase / 2
-    const warnings: string[] = []
-    let operating_mode: 'CCM' | 'DCM' | 'boundary' = 'CCM'
-
-    if (I_phase_avg > 1.2 * ccm_dcm_boundary) {
-      operating_mode = 'CCM'
-    } else if (I_phase_avg < ccm_dcm_boundary) {
-      operating_mode = 'DCM'
-      warnings.push('Operating in DCM. Equations assume CCM — results may be inaccurate. Increase inductance or load current to enter CCM.')
-    } else {
-      operating_mode = 'boundary'
-      warnings.push('Near CCM/DCM boundary. Performance may be unpredictable at light loads.')
-    }
+    const { operating_mode, warnings } = detectCcmDcm(I_phase_avg, ccm_dcm_boundary)
 
     // ── Multi-phase warnings ─────────────────────────────────────────────────
     if (N > 1) {
@@ -162,7 +151,7 @@ export const buckTopology: Topology = {
     const totalLoss = mosfet_conduction + mosfet_switching + mosfet_gate +
                       inductor_copper + inductor_core + diode_conduction +
                       sync_conduction + sync_dead_time + capacitor_esr
-    const efficiency = pout <= 0 ? 0 : pout / (pout + totalLoss)
+    const efficiency = calcEfficiency(pout, totalLoss)
 
     const multiPhaseFields: Partial<DesignResult> = N > 1 ? {
       phases:             N,
@@ -181,7 +170,7 @@ export const buckTopology: Topology = {
       ccm_dcm_boundary,
       operating_mode,
       saturation_check,
-      losses: buildLosses(
+      losses: buildLosses({
         mosfet_conduction,
         mosfet_switching,
         mosfet_gate,
@@ -191,7 +180,7 @@ export const buckTopology: Topology = {
         sync_conduction,
         sync_dead_time,
         capacitor_esr,
-      ),
+      }),
       warnings: [...warnings, ...loop.warnings],
       extra: multiPhaseFields,
     })
