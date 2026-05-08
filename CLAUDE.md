@@ -40,6 +40,11 @@ always go through the worker.
 - **LTspice Bridge**: `electron/ltspice-bridge.ts` executes LTspice natively via Electron's `child_process`. `src/engine/ltspice/` contains the netlist generators and `.raw`/`.log` parsers which integrate with `ComparisonView` to overlay data.
 - **Startup/Transient Simulation**: `src/engine/transient.ts` uses an RK4 state-space solver. Integrates by requiring Topologies to optionally implement `getStateSpaceModel()` returning A/B matrices. The `TransientTab` (`src/components/TabPanel/tabs/TransientTab.tsx`) dispatches `TRANSIENT_COMPUTE` through the worker; only Buck implements `getStateSpaceModel`. `src/engine/index.ts` exports `getStateSpaceModelFn(topologyId)` for the worker to look up the bound model function.
 - **EMI Pre-Compliance**: `src/engine/emi.ts` takes the steady-state `DesignResult` and spec, computes the Fourier spectrum, and evaluates against limits from `src/data/emi-limits.json`.
+- **Current Sensing**: `src/engine/current-sense.ts` sizes Rsense or evaluates Rds(on) accuracy for peak current-mode control; computes SNR, slope-comp ramp, and package recommendation.
+- **Input Filter**: `src/engine/input-filter.ts` designs the DM + CM input EMI filter with Middlebrook stability margin; runs in the worker after EMI estimation.
+- **Transformer Winding**: `src/engine/transformer-winding.ts` applies Dowell skin/proximity model to select AWG, strands, fill factor, and IEC 62368-1 creepage distances.
+- **Parameter Sweep**: Worker `SWEEP_COMPUTE` / `SWEEP_RESULT` — chunked sweep over any spec parameter; phase-margin computed at each point; CSV export via `SweepView`.
+- **Plugin System**: `src/engine/plugin-types.ts` + `electron/plugin-ipc.ts` — community topology engines as sandboxed `.js` files; no core-code changes required.
 
 ---
 
@@ -193,6 +198,124 @@ the soft-start capacitor and estimates inrush currents:
   and brown-out conflict when a dependent rail enables before its input supply reaches PG.
 - `SequencingView` modal: load rails from saved `.pswb` files or enter manually; drag-and-drop
   ↑/↓ reorder; D3 timing diagram; conflict highlighting. Toolbar button: ⏱ Sequencing.
+
+### Current Sensing Design (`src/engine/current-sense.ts`)
+`designCurrentSense(topology, spec, result, method, vsenseTargetMv): CurrentSenseResult`
+sizes the current-sense element for peak current-mode control:
+- **Resistor method** — selects `Rsense = Vtarget / Ipeak`; checks SNR at 10 % load (5 mV noise floor);
+  recommends package (0805/1206/2010/2512/shunt); flags Kelvin connections when `Rsense < 10 mΩ`.
+- **Rds(on) method** — estimates accuracy drift (% error at 100 °C vs 25 °C baseline).
+- Both methods compute `slope_comp_ramp` (V/s) — minimum external ramp to prevent subharmonic
+  oscillation at D > 50 % (Ridley 1991 small-signal model).
+- References: TI SLVA452B, TI SLVA101, Infineon AN_1805_PL52_1803_132890.
+- Wired in worker `scheduleCompute`: runs when `spec.controlMode === 'current'`;
+  result merged into `DesignResult.current_sense`.
+
+### Input Filter Design (`src/engine/input-filter.ts`)
+`designInputFilter(topology, spec, result, emiResult, opts): InputFilterResult`
+designs a two-stage differential-mode + common-mode input EMI filter:
+- **DM stage** — L/C values from attenuation target; Middlebrook stability criterion:
+  `Zout_filter < Zin_converter` with damping resistor `Rd` to flatten resonance peak.
+- **CM stage** — common-mode choke sized to achieve 20 dB above the CM attenuation target;
+  X/Y capacitor safety classes per IEC 60384-14.
+- `attenuation_override_db`: override auto-target from EMI result.
+- `cm_choke_h`: user-supplied choke or auto-selected.
+- Returns `dm_inductor`, `dm_capacitor`, `cm_choke`, `y_cap`, `damping_resistor`,
+  `insertion_loss_db`, `middlebrook_margin_db`, `warnings[]`.
+- References: Middlebrook IAS 1976, TI SLYT636, Erickson & Maksimovic §10.1, WE ANP008e.
+- Wired in worker `scheduleCompute` when `spec.inputFilterEnabled === true`;
+  result merged into `DesignResult.input_filter`.
+
+### Transformer Winding Calculator (`src/engine/transformer-winding.ts`)
+`designWinding(topology, spec, result, core): WindingResult`
+produces a complete winding design for flyback and forward transformers:
+- **Skin depth** — `δ = √(ρ / (π × µ₀ × f))`; selects smallest AWG that fits in one skin depth
+  (Dowell 1966, Kazimierczuk Ch. 2/4).
+- **Proximity effect factor** — `Fr` iteratively computed from Dowell's equation; warns when
+  `Fr > 1.5` (more than 50 % extra AC copper loss).
+- **Turns and fill** — Np from volt-second balance; Ns_k from turns ratio; fill factor per winding
+  checked against bobbin area; total fill checked against `< 0.7` guideline.
+- **Stranding** — recommends multiple strands in parallel when `diam_solid > 2δ`.
+- **Creepage / clearance** — minimum distances per IEC 62368-1:2018 Table F.5 for
+  reinforced insulation at 250 Vac working voltage.
+- Returns `WindingSection[]` (one per winding), `total_fill_factor_pct`, `leakage_estimate_uh`,
+  `creepage_mm`, `clearance_mm`, `warnings[]`.
+- Worker appends result to `DesignResult.winding_result` for flyback and forward when
+  `result.coreType` is set and `getCoreByType(result.coreType)` returns a valid core.
+
+### Multi-Phase Interleaved Buck (`src/engine/topologies/buck.ts`, `DesignSpec.phases`)
+`DesignSpec.phases?: number` (integer 1–6, default 1) splits the buck into N interleaved phases:
+- Per-phase inductor: `L_phase = L_single × N` (each phase sees 1/N of the load).
+- Per-phase peak current and RMS current scaled by `1/N`.
+- Output ripple partially cancels: effective ripple frequency = `N × fsw` for even N.
+- Losses scaled per-phase; total efficiency accounts for N × gate-drive power.
+- Phase count exposed in `DesignResult.phases` and shown in the results table and schematic.
+
+### Synchronous Rectification (`DesignSpec.rectification`)
+`DesignSpec.rectification: 'diode' | 'synchronous'` (default `'diode'`) replaces the output
+diode with a sync FET across all supported topologies (buck, boost, buck-boost, SEPIC):
+- `P_sync = Rds_sync × I_rms_sync²` replaces `P_diode = VF × I_diode × (1−D)`.
+- Dead-time loss + Coss charge loss added: `VF_body × I × 2 × T_dead × fsw + 0.5 × Coss × Vout² × fsw`.
+- Gate drive power for the sync FET added to total losses.
+- Schematic renders a second MOSFET symbol (with body diode) in place of the output diode.
+
+### Interactive Equation Explorer (`src/engine/equation-metadata.ts`, `src/components/EquationExplorer/`)
+`EQUATION_CATALOG: EquationEntry[]` — static catalogue of every design equation used in the engine:
+- Each entry carries `id`, `label`, `symbol`, `displayUnit`, `displayScale`, `formula` (LaTeX),
+  `sourceRef`, and `vars: EquationVar[]`.
+- `EquationVar` describes each variable: `key`, `symbol`, `label`, `unit`, `min/max/step`, and
+  an `extract(spec, result)` function that reads the current value from the live design.
+- `EquationExplorer` modal: clicking any result value opens the explorer for that equation.
+  Sliders beneath the formula let the user vary one variable while holding others constant —
+  re-evaluates the formula client-side in real time (no worker round-trip).
+- Store key: `activeEquationId` / `setActiveEquationId`.
+
+### Parameter Sweep (`src/components/SweepView/`, worker `SWEEP_COMPUTE`)
+`SweepPayload`: `topology`, `baseSpec`, `sweepParam` (one of `vin|vout|iout|fsw|ripple_ratio|ambient_temp`),
+`min`, `max`, `steps`:
+- Worker computes up to 100 points chunked in groups of 5 (`setTimeout(doChunk, 0)`) to yield
+  between chunks and keep the worker responsive.
+- Each point runs `computeAny` then optionally `computeSweepPM` (log-sweep 100 Hz–1 MHz for
+  gain crossover and phase margin at 0 dB).
+- Progress reported via `SWEEP_PROGRESS`; final `SWEEP_RESULT` carries `SweepPoint[]`.
+- `SweepView` modal: parameter selector, range inputs, step count, live progress bar, and a
+  Recharts line chart. CSV export of all sweep points.
+- Store flow: `requestSweep(req)` → `sweepRequest` set → `App.tsx` posts `SWEEP_COMPUTE` →
+  `setSweepResult`, `setSweepProgress`.
+
+### Design Library (`src/components/DesignLibrary/`, `src/data/reference-designs/`)
+12 curated reference designs in `src/data/reference-designs/*.json`, indexed in `index.ts`.
+Each design JSON contains `topology`, `spec`, `title`, `application`, `description`, `design_notes`,
+and `source` (app-note citation). Designs span:
+- 5V/1A USB charger (buck), 12V LED driver (boost), 3.3V CPU core (buck), Li-ion to 5V (boost),
+  48V→12V telecom (buck), 24V industrial (forward), 5V/3.3V dual-output flyback,
+  12V server auxiliary (flyback), 65W USB-C PD adapter (flyback), SEPIC automotive,
+  buck-boost battery manager, and a high-current multi-phase buck.
+- `DesignLibrary` modal: search/filter by title + application, detail view with spec preview
+  cells and design notes, "Load Design" applies spec+topology to the store.
+- Keyboard: `Ctrl+L` opens the library.
+
+### Plugin System (`src/engine/plugin-types.ts`, `electron/plugin-ipc.ts`)
+Community topology plugins as plain `.js` files in `userData/plugins/`:
+- `TopologyPlugin` interface: `id`, `name`, `version`, `author`, `description`, `compute(spec)`,
+  optional `getTransferFunction`, `generateWaveforms`, `getSchematicSVG`, `customInputs`, `defaultSpec`.
+- Electron IPC: `plugin:list` reads all `.js` files and returns `{filename, source}[]`;
+  `plugin:open-folder` opens the plugins directory in the OS file manager.
+- Worker sandboxing: `new Function('module', 'exports', source)(mod, mod.exports)` — plugins run
+  inside the Web Worker with access to JS built-ins only; no DOM, no Node, no `import`.
+- `LOAD_PLUGINS` worker message clears and rebuilds `pluginRegistry`; validates each plugin
+  with `validatePlugin()`; returns `PLUGINS_LOADED` with `PluginMeta[]` (name, version, enabled, error).
+- Topology dropdown gains a **Community Plugins** `<optgroup>`; `pluginTopologyId: string | null`
+  in the store tracks the active plugin (distinct from built-in `TopologyId`).
+- Settings modal Plugins section: per-plugin enable/disable toggles, "Open Folder", "Reload Plugins".
+- See [PLUGINS.md](PLUGINS.md) for the authoring guide, interface reference, and example Ćuk skeleton.
+
+### URL State Share (`src/engine/share.ts`, `src/components/ShareButton.tsx`)
+`serializeState(state): string` — zlib-compresses + Base64-encodes the design spec for URL embedding.
+`deserializeState(encoded): unknown` — reverses the encoding for paste-in restoration.
+`ShareButton` renders a toolbar icon; on click it writes the compressed URL to the clipboard
+and shows a brief "Copied!" confirmation. The renderer reads `window.location.search` on load
+and hydrates the store if a `?s=` parameter is present.
 
 ### Component Search / Digi-Key Integration
 Provider abstraction in `src/engine/component-search.ts`:

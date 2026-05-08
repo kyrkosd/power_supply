@@ -50,6 +50,8 @@ export function Toolbar(): React.ReactElement {
     setIsSettingsOpen,
     setIsSweepOpen,
     setIsLibraryOpen,
+    pluginTopologyId, plugins, setPluginTopology,
+    setIsShareOpen,
   } = useDesignStore()
 
   const [isExporting, setIsExporting] = useState(false)
@@ -145,6 +147,7 @@ export function Toolbar(): React.ReactElement {
           <button className={styles.btn} onClick={openProject} title="Open project (Ctrl+O)">Open</button>
           <button className={styles.btn} onClick={saveProject} title={`Save${currentProjectPath ? '' : ' as'} (Ctrl+S)`}>Save</button>
           <button className={styles.btn} onClick={saveProjectAs} title="Save as (Ctrl+Shift+S)">Save As</button>
+          <button className={styles.btn} onClick={() => setIsShareOpen(true)} title="Share — copy a pswb:// link to clipboard">⇗ Share</button>
         </div>
 
         <div className={styles.divider} />
@@ -161,12 +164,30 @@ export function Toolbar(): React.ReactElement {
           <select
             id="topology-select"
             className={styles.select}
-            value={topology}
-            onChange={(e) => handleTopologyChange(e.target.value as TopologyId)}
+            value={pluginTopologyId ?? topology}
+            onChange={(e) => {
+              const val = e.target.value
+              const isBuiltin = TOPOLOGIES.some(t => t.id === val)
+              if (isBuiltin) {
+                setPluginTopology(null)
+                handleTopologyChange(val as TopologyId)
+              } else {
+                setPluginTopology(val)
+              }
+            }}
           >
-            {TOPOLOGIES.map((t) => (
-              <option key={t.id} value={t.id}>{t.label}</option>
-            ))}
+            <optgroup label="Built-in">
+              {TOPOLOGIES.map((t) => (
+                <option key={t.id} value={t.id}>{t.label}</option>
+              ))}
+            </optgroup>
+            {plugins.filter(p => p.enabled).length > 0 && (
+              <optgroup label="Community Plugins">
+                {plugins.filter(p => p.enabled).map(p => (
+                  <option key={p.id} value={p.id}>⚡ {p.name}</option>
+                ))}
+              </optgroup>
+            )}
           </select>
           {isComputing && <span className={styles.spinner} title="Computing…" />}
         </div>

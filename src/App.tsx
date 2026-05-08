@@ -9,13 +9,16 @@ import { ComponentSuggestions } from './components/ComponentSuggestions/Componen
 import { FirstRunWelcome } from './components/FirstRunWelcome/FirstRunWelcome'
 import { StatusBar } from './components/StatusBar/StatusBar'
 import { useDesignStore, type ActiveVizTab } from './store/design-store'
+import type { PluginSource } from './engine/plugin-types'
 import { DesignComparison } from './components/ComparisonView/DesignComparison'
 import { SequencingView } from './components/SequencingView/SequencingView'
 import { Settings } from './components/Settings/Settings'
 import { EquationExplorer } from './components/EquationExplorer/EquationExplorer'
 import { SweepView } from './components/SweepView/SweepView'
 import { DesignLibrary } from './components/DesignLibrary/DesignLibrary'
+import { ShareModal, PasteConfirmModal } from './components/ShareModal/ShareModal'
 import { validateSpec } from './engine/validation'
+import { isPswbLink, decodeDesign } from './export/share-link'
 import styles from './App.module.css'
 
 // ── Keyboard shortcut handlers ────────────────────────────────────────────────
@@ -93,6 +96,11 @@ export default function App(): React.ReactElement {
   const setSweepResult            = useDesignStore((s) => s.setSweepResult)
   const setSweepProgress          = useDesignStore((s) => s.setSweepProgress)
   const setIsLibraryOpen          = useDesignStore((s) => s.setIsLibraryOpen)
+  const pluginTopologyId          = useDesignStore((s) => s.pluginTopologyId)
+  const disabledPluginIds         = useDesignStore((s) => s.disabledPluginIds)
+  const setPlugins                = useDesignStore((s) => s.setPlugins)
+  const pluginReloadRequest       = useDesignStore((s) => s.pluginReloadRequest)
+  const setPendingShareDesign     = useDesignStore((s) => s.setPendingShareDesign)
 
   const workerRef = useRef<Worker | null>(null)
 
@@ -132,6 +140,8 @@ export default function App(): React.ReactElement {
         setSweepProgress(msg.payload.current, msg.payload.total)
       } else if (msg?.type === 'SWEEP_RESULT' && msg.payload) {
         setSweepResult(msg.payload)
+      } else if (msg?.type === 'PLUGINS_LOADED' && msg.payload) {
+        setPlugins(msg.payload.plugins)
       } else if (msg?.type === 'ERROR' && msg.payload) {
         console.error('Engine worker error:', msg.payload.message)
       }
@@ -144,18 +154,22 @@ export default function App(): React.ReactElement {
       worker.terminate()
       workerRef.current = null
     }
-  }, [setResult, setMcResult, setEfficiencyMapResult, setTransientResult, setEmiResult, setSweepResult, setSweepProgress])
+  }, [setResult, setMcResult, setEfficiencyMapResult, setTransientResult, setEmiResult, setSweepResult, setSweepProgress, setPlugins])
 
   // Engine worker — dispatch design computation on spec/topology change
   // Skip when validation errors exist; cancelComputing clears the spinner.
+  // When a plugin topology is active, validation is skipped (plugins define their own constraints).
   useEffect(() => {
-    const { valid } = validateSpec(topology, spec)
-    if (!valid) {
-      cancelComputing()
-      return
+    const activeTopology = pluginTopologyId ?? topology
+    if (!pluginTopologyId) {
+      const { valid } = validateSpec(topology, spec)
+      if (!valid) {
+        cancelComputing()
+        return
+      }
     }
-    workerRef.current?.postMessage({ type: 'COMPUTE', payload: { topology, spec } })
-  }, [topology, spec, cancelComputing])
+    workerRef.current?.postMessage({ type: 'COMPUTE', payload: { topology: activeTopology, spec } })
+  }, [topology, spec, pluginTopologyId, cancelComputing])
 
   // Engine worker — dispatch efficiency map computation when requested
   useEffect(() => {
@@ -189,6 +203,62 @@ export default function App(): React.ReactElement {
     clearSweepRequest()
   }, [sweepRequest, clearSweepRequest])
 
+  // Share — handle pswb:// deep links received while the app is running
+  useEffect(() => {
+    window.shareAPI?.onDeepLink((url) => {
+      const design = decodeDesign(url)
+      if (design) setPendingShareDesign(design)
+    })
+    // Check for a pswb:// URL that arrived via CLI on first launch
+    window.shareAPI?.getLaunchLink().then((url) => {
+      if (!url) return
+      const design = decodeDesign(url)
+      if (design) setPendingShareDesign(design)
+    })
+  // Run once on mount; the callbacks register listeners that stay alive
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Share — global paste listener: intercept pswb:// strings pasted anywhere
+  useEffect(() => {
+    function onPaste(e: ClipboardEvent): void {
+      const text = e.clipboardData?.getData('text') ?? ''
+      if (!isPswbLink(text)) return
+      const design = decodeDesign(text.trim())
+      if (!design) return
+      // Only intercept when the paste target is not a text input / textarea
+      // (so normal editing isn't disrupted)
+      const target = e.target as HTMLElement
+      if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) return
+      e.preventDefault()
+      setPendingShareDesign(design)
+    }
+    document.addEventListener('paste', onPaste)
+    return () => document.removeEventListener('paste', onPaste)
+  }, [setPendingShareDesign])
+
+  // Plugin system — load plugins from filesystem and send to worker
+  useEffect(() => {
+    async function loadPlugins(): Promise<void> {
+      const api = window.pluginAPI
+      if (!api) return
+      try {
+        const res = await api.listPlugins()
+        if (!res.success) return
+        const sources: PluginSource[] = res.plugins
+        workerRef.current?.postMessage({
+          type: 'LOAD_PLUGINS',
+          payload: { sources, disabledIds: disabledPluginIds },
+        })
+      } catch {
+        // Non-Electron environment — silently skip
+      }
+    }
+    loadPlugins()
+  // pluginReloadRequest is a counter that increments when the user clicks "Reload"
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pluginReloadRequest])
+
   return (
     <div className={styles.shell}>
       <FirstRunWelcome />
@@ -198,6 +268,8 @@ export default function App(): React.ReactElement {
       <EquationExplorer />
       <SweepView />
       <DesignLibrary />
+      <ShareModal />
+      <PasteConfirmModal />
       <Toolbar />
       <div className={styles.workspace}>
         <aside className={styles.sidebar}>

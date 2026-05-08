@@ -10,6 +10,8 @@ import type { EMIResult } from '../engine/topologies/types'
 import type { ProjectFile } from '../types/project'
 import { undoMiddleware } from './undo-middleware'
 import type { SelectedComponents } from '../engine/component-selector'
+import type { PluginMeta } from '../engine/plugin-types'
+import type { ShareableDesign } from '../export/share-link'
 import { DEFAULT_FEEDBACK_OPTIONS } from '../engine/feedback'
 import type { FeedbackOptions } from '../engine/feedback'
 import { DEFAULT_SOFT_START_OPTIONS } from '../engine/soft-start'
@@ -134,6 +136,22 @@ export interface DesignStoreState {
   setIsLibraryOpen: (open: boolean) => void
   loadDesignSpec: (topology: TopologyId, spec: DesignSpec) => void
 
+  // Share link
+  isShareOpen: boolean
+  setIsShareOpen: (open: boolean) => void
+  pendingShareDesign: ShareableDesign | null
+  setPendingShareDesign: (d: ShareableDesign | null) => void
+
+  // Plugin system
+  pluginTopologyId: string | null
+  plugins: PluginMeta[]
+  disabledPluginIds: string[]
+  pluginReloadRequest: number
+  setPluginTopology: (id: string | null) => void
+  setPlugins: (plugins: PluginMeta[]) => void
+  togglePlugin: (id: string) => void
+  requestPluginReload: () => void
+
   // Parameter sweep
   isSweepOpen: boolean
   setIsSweepOpen: (open: boolean) => void
@@ -245,6 +263,16 @@ export const useDesignStore = create<DesignStoreState>(
     // Design library state
     isLibraryOpen: false,
 
+    // Share link state
+    isShareOpen: false,
+    pendingShareDesign: null,
+
+    // Plugin system state
+    pluginTopologyId: null,
+    plugins: [],
+    disabledPluginIds: [],
+    pluginReloadRequest: 0,
+
     // Sweep analysis state
     isSweepOpen: false,
     sweepLoading: false,
@@ -296,11 +324,11 @@ export const useDesignStore = create<DesignStoreState>(
       set((state) => ({ softStartOptions: { ...state.softStartOptions, ...opts } })),
 
     setTopology: (topology) =>
-      set({ topology, spec: TOPOLOGY_DEFAULTS[topology], isModified: true, selectedComponents: EMPTY_SELECTION, ...COMPUTE_RESET }),
+      set({ topology, spec: TOPOLOGY_DEFAULTS[topology], pluginTopologyId: null, isModified: true, selectedComponents: EMPTY_SELECTION, ...COMPUTE_RESET }),
 
     // Switches topology without resetting spec values (user chose "Keep Current")
     setTopologyOnly: (topology) =>
-      set({ topology, isModified: true, selectedComponents: EMPTY_SELECTION, ...COMPUTE_RESET }),
+      set({ topology, pluginTopologyId: null, isModified: true, selectedComponents: EMPTY_SELECTION, ...COMPUTE_RESET }),
 
     // Cancels the computing spinner when the worker is blocked by validation errors
     cancelComputing: () => set({ isComputing: false }),
@@ -340,7 +368,19 @@ export const useDesignStore = create<DesignStoreState>(
 
     setIsLibraryOpen: (open) => set({ isLibraryOpen: open }),
     loadDesignSpec: (topology, spec) =>
-      set({ topology, spec, isModified: true, selectedComponents: EMPTY_SELECTION, ...COMPUTE_RESET }),
+      set({ topology, spec, pluginTopologyId: null, isModified: true, selectedComponents: EMPTY_SELECTION, ...COMPUTE_RESET }),
+
+    setIsShareOpen: (open) => set({ isShareOpen: open }),
+    setPendingShareDesign: (d) => set({ pendingShareDesign: d }),
+
+    setPluginTopology: (id) => set({ pluginTopologyId: id, ...COMPUTE_RESET }),
+    setPlugins: (plugins) => set({ plugins }),
+    togglePlugin: (id) => set((state) => ({
+      disabledPluginIds: state.disabledPluginIds.includes(id)
+        ? state.disabledPluginIds.filter(x => x !== id)
+        : [...state.disabledPluginIds, id],
+    })),
+    requestPluginReload: () => set((state) => ({ pluginReloadRequest: state.pluginReloadRequest + 1 })),
 
     setIsSweepOpen: (open) => set({ isSweepOpen: open }),
     requestSweep: (req) => set({ sweepRequest: req, sweepLoading: true, sweepResult: null, sweepProgress: 0, sweepProgressTotal: 0 }),

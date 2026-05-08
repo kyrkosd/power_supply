@@ -53,4 +53,12 @@ interface Window {
     testConnection: () => Promise<{ success: boolean; error?: string }>
     search: (req: import('./engine/component-search').ComponentRequirements) => Promise<DigiKeySearchResult>
   }
+  pluginAPI?: {
+    listPlugins: () => Promise<{ success: boolean; plugins: { filename: string; source: string }[]; error?: string }>
+    openPluginsFolder: () => Promise<{ success: boolean }>
+  }
+  shareAPI?: {
+    getLaunchLink: () => Promise<string | null>
+    onDeepLink: (cb: (url: string) => void) => void
+  }
 }

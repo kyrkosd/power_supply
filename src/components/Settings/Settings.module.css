@@ -214,3 +214,49 @@
   height: 1px;
   background: var(--border, #333);
 }
+
+.pluginList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pluginCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--input-bg, #111122);
+  border: 1px solid var(--border, #333);
+  border-radius: 6px;
+  padding: 8px 12px;
+  gap: 12px;
+}
+
+.pluginInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.pluginName {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary, #e0e0e0);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pluginMeta {
+  font-size: 0.75rem;
+  color: var(--text-secondary, #888);
+}
+
+.pluginError {
+  font-size: 0.7rem;
+  color: #f44336;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

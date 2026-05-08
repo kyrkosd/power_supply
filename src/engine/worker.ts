@@ -8,20 +8,69 @@ import type { InputFilterOptions } from './input-filter'
 import { designWinding } from './transformer-winding'
 import { getCoreByType } from './topologies/core-selector'
 import type { EMIResult } from './topologies/types'
-import type { DesignSpec, DesignResult } from './types'
+import type { DesignSpec, DesignResult, Topology } from './types'
 import type { WaveformSet, TransientResult, TransientMode } from './topologies/types'
 import type { TopologyId } from '../store/workbenchStore'
 import type { MonteCarloConfig, MonteCarloResult } from './monte-carlo'
+import type { TopologyPlugin, PluginMeta, PluginSource } from './plugin-types'
+import { validatePlugin } from './plugin-types'
 
 export type SweepParam = 'vin' | 'vout' | 'iout' | 'fsw' | 'ripple_ratio' | 'ambient_temp'
 
+// ── Plugin registry (populated by LOAD_PLUGINS messages) ─────────────────────
+
+const pluginRegistry = new Map<string, TopologyPlugin>()
+const disabledPluginIds = new Set<string>()
+
+function evaluatePluginSource(source: string): unknown {
+  const mod = { exports: {} as Record<string, unknown> }
+  // new Function sandboxes the plugin: no DOM, no worker globals, no imports.
+  // The plugin receives only standard JS built-ins through the function scope.
+  // eslint-disable-next-line no-new-func
+  new Function('module', 'exports', source)(mod, mod.exports)
+  return mod.exports.default ?? mod.exports
+}
+
+function resolveTopology(id: string): Topology {
+  const plugin = pluginRegistry.get(id)
+  if (plugin) {
+    return {
+      id: plugin.id,
+      name: plugin.name,
+      compute: (spec) => plugin.compute(spec),
+      generateWaveforms: plugin.generateWaveforms ? (spec) => plugin.generateWaveforms!(spec) : undefined,
+      getTransferFunction: plugin.getTransferFunction
+        ? (spec, result) => plugin.getTransferFunction!(spec, result)
+        : undefined,
+    }
+  }
+  return getTopology(id as TopologyId)
+}
+
+function computeAny(topologyId: string, spec: DesignSpec): DesignResult {
+  const plugin = pluginRegistry.get(topologyId)
+  if (plugin) {
+    if (disabledPluginIds.has(topologyId)) throw new Error(`Plugin '${topologyId}' is disabled`)
+    return plugin.compute(spec)
+  }
+  return compute(topologyId as TopologyId, spec)
+}
+
+function generateWaveformsAny(topologyId: string, spec: DesignSpec): WaveformSet | null {
+  const plugin = pluginRegistry.get(topologyId)
+  if (plugin) return plugin.generateWaveforms ? plugin.generateWaveforms(spec) : null
+  return generateWaveforms(topologyId as TopologyId, spec)
+}
+
+// ── Payload interfaces ────────────────────────────────────────────────────────
+
 interface ComputePayload {
-  topology: TopologyId
+  topology: string
   spec: DesignSpec
 }
 
 interface SweepPayload {
-  topology: TopologyId
+  topology: string
   baseSpec: DesignSpec
   sweepParam: SweepParam
   min: number
@@ -36,22 +85,27 @@ export interface SweepPoint {
 }
 
 interface MCComputePayload {
-  topology: TopologyId
+  topology: string
   spec: DesignSpec
   mcConfig: MonteCarloConfig
 }
 
 interface EfficiencyMapPayload {
-  topology: TopologyId
+  topology: string
   spec: DesignSpec
 }
 
 interface TransientPayload {
-  topology: TopologyId
+  topology: string
   spec: DesignSpec
   result: DesignResult
   mode: TransientMode
   softStartSeconds: number
+}
+
+interface LoadPluginsPayload {
+  sources: PluginSource[]
+  disabledIds: string[]
 }
 
 type WorkerRequest =
@@ -60,6 +114,7 @@ type WorkerRequest =
   | { type: 'EFFICIENCY_MAP'; payload: EfficiencyMapPayload }
   | { type: 'TRANSIENT_COMPUTE'; payload: TransientPayload }
   | { type: 'SWEEP_COMPUTE'; payload: SweepPayload }
+  | { type: 'LOAD_PLUGINS'; payload: LoadPluginsPayload }
 
 type ResultResponse = {
   type: 'RESULT'
@@ -80,6 +135,7 @@ type TransientResultResponse = {
 type SweepProgressResponse = { type: 'SWEEP_PROGRESS'; payload: { current: number; total: number } }
 type SweepResultResponse = { type: 'SWEEP_RESULT'; payload: { sweepParam: SweepParam; points: SweepPoint[] } }
 type ErrorResponse = { type: 'ERROR'; payload: { message: string } }
+type PluginsLoadedResponse = { type: 'PLUGINS_LOADED'; payload: { plugins: PluginMeta[] } }
 
 const DEBOUNCE_MS = 8
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
@@ -95,31 +151,31 @@ function scheduleCompute(payload: ComputePayload): void {
     latestPayload = null
     const start = performance.now()
     try {
-      let result = compute(topology, spec)
+      let result = computeAny(topology, spec)
       if (spec.controlMode === 'current') {
-        const cs = designCurrentSense(topology, spec, result, spec.senseMethod ?? 'resistor', spec.vsenseTargetMv ?? 150)
+        const cs = designCurrentSense(topology as TopologyId, spec, result, spec.senseMethod ?? 'resistor', spec.vsenseTargetMv ?? 150)
         result = { ...result, current_sense: cs }
       }
       // EMI + optional input filter
-      const emiResult: EMIResult = estimateEMI(topology, spec, result)
+      const emiResult: EMIResult = estimateEMI(topology as TopologyId, spec, result)
       if (spec.inputFilterEnabled) {
         const filterOpts: InputFilterOptions = {
           enabled: true,
           attenuation_override_db: spec.inputFilterAttenuationDb ?? 0,
           cm_choke_h: (spec.inputFilterCmChokeMh ?? 0) / 1000,
         }
-        const inputFilter = designInputFilter(topology, spec, result, emiResult, filterOpts)
+        const inputFilter = designInputFilter(topology as TopologyId, spec, result, emiResult, filterOpts)
         result = { ...result, input_filter: inputFilter }
       }
       // Transformer winding design (flyback and forward only)
       if ((topology === 'flyback' || topology === 'forward') && result.coreType) {
         const core = getCoreByType(result.coreType)
         if (core) {
-          const winding = designWinding(topology, spec, result, core)
+          const winding = designWinding(topology as TopologyId, spec, result, core)
           result = { ...result, winding_result: winding }
         }
       }
-      const waveforms = generateWaveforms(topology, spec)
+      const waveforms = generateWaveformsAny(topology, spec)
       const timing_ms = performance.now() - start
       const response: ResultResponse = { type: 'RESULT', payload: { result, waveforms, timing_ms, emiResult } }
       if (waveforms) {
@@ -222,11 +278,43 @@ self.addEventListener('message', (event: MessageEvent<WorkerRequest>) => {
     return
   }
 
+  if (message.type === 'LOAD_PLUGINS') {
+    const { sources, disabledIds } = message.payload
+    pluginRegistry.clear()
+    disabledPluginIds.clear()
+    disabledIds.forEach(id => disabledPluginIds.add(id))
+    const loaded: PluginMeta[] = []
+    for (const { filename, source } of sources) {
+      try {
+        const exported = evaluatePluginSource(source)
+        if (!validatePlugin(exported)) {
+          loaded.push({ id: filename, name: filename, version: '?', author: '?', description: '', filename, enabled: false, error: 'Missing required fields (id, name, compute)' })
+          continue
+        }
+        pluginRegistry.set(exported.id, exported)
+        loaded.push({
+          id: exported.id,
+          name: exported.name,
+          version: exported.version,
+          author: exported.author,
+          description: exported.description,
+          filename,
+          enabled: !disabledPluginIds.has(exported.id),
+        })
+      } catch (err) {
+        loaded.push({ id: filename, name: filename, version: '?', author: '?', description: '', filename, enabled: false, error: String(err) })
+      }
+    }
+    const response: PluginsLoadedResponse = { type: 'PLUGINS_LOADED', payload: { plugins: loaded } }
+    self.postMessage(response)
+    return
+  }
+
   if (message.type === 'MC_COMPUTE') {
     const { topology, spec, mcConfig } = message.payload
     try {
-      const nominalResult = compute(topology, spec)
-      const topologyObj = getTopology(topology)
+      const nominalResult = computeAny(topology, spec)
+      const topologyObj = resolveTopology(topology)
       const mcResult = runMonteCarlo(topologyObj, spec, nominalResult, mcConfig)
       const response: MCResultResponse = { type: 'MC_RESULT', payload: mcResult }
       self.postMessage(response)
@@ -240,7 +328,7 @@ self.addEventListener('message', (event: MessageEvent<WorkerRequest>) => {
 
   if (message.type === 'EFFICIENCY_MAP') {
     try {
-      const response = computeEfficiencyMap(message.payload)
+      const response = computeEfficiencyMap(message.payload as EfficiencyMapPayload)
       self.postMessage(response)
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error)
@@ -252,7 +340,7 @@ self.addEventListener('message', (event: MessageEvent<WorkerRequest>) => {
 
   if (message.type === 'SWEEP_COMPUTE') {
     const { topology: topoId, baseSpec, sweepParam, min, max, steps } = message.payload
-    const topo = getTopology(topoId)
+    const topo = resolveTopology(topoId)
     const vals = linspace(min, max, Math.max(2, steps))
     const pts: SweepPoint[] = []
     let i = 0
@@ -263,7 +351,7 @@ self.addEventListener('message', (event: MessageEvent<WorkerRequest>) => {
         const v = vals[i]
         const varSpec = applyParam(baseSpec, sweepParam, v)
         try {
-          const result = compute(topoId, varSpec)
+          const result = computeAny(topoId, varSpec)
           pts.push({ paramValue: v, result, phaseMargin: computeSweepPM(topo, varSpec, result) })
         } catch {
           pts.push({ paramValue: v, result: null, phaseMargin: null })

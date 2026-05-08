@@ -34,12 +34,32 @@ const digikeyAPI = {
     ipcRenderer.invoke('digikey:search', req),
 }
 
+const pluginAPI = {
+  listPlugins: () =>
+    ipcRenderer.invoke('plugin:list'),
+  openPluginsFolder: () =>
+    ipcRenderer.invoke('plugin:open-folder'),
+}
+
+const shareAPI = {
+  // Retrieve a pswb:// URL that was passed on the command line at launch.
+  getLaunchLink: (): Promise<string | null> =>
+    ipcRenderer.invoke('share:get-launch-link'),
+  // Register a callback for pswb:// URLs arriving while the app is running
+  // (second-instance on Windows/Linux, open-url on macOS).
+  onDeepLink: (cb: (url: string) => void): void => {
+    ipcRenderer.on('share:deep-link', (_event, url: string) => cb(url))
+  },
+}
+
 if (process.contextIsolated) {
   try {
     contextBridge.exposeInMainWorld('electron', electronAPI)
     contextBridge.exposeInMainWorld('projectAPI', projectAPI)
     contextBridge.exposeInMainWorld('exportAPI', exportAPI)
     contextBridge.exposeInMainWorld('digikeyAPI', digikeyAPI)
+    contextBridge.exposeInMainWorld('pluginAPI', pluginAPI)
+    contextBridge.exposeInMainWorld('shareAPI', shareAPI)
   } catch (error) {
     console.error(error)
   }
@@ -52,4 +72,8 @@ if (process.contextIsolated) {
   window.exportAPI = exportAPI
   // @ts-expect-error -- window.digikeyAPI is declared in env.d.ts
   window.digikeyAPI = digikeyAPI
+  // @ts-expect-error -- window.pluginAPI is declared in env.d.ts
+  window.pluginAPI = pluginAPI
+  // @ts-expect-error -- window.shareAPI is declared in env.d.ts
+  window.shareAPI = shareAPI
 }
