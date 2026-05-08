@@ -14,6 +14,7 @@ import { SequencingView } from './components/SequencingView/SequencingView'
 import { Settings } from './components/Settings/Settings'
 import { EquationExplorer } from './components/EquationExplorer/EquationExplorer'
 import { SweepView } from './components/SweepView/SweepView'
+import { DesignLibrary } from './components/DesignLibrary/DesignLibrary'
 import { validateSpec } from './engine/validation'
 import styles from './App.module.css'
 
@@ -32,6 +33,7 @@ type EditHandlers = {
   setActiveVizTab: (tab: ActiveVizTab) => void
   saveToComparison: () => void
   setIsComparing: (open: boolean) => void
+  setIsLibraryOpen: (open: boolean) => void
 }
 
 function handleFileShortcut(event: KeyboardEvent, handlers: FileHandlers): boolean {
@@ -52,6 +54,7 @@ function handleEditShortcut(event: KeyboardEvent, handlers: EditHandlers): void 
     case 'z': event.preventDefault(); event.shiftKey ? handlers.redo() : handlers.undo(); break
     case 'y': event.preventDefault(); handlers.redo(); break
     case 'k': event.preventDefault(); event.shiftKey ? handlers.setIsComparing(true) : handlers.saveToComparison(); break
+    case 'l': event.preventDefault(); handlers.setIsLibraryOpen(true); break
     case '1': event.preventDefault(); handlers.setActiveVizTab('waveforms'); break
     case '2': event.preventDefault(); handlers.setActiveVizTab('bode'); break
     case '3': event.preventDefault(); handlers.setActiveVizTab('losses'); break
@@ -89,13 +92,14 @@ export default function App(): React.ReactElement {
   const clearSweepRequest         = useDesignStore((s) => s.clearSweepRequest)
   const setSweepResult            = useDesignStore((s) => s.setSweepResult)
   const setSweepProgress          = useDesignStore((s) => s.setSweepProgress)
+  const setIsLibraryOpen          = useDesignStore((s) => s.setIsLibraryOpen)
 
   const workerRef = useRef<Worker | null>(null)
 
   // Keyboard shortcuts
   useEffect(() => {
     const fileHandlers: FileHandlers = { newProject, openProject, saveProject, saveProjectAs }
-    const editHandlers: EditHandlers = { undo, redo, setActiveVizTab, saveToComparison, setIsComparing }
+    const editHandlers: EditHandlers = { undo, redo, setActiveVizTab, saveToComparison, setIsComparing, setIsLibraryOpen }
 
     function onKeyDown(event: KeyboardEvent): void {
       // File shortcuts work even when focus is inside a text field
@@ -107,7 +111,7 @@ export default function App(): React.ReactElement {
 
     document.addEventListener('keydown', onKeyDown)
     return () => document.removeEventListener('keydown', onKeyDown)
-  }, [setActiveVizTab, newProject, openProject, saveProject, saveProjectAs, undo, redo, saveToComparison, setIsComparing])
+  }, [setActiveVizTab, newProject, openProject, saveProject, saveProjectAs, undo, redo, saveToComparison, setIsComparing, setIsLibraryOpen])
 
   // Engine worker — lifecycle
   useEffect(() => {
@@ -193,6 +197,7 @@ export default function App(): React.ReactElement {
       <Settings />
       <EquationExplorer />
       <SweepView />
+      <DesignLibrary />
       <Toolbar />
       <div className={styles.workspace}>
         <aside className={styles.sidebar}>

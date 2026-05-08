@@ -107,6 +107,11 @@ function tabLabel(tab: TabId): string {
 function QuickStartTab(): React.ReactElement {
   return (
     <div className={styles.tabContent}>
+      <div style={{ background: 'rgba(50, 201, 230, 0.07)', border: '1px solid rgba(50, 201, 230, 0.2)', borderRadius: 6, padding: '9px 12px', marginBottom: 14, fontSize: 12, lineHeight: 1.5 }}>
+        <strong style={{ color: '#32c9e6' }}>New to the app?</strong> Open the{' '}
+        <strong>Design Library</strong> (toolbar button or <kbd style={{ background: 'rgba(255,255,255,0.08)', borderRadius: 3, padding: '1px 5px', fontSize: 11 }}>Ctrl+L</kbd>) and load a reference design
+        to see how a complete design looks — 12 real-world examples from beginner to advanced.
+      </div>
       <h3>Getting Started</h3>
       <ol className={styles.stepList}>
         <li>

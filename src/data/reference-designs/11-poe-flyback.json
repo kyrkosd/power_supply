@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "created": "2024-01-15T00:00:00.000Z",
+  "modified": "2024-01-15T00:00:00.000Z",
+  "topology": "flyback",
+  "spec": {
+    "vinMin": 36.0,
+    "vinMax": 57.0,
+    "vout": 5.0,
+    "iout": 2.5,
+    "fsw": 150000,
+    "rippleRatio": 0.30,
+    "ambientTemp": 40,
+    "voutRippleMax": 0.05,
+    "efficiency": 0.88,
+    "leakageRatio": 0.04
+  },
+  "componentOverrides": {},
+  "notes": "",
+  "title": "PoE Powered Device (36–57V Isolated)",
+  "description": "An isolated flyback converter for a PoE (Power over Ethernet) powered device, operating from the 36–57 V PoE input range to deliver an isolated 5 V/2.5 A (12.5 W) output to the device circuitry.",
+  "application": "IEEE 802.3af PoE Powered Device",
+  "difficulty": "advanced",
+  "design_notes": "IEEE 802.3af (PoE Class 3) allows up to 15.4 W at the PSE port; accounting for cable loss, the PD receives 12.95 W minimum at a port voltage of 37–57 V. This design operates within Class 3 budget. Isolation is mandatory: the PoE standard requires 1500 Vrms primary-to-secondary isolation in the DC-DC converter to ensure the Cat-5 cable remains safe to touch. The flyback transformer must meet this isolation requirement with adequate creepage and clearance per IEC 60950-1 / IEC 62368-1. The 36–57 V input covers the full classification and operating voltage range; a TVS on the input handles the PoE inrush and transient pulses defined in IEEE 802.3. Output voltage can also be 3.3 V or 12 V depending on the downstream device — adjust Vout and recalculate.",
+  "source": "TI SLVA107B — Flyback Design; IEEE 802.3af-2003 §33.3; IEC 62368-1 §5.4"
+}

@@ -129,6 +129,11 @@ export interface DesignStoreState {
   activeEquationId: string | null
   setActiveEquationId: (id: string | null) => void
 
+  // Design library
+  isLibraryOpen: boolean
+  setIsLibraryOpen: (open: boolean) => void
+  loadDesignSpec: (topology: TopologyId, spec: DesignSpec) => void
+
   // Parameter sweep
   isSweepOpen: boolean
   setIsSweepOpen: (open: boolean) => void
@@ -237,6 +242,9 @@ export const useDesignStore = create<DesignStoreState>(
     // Equation explorer state
     activeEquationId: null,
 
+    // Design library state
+    isLibraryOpen: false,
+
     // Sweep analysis state
     isSweepOpen: false,
     sweepLoading: false,
@@ -329,6 +337,10 @@ export const useDesignStore = create<DesignStoreState>(
     setActiveVizTab: (activeVizTab) => set({ activeVizTab }),
 
     setActiveEquationId: (activeEquationId) => set({ activeEquationId }),
+
+    setIsLibraryOpen: (open) => set({ isLibraryOpen: open }),
+    loadDesignSpec: (topology, spec) =>
+      set({ topology, spec, isModified: true, selectedComponents: EMPTY_SELECTION, ...COMPUTE_RESET }),
 
     setIsSweepOpen: (open) => set({ isSweepOpen: open }),
     requestSweep: (req) => set({ sweepRequest: req, sweepLoading: true, sweepResult: null, sweepProgress: 0, sweepProgressTotal: 0 }),

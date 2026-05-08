@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "created": "2024-01-15T00:00:00.000Z",
+  "modified": "2024-01-15T00:00:00.000Z",
+  "topology": "flyback",
+  "spec": {
+    "vinMin": 100.0,
+    "vinMax": 370.0,
+    "vout": 20.0,
+    "iout": 3.25,
+    "fsw": 100000,
+    "rippleRatio": 0.30,
+    "ambientTemp": 40,
+    "voutRippleMax": 0.40,
+    "efficiency": 0.88,
+    "leakageRatio": 0.05
+  },
+  "componentOverrides": {},
+  "notes": "",
+  "title": "65W USB-C PD Adapter",
+  "description": "A quasi-resonant flyback converter converting the bridge-rectified AC mains bus (100–370 V DC) to a 20 V/3.25 A output, forming the power stage of a 65 W USB-C Power Delivery charger.",
+  "application": "USB-C PD Laptop Charger",
+  "difficulty": "advanced",
+  "design_notes": "The input range of 100–370 V represents the full-wave rectified DC bus from 90–264 Vac mains without power-factor correction (bulk capacitor output). A complete PD adapter adds an active PFC stage in front, which raises this to a regulated ~400 V DC bus — in that case, set Vin to 380–400 V. The 5 % leakage inductance ratio is typical for a practical flyback transformer with separated primary/secondary windings; the RCD clamp dissipates approximately 1.5–2 W, which must be budgeted into thermal design. USB-C PD output voltage negotiation (5/9/12/15/20 V) is implemented by a PD controller (e.g. FUSB302, CYPD3135) adjusting the feedback reference — this power stage is designed at the 20 V maximum PDO. The 100 kHz switching frequency is chosen to comfortably fit within the quasi-resonant ZVS valley-switching window at light load.",
+  "source": "TI SLUA107B — Flyback Converter Design; ON Semiconductor AND9135; USB PD Spec Rev 3.1"
+}

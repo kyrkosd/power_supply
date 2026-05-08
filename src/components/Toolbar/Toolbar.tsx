@@ -49,6 +49,7 @@ export function Toolbar(): React.ReactElement {
     setIsSequencing,
     setIsSettingsOpen,
     setIsSweepOpen,
+    setIsLibraryOpen,
   } = useDesignStore()
 
   const [isExporting, setIsExporting] = useState(false)
@@ -191,6 +192,13 @@ export function Toolbar(): React.ReactElement {
             title={comparisonSlot && result ? 'Compare Design A vs current (Ctrl+Shift+K)' : 'Save a design first'}
           >
             ⇄ Compare
+          </button>
+          <button
+            className={styles.btn}
+            onClick={() => setIsLibraryOpen(true)}
+            title="Design Library — load a reference design (Ctrl+L)"
+          >
+            📚 Library
           </button>
           <button
             className={styles.btn}

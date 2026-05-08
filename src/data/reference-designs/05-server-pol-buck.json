@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "created": "2024-01-15T00:00:00.000Z",
+  "modified": "2024-01-15T00:00:00.000Z",
+  "topology": "buck",
+  "spec": {
+    "vinMin": 11.4,
+    "vinMax": 12.6,
+    "vout": 1.2,
+    "iout": 30.0,
+    "fsw": 600000,
+    "rippleRatio": 0.25,
+    "ambientTemp": 40,
+    "voutRippleMax": 0.012,
+    "efficiency": 0.88,
+    "phases": 4,
+    "rectification": "synchronous"
+  },
+  "componentOverrides": {},
+  "notes": "",
+  "title": "12V → 1.2V Server Point-of-Load",
+  "description": "A quad-phase synchronous buck delivering 30 A at 1.2 V to a server processor core-voltage rail. Uses interleaved phases to cancel output ripple and distribute heat across four inductors.",
+  "application": "Server CPU Core Voltage (POL)",
+  "difficulty": "intermediate",
+  "design_notes": "At 30 A load and 1.2 V output, a single-phase design requires a 7.5 A peak-to-peak inductor ripple current, demanding a very large output capacitor bank to hit 12 mV ripple. Four interleaved phases at 600 kHz each reduce the effective ripple frequency to 2.4 MHz, allowing the per-phase inductance to be lowered and the total capacitance to be dramatically reduced (the ripple cancellation factor K approaches 0 at D = 0.25 with 4 phases). Synchronous rectification is essential at 30 A: a Schottky diode would dissipate ~10 W in the freewheeling phase alone. Use a dedicated multiphase controller IC (e.g. TI TPS40400, Renesas RAA228228) and place all inductors in a row above the output capacitor bank for optimal current sharing.",
+  "source": "TI SLVA354A — Multiphase Buck Regulator Design; Erickson & Maksimovic §12.4"
+}

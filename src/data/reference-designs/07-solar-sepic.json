@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "created": "2024-01-15T00:00:00.000Z",
+  "modified": "2024-01-15T00:00:00.000Z",
+  "topology": "sepic",
+  "spec": {
+    "vinMin": 6.0,
+    "vinMax": 18.0,
+    "vout": 14.4,
+    "iout": 2.0,
+    "fsw": 150000,
+    "rippleRatio": 0.35,
+    "ambientTemp": 40,
+    "voutRippleMax": 0.144,
+    "efficiency": 0.88
+  },
+  "componentOverrides": {},
+  "notes": "",
+  "title": "Solar MPPT Charger (SEPIC)",
+  "description": "A SEPIC converter charging a 12 V lead-acid or LiFePO4 battery bank at up to 28.8 W from a solar panel whose open-circuit voltage varies between 6 V and 18 V depending on irradiance.",
+  "application": "Solar Battery Charger (MPPT)",
+  "difficulty": "intermediate",
+  "design_notes": "The SEPIC topology is uniquely suited to MPPT solar charging because the output voltage (14.4 V battery charge voltage) can be both above and below the panel voltage, allowing operation from a single low-cell-count panel across its full MPP voltage range (typically 70–80 % of Voc). Unlike a buck-boost, the SEPIC maintains non-inverted polarity and presents a continuous input current, which is gentler on the panel's output impedance. The coupling capacitor between the two inductors is a 10 µF film or large-value X7R ceramic; avoid electrolytic here as ripple current is high. Full MPPT requires a perturb-and-observe or incremental-conductance outer loop above this power-stage model — that logic runs in a microcontroller measuring Vpanel and Ipanel.",
+  "source": "TI SLVA061 — SEPIC Converter Design; Erickson & Maksimovic §11.5"
+}

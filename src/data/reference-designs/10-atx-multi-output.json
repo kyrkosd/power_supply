@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "created": "2024-01-15T00:00:00.000Z",
+  "modified": "2024-01-15T00:00:00.000Z",
+  "topology": "flyback",
+  "spec": {
+    "vinMin": 300.0,
+    "vinMax": 375.0,
+    "vout": 12.0,
+    "iout": 18.0,
+    "fsw": 100000,
+    "rippleRatio": 0.30,
+    "ambientTemp": 40,
+    "voutRippleMax": 0.12,
+    "efficiency": 0.87,
+    "leakageRatio": 0.04,
+    "secondary_outputs": [
+      { "vout": 5.0,  "iout": 30.0, "diode_vf": 0.40, "is_regulated": false },
+      { "vout": 3.3,  "iout": 25.0, "diode_vf": 0.40, "is_regulated": false }
+    ]
+  },
+  "componentOverrides": {},
+  "notes": "",
+  "title": "Multi-Output ATX PSU",
+  "description": "A multi-output flyback converter modelling the secondary side of an ATX computer power supply: 12 V/18 A (main), 5 V/30 A (logic), and 3.3 V/25 A (CPU/DRAM) from a 300–375 V PFC bus.",
+  "application": "ATX Computer Power Supply",
+  "difficulty": "advanced",
+  "design_notes": "The 12 V rail is selected as the regulated primary output (feedback loop closes on it). The 5 V and 3.3 V rails are derived via additional secondary windings and are cross-regulated — meaning their output voltages vary with load balance between rails. The cross-regulation estimate (shown in secondary output results) is typically ±3–5 % under a ±50 % primary load swing and can be improved with a magnetic amplifier (magamp) post-regulator on the 5 V winding. Modern ATX12V v2.x supplies derive the 3.3 V rail from a separate buck post-regulator on the 5 V output, eliminating the cross-regulation problem but adding a component. The 300–375 V input represents the output of the front-end PFC boost stage; the PFC stage is not modelled here. Total power across all outputs: 12×18 + 5×30 + 3.3×25 ≈ 582 W.",
+  "source": "Erickson & Maksimovic §13.2 (multi-output); ATX12V PSU Design Guide v2.52"
+}

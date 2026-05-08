@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "created": "2024-01-15T00:00:00.000Z",
+  "modified": "2024-01-15T00:00:00.000Z",
+  "topology": "boost",
+  "spec": {
+    "vinMin": 3.0,
+    "vinMax": 4.2,
+    "vout": 5.0,
+    "iout": 1.0,
+    "fsw": 400000,
+    "rippleRatio": 0.30,
+    "ambientTemp": 25,
+    "voutRippleMax": 0.05,
+    "efficiency": 0.88
+  },
+  "componentOverrides": {},
+  "notes": "",
+  "title": "Li-Ion Battery → 5V Boost",
+  "description": "A boost converter powering a USB 5 V output from a single lithium-ion cell (3.0–4.2 V). Covers the full cell discharge curve from empty (3.0 V) to fully charged (4.2 V).",
+  "application": "Portable Power Bank",
+  "difficulty": "beginner",
+  "design_notes": "The widest duty-cycle variation occurs at minimum input voltage (Vin = 3.0 V), where D ≈ 0.40. At maximum cell voltage (4.2 V) the duty cycle falls to about 0.16. Verify that the selected controller handles this range gracefully; many synchronous boost ICs have a minimum duty-cycle clamp. The 400 kHz switching frequency is a practical compromise for battery-powered designs: high enough for a compact 10–15 µH inductor, yet low enough that gate-drive losses are not dominant at the sub-1 A input current levels. Low-dropout (LDO) post-regulation is sometimes added after the boost stage to eliminate switching noise entirely on noise-sensitive loads.",
+  "source": "TI SLVA372D — Understanding Boost Power Stages; ON Semiconductor AND9135"
+}

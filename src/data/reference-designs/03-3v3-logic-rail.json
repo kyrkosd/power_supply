@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "created": "2024-01-15T00:00:00.000Z",
+  "modified": "2024-01-15T00:00:00.000Z",
+  "topology": "buck",
+  "spec": {
+    "vinMin": 4.75,
+    "vinMax": 5.25,
+    "vout": 3.3,
+    "iout": 0.5,
+    "fsw": 600000,
+    "rippleRatio": 0.20,
+    "ambientTemp": 25,
+    "voutRippleMax": 0.02,
+    "efficiency": 0.88
+  },
+  "componentOverrides": {},
+  "notes": "",
+  "title": "3.3V Logic Rail (Low Noise)",
+  "description": "A low-ripple 3.3 V rail derived from a 5 V bus, targeting microcontroller and digital logic applications where voltage noise degrades ADC accuracy and RF performance.",
+  "application": "MCU / Logic Power Rail",
+  "difficulty": "beginner",
+  "design_notes": "The 600 kHz switching frequency and 20 % ripple ratio work together to produce a small 6.8 µH inductor and a compact 22–47 µF output capacitor, allowing a very small PCB footprint. The 20 mV ripple target (0.6 % of 3.3 V) is tight enough for most microcontrollers and 12-bit ADCs without requiring additional LC post-filtering. If the design powers an RF transceiver or precision DAC, add a second LC stage (e.g. 1 µH + 10 µF) after the switcher to reach sub-millivolt noise. Ferrite-bead filtering on power entry pins is still recommended for sensitive analogue blocks regardless of output ripple.",
+  "source": "Erickson & Maksimovic §2.4; TI SLVA677 — Practical Feedback Loop Design Considerations"
+}

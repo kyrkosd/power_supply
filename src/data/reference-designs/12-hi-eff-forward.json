@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "created": "2024-01-15T00:00:00.000Z",
+  "modified": "2024-01-15T00:00:00.000Z",
+  "topology": "forward",
+  "spec": {
+    "vinMin": 44.0,
+    "vinMax": 52.0,
+    "vout": 12.0,
+    "iout": 20.0,
+    "fsw": 200000,
+    "rippleRatio": 0.25,
+    "ambientTemp": 40,
+    "voutRippleMax": 0.12,
+    "efficiency": 0.90,
+    "leakageRatio": 0.02,
+    "rectification": "synchronous"
+  },
+  "componentOverrides": {},
+  "notes": "",
+  "title": "High-Efficiency 48V → 12V/20A",
+  "description": "A high-efficiency synchronous forward converter delivering 240 W at 12 V/20 A from a 48 V bus, targeting data-centre and telecom intermediate bus applications where every percent of efficiency matters.",
+  "application": "48V IBA (Intermediate Bus Architecture)",
+  "difficulty": "advanced",
+  "design_notes": "The forward topology is preferred over the flyback at 240 W because energy is transferred directly to the secondary during the switch-on phase, reducing RMS currents in the transformer windings and allowing a smaller core for the same power. Synchronous rectification on the secondary eliminates the ~0.5 V Schottky forward drop: at 20 A, this saves 10 W — an improvement from roughly 88 % to 90 % efficiency. The 2 % leakage ratio assumes a tightly wound interleaved transformer (bifilar or sectioned winding); the RCD clamp power dissipation is minimal. The 200 kHz switching frequency is a deliberate middle ground: low enough that the synchronous rectifier's gate-drive losses stay below 1 W, yet high enough that the inductor (approx 10–15 µH) fits in a compact package. Duty-cycle range is approximately 0.23–0.27 across the input span — very narrow, which simplifies compensator design.",
+  "source": "Erickson & Maksimovic §6.3; TI SLUA107 — Forward Converter Design; Vicor AN008 — 48V IBA"
+}

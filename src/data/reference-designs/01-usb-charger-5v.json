@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "created": "2024-01-15T00:00:00.000Z",
+  "modified": "2024-01-15T00:00:00.000Z",
+  "topology": "buck",
+  "spec": {
+    "vinMin": 11.4,
+    "vinMax": 12.6,
+    "vout": 5.0,
+    "iout": 1.0,
+    "fsw": 200000,
+    "rippleRatio": 0.30,
+    "ambientTemp": 25,
+    "voutRippleMax": 0.05,
+    "efficiency": 0.87
+  },
+  "componentOverrides": {},
+  "notes": "",
+  "title": "5V/1A USB Charger",
+  "description": "A basic synchronous buck converter converting a 12 V wall adapter to a 5 V USB output rail. Optimised for simplicity and low BOM cost at 200 kHz.",
+  "application": "USB Phone Charger",
+  "difficulty": "beginner",
+  "design_notes": "The 200 kHz switching frequency is a deliberate choice for beginners: low enough that the inductor and capacitor are large enough to solder by hand and measure with a standard oscilloscope. The 30 % ripple ratio (ΔIL = 0.30 A) keeps the converter comfortably in CCM at full load and gives about 2× headroom above the CCM/DCM boundary. A 47 µF ceramic output capacitor easily meets the 50 mV ripple target. Note that USB Quick Charge or PD protocols require additional negotiation ICs not modelled here — this design produces a fixed, unregulated-protocol 5 V rail.",
+  "source": "TI SLVA477B — Switching Regulator Fundamentals; Erickson & Maksimovic §2.3"
+}

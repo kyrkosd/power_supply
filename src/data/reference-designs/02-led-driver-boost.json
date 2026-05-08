@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "created": "2024-01-15T00:00:00.000Z",
+  "modified": "2024-01-15T00:00:00.000Z",
+  "topology": "boost",
+  "spec": {
+    "vinMin": 4.5,
+    "vinMax": 5.5,
+    "vout": 12.0,
+    "iout": 0.35,
+    "fsw": 300000,
+    "rippleRatio": 0.30,
+    "ambientTemp": 25,
+    "voutRippleMax": 0.24,
+    "efficiency": 0.86
+  },
+  "componentOverrides": {},
+  "notes": "",
+  "title": "LED Driver (Boost Stage)",
+  "description": "A boost converter that raises a USB 5 V supply to 12 V for driving a series string of white LEDs at approximately 350 mA. Demonstrates the boost topology for above-rail LED applications.",
+  "application": "LED Lighting Driver",
+  "difficulty": "beginner",
+  "design_notes": "This design covers only the voltage conversion stage. True constant-current LED control requires a dedicated CC feedback loop (a sense resistor in the LED return path feeding back to the controller's FB pin, or a dedicated LED driver IC). The 300 kHz switching frequency shrinks the inductor to a practical 47–68 µH footprint. The 2 % output ripple (240 mV) is acceptable for LEDs because the LED's forward-voltage characteristic acts as a soft limiter — tighter regulation is only needed when PWM dimming with a precise average-current target. Boost converters require a zero-ESR output capacitor; use an X5R or X7R ceramic, not electrolytic.",
+  "source": "TI SLVA372D — Understanding Boost Power Stages in Switchmode Power Supplies"
+}

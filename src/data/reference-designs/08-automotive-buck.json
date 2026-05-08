@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "created": "2024-01-15T00:00:00.000Z",
+  "modified": "2024-01-15T00:00:00.000Z",
+  "topology": "buck",
+  "spec": {
+    "vinMin": 9.0,
+    "vinMax": 16.0,
+    "vout": 5.0,
+    "iout": 3.0,
+    "fsw": 400000,
+    "rippleRatio": 0.30,
+    "ambientTemp": 70,
+    "voutRippleMax": 0.05,
+    "efficiency": 0.87
+  },
+  "componentOverrides": {},
+  "notes": "",
+  "title": "Automotive 5V Rail (9–16V Input)",
+  "description": "A wide-input buck converter for automotive 12 V systems, tolerating load-dump transients (up to 36 V) and cold-crank sag (down to 9 V) while delivering 5 V at 3 A to body-electronics MCUs.",
+  "application": "Automotive Body ECU Power",
+  "difficulty": "intermediate",
+  "design_notes": "The 9–16 V input range covers the full automotive 12 V battery operating window including cold-start cranking (9 V) and alternator peak voltage (14.4 V nominal, 16 V worst-case). Load-dump transients can reach 36 V for 400 ms under ISO 7637 pulse 5a — this design requires either a TVS clamp on the input rail or a controller with built-in over-voltage protection. The 70 °C ambient temperature is a conservative worst-case for an underbonnet ECU; derate the MOSFET's Rds(on) accordingly (typically +80 % from 25 °C to 125 °C junction). AEC-Q100 Grade 1 rated components should be specified for production. The 400 kHz switching frequency keeps the inductor below 10 µH while remaining within the lower switching-frequency preference of automotive EMI standards (CISPR 25).",
+  "source": "TI SLVA704 — Automotive Buck Converter Design Guide; CISPR 25 Ed.4"
+}

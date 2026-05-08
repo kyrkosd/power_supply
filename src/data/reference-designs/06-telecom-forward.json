@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "created": "2024-01-15T00:00:00.000Z",
+  "modified": "2024-01-15T00:00:00.000Z",
+  "topology": "forward",
+  "spec": {
+    "vinMin": 44.0,
+    "vinMax": 52.0,
+    "vout": 3.3,
+    "iout": 10.0,
+    "fsw": 200000,
+    "rippleRatio": 0.30,
+    "ambientTemp": 40,
+    "voutRippleMax": 0.033,
+    "efficiency": 0.87,
+    "leakageRatio": 0.03,
+    "rectification": "synchronous"
+  },
+  "componentOverrides": {},
+  "notes": "",
+  "title": "48V Telecom Bus → 3.3V/10A",
+  "description": "An isolated forward converter stepping down the standard −48 V telecom bus (represented here as a positive 44–52 V range) to a regulated 3.3 V/10 A output for network equipment line cards.",
+  "application": "Telecom Point-of-Load (Isolated)",
+  "difficulty": "intermediate",
+  "design_notes": "The forward converter is preferred over the flyback at this power level (33 W) because it transfers energy directly through the transformer during the switch-on phase, reducing transformer core utilisation stress. The turns ratio is chosen so that the duty cycle lands near 0.35–0.45 at nominal input (48 V), leaving headroom for feed-forward regulation down to 44 V. The 3 % leakage ratio models a practical ungapped ETD core; the RCD clamp dissipates the leakage energy stored each cycle. Synchronous rectification on the secondary eliminates the Schottky diode drop, recovering roughly 3 % efficiency at 10 A. Careful gate-drive dead-time management is essential to prevent shoot-through in the synchronous rectifier.",
+  "source": "Erickson & Maksimovic §6.3; TI SLUA107 — Designing a Forward Converter"
+}
