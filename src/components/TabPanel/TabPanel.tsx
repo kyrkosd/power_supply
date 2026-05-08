@@ -1,5 +1,3 @@
-// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
-// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
 import React from 'react'
 import { useDesignStore, type ActiveVizTab } from '../../store/design-store'
 import { WaveformsTab } from './tabs/WaveformsTab'
@@ -14,42 +12,84 @@ import { InputFilterTab } from './tabs/InputFilterTab'
 import { ResultsTable } from '../ResultsTable/ResultsTable'
 import styles from './TabPanel.module.css'
 
-const TABS: { id: ActiveVizTab; label: string }[] = [
-  { id: 'waveforms',      label: 'Waveforms' },
-  { id: 'bode',           label: 'Bode Plot' },
-  { id: 'losses',         label: 'Losses' },
-  { id: 'thermal',        label: 'Thermal' },
-  { id: 'transient',      label: 'Transient' },
-  { id: 'monte-carlo',    label: 'Monte Carlo' },
-  { id: 'efficiency-map', label: 'Efficiency Map' },
-  { id: 'input-filter',   label: 'Input Filter' },
-  { id: 'layout',         label: 'Layout' },
-  { id: 'results',        label: 'Results' },
+// ── Grouped icon navigation definition ───────────────────────────────────────
+
+interface TabDef {
+  id: ActiveVizTab
+  icon: string
+  label: string
+  title: string
+}
+
+interface TabGroup {
+  label: string
+  tabs: TabDef[]
+}
+
+const TAB_GROUPS: TabGroup[] = [
+  {
+    label: 'Analysis',
+    tabs: [
+      { id: 'waveforms',      icon: '∿',  label: 'Waves',    title: 'Waveforms' },
+      { id: 'bode',           icon: '∠',  label: 'Bode',     title: 'Bode Plot' },
+      { id: 'losses',         icon: '∑',  label: 'Losses',   title: 'Loss Breakdown' },
+      { id: 'thermal',        icon: '⊡',  label: 'Thermal',  title: 'Thermal Analysis' },
+    ],
+  },
+  {
+    label: 'Verification',
+    tabs: [
+      { id: 'monte-carlo',    icon: 'σ',  label: 'MC',       title: 'Monte Carlo' },
+      { id: 'transient',      icon: '∫',  label: 'Transient',title: 'Transient Simulation' },
+      { id: 'input-filter',   icon: '≫',  label: 'Filter',   title: 'Input EMI Filter' },
+    ],
+  },
+  {
+    label: 'Design Aids',
+    tabs: [
+      { id: 'efficiency-map', icon: 'η',  label: 'Efficiency',title: 'Efficiency Heatmap' },
+      { id: 'layout',         icon: '⊟',  label: 'Layout',   title: 'PCB Layout Guide' },
+      { id: 'results',        icon: '≡',  label: 'Results',  title: 'Full Results Table' },
+    ],
+  },
 ]
+
+// ── Component ─────────────────────────────────────────────────────────────────
 
 export function TabPanel(): React.ReactElement {
   const { activeVizTab, setActiveVizTab } = useDesignStore()
 
   return (
     <div className={styles.panel}>
-      <div className={styles.tabBar}>
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            className={`${styles.tab} ${activeVizTab === t.id ? styles.active : ''}`}
-            onClick={() => setActiveVizTab(t.id)}
-          >
-            {t.label}
-          </button>
+      {/* Grouped icon nav bar */}
+      <div className={styles.iconNav}>
+        {TAB_GROUPS.map((group) => (
+          <div className={styles.navGroup} key={group.label}>
+            <span className={styles.groupLabel}>{group.label}</span>
+            <div className={styles.groupItems}>
+              {group.tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  className={`${styles.navBtn} ${activeVizTab === tab.id ? styles.active : ''}`}
+                  onClick={() => setActiveVizTab(tab.id)}
+                  title={tab.title}
+                >
+                  <span className={styles.navIcon}>{tab.icon}</span>
+                  <span className={styles.navLabel}>{tab.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
         ))}
-        <div className={styles.tabBarFill} />
       </div>
+
+      {/* Tab content */}
       <div className={styles.tabContent}>
-        {activeVizTab === 'waveforms' && <WaveformsTab />}
-        {activeVizTab === 'bode'      && <BodeTab />}
-        {activeVizTab === 'losses'    && <LossesTab />}
-        {activeVizTab === 'thermal'      && <ThermalTab />}
-        {activeVizTab === 'transient'       && <TransientTab />}
+        {activeVizTab === 'waveforms'      && <WaveformsTab />}
+        {activeVizTab === 'bode'           && <BodeTab />}
+        {activeVizTab === 'losses'         && <LossesTab />}
+        {activeVizTab === 'thermal'        && <ThermalTab />}
+        {activeVizTab === 'transient'      && <TransientTab />}
         {activeVizTab === 'monte-carlo'    && <MonteCarloTab />}
         {activeVizTab === 'efficiency-map' && <EfficiencyMapTab />}
         {activeVizTab === 'input-filter'   && <InputFilterTab />}

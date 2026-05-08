@@ -1,0 +1,118 @@
+.row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.select {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 5px 8px;
+  font-size: 12px;
+  font-family: var(--font-ui);
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.select:hover { border-color: var(--text-muted); }
+.select:focus { border-color: var(--border-focus); }
+
+.spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.resetBtn {
+  padding: 5px 8px;
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.resetBtn:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+/* Confirmation banner */
+.banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: rgba(74, 144, 217, 0.08);
+  border-bottom: 1px solid rgba(74, 144, 217, 0.22);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.bannerText {
+  flex: 1;
+  font-size: 11px;
+  color: var(--text-secondary);
+  min-width: 120px;
+}
+
+.bannerText strong {
+  color: var(--text-primary);
+}
+
+.bannerBtns {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.applyBtn {
+  padding: 3px 10px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.applyBtn:hover { background: var(--accent-hover); }
+
+.keepBtn {
+  padding: 3px 10px;
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-ui);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.keepBtn:hover {
+  color: var(--text-primary);
+  border-color: var(--text-muted);
+}

@@ -1,11 +1,9 @@
-/* INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability. */
-/* INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability. */
 .toolbar {
   height: var(--toolbar-h);
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 0 12px;
+  gap: 6px;
+  padding: 0 10px;
   background: var(--bg-elevated);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
@@ -15,89 +13,49 @@
 .brand {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
 .logo {
-  font-size: 18px;
+  font-size: 16px;
 }
 
 .title {
   font-weight: 600;
-  font-size: 14px;
+  font-size: 13px;
   color: var(--text-primary);
   white-space: nowrap;
 }
 
-.controls {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.label {
+/* Project name — centered spacer */
+.projectName {
+  flex: 1;
+  text-align: center;
   font-size: 12px;
   color: var(--text-secondary);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 8px;
 }
 
-.select {
-  background: var(--bg-surface);
-  color: var(--text-primary);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 4px 8px;
-  font-size: 13px;
-  font-family: var(--font-ui);
-  cursor: pointer;
-  outline: none;
-  transition: border-color 0.15s;
+.dot {
+  color: var(--accent);
 }
-
-.select:hover { border-color: var(--text-muted); }
-.select:focus { border-color: var(--border-focus); }
-
-.spacer { flex: 1; }
 
 .divider {
   width: 1px;
-  height: 20px;
+  height: 18px;
   background: var(--border);
   flex-shrink: 0;
+  margin: 0 2px;
 }
 
-.fileActions {
-  display: flex;
-  gap: 4px;
-}
-
-.undoActions {
+.fileGroup {
   display: flex;
   gap: 2px;
-}
-
-.undoActions .btn {
-  padding: 5px 9px;
-  font-size: 14px;
-  line-height: 1;
-}
-
-.projectName {
-  font-size: 13px;
-  color: var(--text-secondary);
-  font-weight: 400;
-  white-space: nowrap;
-}
-
-.unsaved {
-  font-size: 16px;
-  color: var(--accent);
-  line-height: 1;
-}
-
-.actions {
-  display: flex;
-  gap: 6px;
+  flex-shrink: 0;
 }
 
 .btn {
@@ -105,18 +63,19 @@
   color: var(--text-primary);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 5px 12px;
+  padding: 4px 10px;
   font-size: 12px;
   font-family: var(--font-ui);
   cursor: pointer;
-  opacity: 1;
   white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
 
 .btn:disabled {
-  color: var(--text-secondary);
+  color: var(--text-muted);
   cursor: not-allowed;
-  opacity: 0.6;
+  opacity: 0.55;
 }
 
 .btn:not(:disabled):hover {
@@ -125,79 +84,78 @@
   color: var(--accent);
 }
 
-.spinner {
-  display: inline-block;
-  width: 14px;
-  height: 14px;
-  border: 2px solid var(--border);
-  border-top-color: var(--accent);
-  border-radius: 50%;
-  animation: spin 0.6s linear infinite;
+/* ── Dropdown ─────────────────────────────────────────────────────────────────── */
+
+.dropdownWrap {
+  position: relative;
   flex-shrink: 0;
 }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
+.dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 200px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+  z-index: 200;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
-/* ── Smart-defaults confirmation banner ─────────────────────────────────────── */
+.dropdownRight {
+  left: auto;
+  right: 0;
+}
 
-.confirmBanner {
+.dropItem {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 12px;
-  padding: 8px 16px;
-  background: rgba(74, 144, 217, 0.08);
-  border-bottom: 1px solid rgba(74, 144, 217, 0.22);
-  flex-shrink: 0;
-  flex-wrap: wrap;
-}
-
-.confirmText {
-  flex: 1;
+  padding: 9px 14px;
   font-size: 12px;
-  color: var(--text-secondary);
-  min-width: 200px;
-}
-
-.confirmText strong {
+  font-family: var(--font-ui);
   color: var(--text-primary);
-}
-
-.confirmBtns {
-  display: flex;
-  gap: 6px;
-  flex-shrink: 0;
-}
-
-.confirmApply {
-  padding: 5px 14px;
-  background: var(--accent);
-  color: #fff;
+  background: transparent;
   border: none;
-  border-radius: var(--radius-sm);
-  font-family: var(--font-ui);
-  font-size: 12px;
-  font-weight: 600;
   cursor: pointer;
+  text-align: left;
+  white-space: nowrap;
+  transition: background 0.1s, color 0.1s;
 }
 
-.confirmApply:hover {
-  background: var(--accent-hover);
+.dropItem:hover {
+  background: var(--accent-dim);
+  color: var(--accent);
 }
 
-.confirmKeep {
-  padding: 5px 14px;
-  background: var(--bg-surface);
-  color: var(--text-secondary);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  font-family: var(--font-ui);
-  font-size: 12px;
-  cursor: pointer;
+.dropItem:disabled {
+  color: var(--text-muted);
+  cursor: not-allowed;
 }
 
-.confirmKeep:hover {
-  color: var(--text-primary);
-  border-color: var(--text-muted);
+.dropItem:disabled:hover {
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.dropItem kbd {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+.dropDivider {
+  height: 1px;
+  background: var(--border);
+  margin: 2px 0;
+}
+
+/* The HelpPanel button inside the overflow menu */
+.dropHelpItem {
+  padding: 4px 8px;
 }

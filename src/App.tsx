@@ -5,7 +5,6 @@ import { Toolbar } from './components/Toolbar/Toolbar'
 import { InputPanel } from './components/InputPanel/InputPanel'
 import { SchematicView } from './components/SchematicView/SchematicView'
 import { TabPanel } from './components/TabPanel/TabPanel'
-import { ComponentSuggestions } from './components/ComponentSuggestions/ComponentSuggestions'
 import { FirstRunWelcome } from './components/FirstRunWelcome/FirstRunWelcome'
 import { StatusBar } from './components/StatusBar/StatusBar'
 import { useDesignStore, type ActiveVizTab } from './store/design-store'
@@ -17,6 +16,8 @@ import { EquationExplorer } from './components/EquationExplorer/EquationExplorer
 import { SweepView } from './components/SweepView/SweepView'
 import { DesignLibrary } from './components/DesignLibrary/DesignLibrary'
 import { ShareModal, PasteConfirmModal } from './components/ShareModal/ShareModal'
+import { TopologySelector } from './components/TopologySelector/TopologySelector'
+import { RightPanel } from './components/RightPanel/RightPanel'
 import { validateSpec } from './engine/validation'
 import { isPswbLink, decodeDesign } from './export/share-link'
 import styles from './App.module.css'
@@ -272,22 +273,26 @@ export default function App(): React.ReactElement {
       <PasteConfirmModal />
       <Toolbar />
       <div className={styles.workspace}>
-        <aside className={styles.sidebar}>
+        {/* Left column: topology selector + input panel */}
+        <aside className={styles.leftCol}>
+          <TopologySelector />
           <InputPanel />
         </aside>
-        <div className={styles.content}>
+
+        {/* Center column: schematic + visualization tabs */}
+        <div className={styles.centerCol}>
           <div className={styles.schematicArea}>
             <SchematicView />
           </div>
-          <div className={styles.bottomRow}>
-            <div className={styles.componentPanel}>
-              <ComponentSuggestions />
-            </div>
-            <div className={styles.tabArea}>
-              <TabPanel />
-            </div>
+          <div className={styles.vizArea}>
+            <TabPanel />
           </div>
         </div>
+
+        {/* Right column: result cards + component suggestions + notes */}
+        <aside className={styles.rightCol}>
+          <RightPanel />
+        </aside>
       </div>
       <StatusBar />
     </div>

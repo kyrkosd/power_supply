@@ -171,7 +171,7 @@ function SecondaryOutputRow({ index, output, onChange, onRemove }: SecondaryRowP
 // ── Main component ────────────────────────────────────────────────────────────
 
 export function InputPanel(): React.ReactElement {
-  const { spec, result, topology, updateSpec, requestMcRun, setActiveVizTab, notes, setNotes, feedbackOptions, setFeedbackOptions, softStartOptions, setSoftStartOptions } = useDesignStore()
+  const { spec, result, topology, updateSpec, requestMcRun, setActiveVizTab, feedbackOptions, setFeedbackOptions, softStartOptions, setSoftStartOptions } = useDesignStore()
   const [mcIterations, setMcIterations] = useState(1000)
   const [mcSeed, setMcSeed] = useState(42)
 
@@ -332,29 +332,6 @@ export function InputPanel(): React.ReactElement {
               </div>
             </details>
           ))}
-        </div>
-
-        <div className={styles.summaryPanel}>
-          <div className={styles.summaryRow}>
-            <span>Duty cycle</span>
-            <strong>{result ? `${(result.dutyCycle * 100).toFixed(1)} %` : '—'}</strong>
-          </div>
-          <div className={styles.summaryRow}>
-            <span>Inductance</span>
-            <strong>{result ? `${(result.inductance * 1e6).toFixed(2)} µH` : '—'}</strong>
-          </div>
-          <div className={styles.summaryRow}>
-            <span>Capacitance</span>
-            <strong>{result ? `${(result.capacitance * 1e6).toFixed(1)} µF` : '—'}</strong>
-          </div>
-          <div className={styles.summaryRow}>
-            <span>Peak current</span>
-            <strong>{result ? `${result.peakCurrent.toFixed(2)} A` : '—'}</strong>
-          </div>
-          <div className={styles.summaryRow}>
-            <span>Efficiency</span>
-            <strong>{result?.efficiency != null ? `${(result.efficiency * 100).toFixed(1)} %` : '—'}</strong>
-          </div>
         </div>
 
         {/* ── Multi-Output (flyback only) ── */}
@@ -813,17 +790,6 @@ export function InputPanel(): React.ReactElement {
               </>
             )}
           </div>
-        </details>
-
-        <details className={styles.notesSection}>
-          <summary className={styles.notesSectionTitle}>Notes</summary>
-          <textarea
-            className={styles.notesTextarea}
-            placeholder="Type design notes here…"
-            value={notes}
-            rows={4}
-            onChange={(e) => setNotes(e.target.value)}
-          />
         </details>
 
       </div>

@@ -1,5 +1,3 @@
-/* INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability. */
-/* INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability. */
 .shell {
   display: flex;
   flex-direction: column;
@@ -8,25 +6,27 @@
   background: var(--bg-base);
 }
 
+/* ── 3-column workspace ──────────────────────────────────────────────────────── */
+
 .workspace {
-  display: flex;
+  display: grid;
+  grid-template-columns: 280px 1fr 300px;
   flex: 1;
   min-height: 0;
   overflow: hidden;
 }
 
-.sidebar {
-  width: var(--sidebar-w);
-  flex-shrink: 0;
-  background: var(--bg-panel);
-  border-right: 1px solid var(--border);
+/* Left column — topology selector + InputPanel */
+.leftCol {
   display: flex;
   flex-direction: column;
+  border-right: 1px solid var(--border);
+  background: var(--bg-panel);
   overflow: hidden;
 }
 
-.content {
-  flex: 1;
+/* Center column — schematic + icon nav + visualization */
+.centerCol {
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -35,30 +35,70 @@
 
 .schematicArea {
   flex: 1;
-  min-height: 0;
+  min-height: 180px;
   border-bottom: 1px solid var(--border);
   overflow: hidden;
 }
 
-/* Bottom row: ComponentSuggestions left, TabPanel right */
-.bottomRow {
-  height: 290px;
+/* TabPanel lives here, includes its own icon nav + content */
+.vizArea {
+  height: 340px;
   flex-shrink: 0;
   display: flex;
+  flex-direction: column;
   overflow: hidden;
 }
 
-.componentPanel {
-  width: 230px;
-  flex-shrink: 0;
-  border-right: 1px solid var(--border);
-  background: var(--bg-surface);
-  overflow-y: auto;
+/* Right column — result cards + warnings + suggestions + notes */
+.rightCol {
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--border);
+  background: var(--bg-panel);
+  overflow: hidden;
 }
 
-.tabArea {
-  flex: 1;
-  min-width: 0;
-  background: var(--bg-surface);
-  overflow: hidden;
+/* ── Responsive ──────────────────────────────────────────────────────────────── */
+
+/* 1400px–1600px: nudge right col slightly smaller */
+@media (max-width: 1500px) {
+  .workspace {
+    grid-template-columns: 260px 1fr 280px;
+  }
+}
+
+/* Below 1300px: left col also tightens */
+@media (max-width: 1300px) {
+  .workspace {
+    grid-template-columns: 240px 1fr 260px;
+  }
+}
+
+/* Below 1100px: right col at minimum useful width */
+@media (max-width: 1100px) {
+  .workspace {
+    grid-template-columns: 230px 1fr 220px;
+  }
+}
+
+/* Below 950px: hide right column */
+@media (max-width: 950px) {
+  .workspace {
+    grid-template-columns: 230px 1fr;
+  }
+
+  .rightCol {
+    display: none;
+  }
+}
+
+/* Below 720px: hide left column too */
+@media (max-width: 720px) {
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .leftCol {
+    display: none;
+  }
 }
