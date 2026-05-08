@@ -128,22 +128,21 @@ export function RightPanel(): React.ReactElement {
         </div>
       )}
 
-      {/* ── Component suggestions ── */}
-      <div className={styles.suggestionsWrap}>
+      {/* ── Scrollable body: component suggestions + notes ── */}
+      <div className={styles.scrollBody}>
         <ComponentSuggestions />
-      </div>
 
-      {/* ── Notes ── */}
-      <details className={styles.notesSection}>
-        <summary className={styles.notesTitle}>Notes</summary>
-        <textarea
-          className={styles.notesTextarea}
-          placeholder="Design notes, assumptions, reminders…"
-          value={notes}
-          rows={4}
-          onChange={(e) => setNotes(e.target.value)}
-        />
-      </details>
+        <details className={styles.notesSection}>
+          <summary className={styles.notesTitle}>Notes</summary>
+          <textarea
+            className={styles.notesTextarea}
+            placeholder="Design notes, assumptions, reminders…"
+            value={notes}
+            rows={4}
+            onChange={(e) => setNotes(e.target.value)}
+          />
+        </details>
+      </div>
     </div>
   )
 }

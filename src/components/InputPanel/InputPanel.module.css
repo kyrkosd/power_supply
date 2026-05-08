@@ -3,15 +3,36 @@
 .panel {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
   overflow: hidden;
 }
 
 /* Scrollable region: everything except the MC footer */
 .scrollArea {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: 10px 0 8px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.scrollArea::-webkit-scrollbar {
+  width: 4px;
+}
+
+.scrollArea::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollArea::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 2px;
+}
+
+.scrollArea::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
 }
 
 /* Monte Carlo — always-visible sticky footer */
