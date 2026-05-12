@@ -1,7 +1,9 @@
-// Quick Start, Results, and Shortcuts tab content for HelpPanel.
+// Quick Start, Results, and Shortcuts tab content for the HelpPanel.
 import React from 'react'
 import styles from './HelpPanel.module.css'
+import { TipBanner, AbbreviationsTable } from './helpPanelUtils'
 
+/** Identifier for each HelpPanel tab. */
 export type TabId = 'quickstart' | 'results' | 'charts' | 'topologies' | 'shortcuts'
 
 const TAB_LABELS: Record<TabId, string> = {
@@ -9,44 +11,45 @@ const TAB_LABELS: Record<TabId, string> = {
   topologies: 'Topologies',  shortcuts: 'Shortcuts',
 }
 
-/** Display label for a tab id. */
+/** Returns the display label for a given tab id. */
 export function tabLabel(tab: TabId): string { return TAB_LABELS[tab] }
 
-// ── Quick Start ───────────────────────────────────────────────────────────────
+// ── Quick Start helpers ───────────────────────────────────────────────────────
 
+/** Numbered workflow steps section for the Quick Start tab. */
+function WorkflowSteps(): React.ReactElement {
+  return (
+    <ol className={styles.stepList}>
+      <li><strong>Select a topology</strong> from the dropdown (Buck, Boost, Buck-Boost, Flyback, Forward, SEPIC).</li>
+      <li>
+        <strong>Enter your specifications</strong> in the left panel:
+        <ul>
+          <li><strong>Vin min/max:</strong> Input voltage range in volts</li>
+          <li><strong>Vout:</strong> Desired output voltage in volts</li>
+          <li><strong>Iout:</strong> Output current in amps</li>
+          <li><strong>Fsw:</strong> Switching frequency — higher = smaller components but more losses (100 kHz–2 MHz typical)</li>
+          <li><strong>Ripple ratio:</strong> Inductor current ripple as a fraction of output current (0.2–0.4 typical)</li>
+        </ul>
+      </li>
+      <li><strong>Review the results:</strong> Component values and efficiency update in real time. Watch the Waveforms tab to see if the inductor current stays positive (CCM) or touches zero (DCM).</li>
+    </ol>
+  )
+}
+
+// ── Tab components ────────────────────────────────────────────────────────────
+
+/** Tab 1: step-by-step workflow, key abbreviations, and UI layout overview. */
 export function QuickStartTab(): React.ReactElement {
   return (
     <div className={styles.tabContent}>
-      <div style={{ background: 'rgba(50,201,230,0.07)', border: '1px solid rgba(50,201,230,0.2)', borderRadius: 6, padding: '9px 12px', marginBottom: 14, fontSize: 12, lineHeight: 1.5 }}>
+      <TipBanner>
         <strong style={{ color: '#32c9e6' }}>New to the app?</strong> Open the{' '}
         <strong>Design Library</strong> (<kbd style={{ background: 'rgba(255,255,255,0.08)', borderRadius: 3, padding: '1px 5px', fontSize: 11 }}>Ctrl+L</kbd>) and load a reference design — 12 real-world examples from beginner to advanced.
-      </div>
+      </TipBanner>
       <h3>Getting Started</h3>
-      <ol className={styles.stepList}>
-        <li><strong>Select a topology</strong> from the dropdown (Buck, Boost, Buck-Boost, Flyback, Forward, SEPIC).</li>
-        <li>
-          <strong>Enter your specifications</strong> in the left panel:
-          <ul>
-            <li><strong>Vin min/max:</strong> Input voltage range in volts</li>
-            <li><strong>Vout:</strong> Desired output voltage in volts</li>
-            <li><strong>Iout:</strong> Output current in amps</li>
-            <li><strong>Fsw:</strong> Switching frequency — higher = smaller components but more losses (100 kHz–2 MHz typical)</li>
-            <li><strong>Ripple ratio:</strong> Inductor current ripple as a fraction of output current (0.2–0.4 typical)</li>
-          </ul>
-        </li>
-        <li><strong>Review the results:</strong> Component values and efficiency update in real time. Watch the Waveforms tab to see if the inductor current stays positive (CCM) or touches zero (DCM).</li>
-      </ol>
+      <WorkflowSteps />
       <h4>Key Abbreviations &amp; Units</h4>
-      <table className={styles.table}>
-        <tbody>
-          <tr><td><strong>D</strong></td><td>Duty cycle (0–1): ratio of switch-on time to switching period</td></tr>
-          <tr><td><strong>L</strong></td><td>Inductance in µH (microhenries) or mH (millihenries)</td></tr>
-          <tr><td><strong>C</strong></td><td>Capacitance in µF (microfarads) or nF (nanofarads)</td></tr>
-          <tr><td><strong>fsw</strong></td><td>Switching frequency in kHz or MHz</td></tr>
-          <tr><td><strong>η (eta)</strong></td><td>Efficiency: output power / input power × 100 % (goal: &gt;85 %)</td></tr>
-          <tr><td><strong>PM</strong></td><td>Phase margin: stability indicator (&gt;45° = stable, &lt;30° = risky)</td></tr>
-        </tbody>
-      </table>
+      <AbbreviationsTable />
       <h4>App Layout</h4>
       <ul>
         <li><strong>Left panel:</strong> Design inputs and Monte Carlo / Transient controls</li>
@@ -58,8 +61,7 @@ export function QuickStartTab(): React.ReactElement {
   )
 }
 
-// ── Results ───────────────────────────────────────────────────────────────────
-
+/** Tab 2: component values, duty cycle, efficiency interpretation, and common warnings. */
 export function ResultsTab(): React.ReactElement {
   return (
     <div className={styles.tabContent}>
@@ -92,8 +94,7 @@ export function ResultsTab(): React.ReactElement {
   )
 }
 
-// ── Shortcuts ─────────────────────────────────────────────────────────────────
-
+/** Tab 5: keyboard shortcut reference table. */
 export function ShortcutsTab(): React.ReactElement {
   return (
     <div className={styles.tabContent}>
