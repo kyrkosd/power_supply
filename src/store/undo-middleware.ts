@@ -1,7 +1,7 @@
-// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
-// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
 import type { DesignSpec } from '../engine/types'
 import type { TopologyId } from './workbenchStore'
+
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 export interface Snapshot {
   topology: TopologyId
@@ -12,18 +12,18 @@ const MAX_HISTORY = 50
 const DEBOUNCE_MS = 300
 
 // History arrays live outside Zustand state so snapshots don't appear in devtools
-// and don't interfere with Zustand's own change-detection.  Single-store app only.
+// and don't interfere with Zustand's own change-detection. Single-store app only.
 const undoHistory: Snapshot[] = []
 const redoHistory: Snapshot[] = []
 
-// Debounce state
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
-let pendingSnapshot: Snapshot | null = null  // state captured at the START of each drag window
+/** State captured at the START of each drag window. */
+let pendingSnapshot: Snapshot | null = null
 
 type SetFn<T> = (partial: T | Partial<T> | ((s: T) => T | Partial<T>), replace?: boolean) => void
 type GetFn<T> = () => T
 
-// Fields the middleware expects the store state to contain
+/** Fields the middleware expects the store state to contain. */
 interface UndoableStore {
   topology: TopologyId
   spec: DesignSpec
@@ -31,7 +31,6 @@ interface UndoableStore {
   canRedo: boolean
   undo: () => void
   redo: () => void
-  // Compute-reset fields (set by undo/redo to trigger worker recomputation)
   result: unknown
   waveforms: unknown
   mcResult: unknown
@@ -41,6 +40,65 @@ interface UndoableStore {
   isModified: boolean
 }
 
+// ── History helpers ───────────────────────────────────────────────────────────
+
+/** Push `snap` onto `history`, honoring the MAX_HISTORY cap. */
+function pushCapped(history: Snapshot[], snap: Snapshot): void {
+  history.push(snap)
+  if (history.length > MAX_HISTORY) history.shift()
+}
+
+/** Commit `pendingSnapshot` to `undoHistory` and set `canUndo: true`. */
+function commitPending(set: SetFn<UndoableStore>): void {
+  if (!pendingSnapshot) return
+  pushCapped(undoHistory, pendingSnapshot)
+  pendingSnapshot = null
+  set({ canUndo: true } as Partial<UndoableStore>)
+}
+
+/**
+ * Flush the in-flight debounce window and commit the pending snapshot immediately.
+ * Called before undo so that Ctrl+Z during a drag commits and then reverts.
+ */
+function flush(set: SetFn<UndoableStore>): void {
+  if (debounceTimer) { clearTimeout(debounceTimer); debounceTimer = null }
+  commitPending(set)
+}
+
+/**
+ * Return `partial` augmented with `{ canRedo: false }` when redoHistory is non-empty,
+ * merging into a single `originalSet` call to avoid an extra re-render.
+ */
+function withRedoClear<T>(
+  partial: T | Partial<T> | ((s: T) => T | Partial<T>),
+  updates: Partial<T>,
+): typeof partial {
+  if (redoHistory.length === 0) return partial
+  redoHistory.length = 0
+  return typeof partial === 'function'
+    ? (s: T) => ({ ...(partial as (s: T) => Partial<T>)(s), canRedo: false } as Partial<T>)
+    : ({ ...updates, canRedo: false } as Partial<T>)
+}
+
+/** Shared payload shape written by both undo and redo after applying a snapshot. */
+function restorePayload(
+  snap: Snapshot,
+  canUndo: boolean,
+  canRedo: boolean,
+): Partial<UndoableStore> {
+  return {
+    topology: snap.topology,
+    spec: snap.spec,
+    canUndo,
+    canRedo,
+    result: null, waveforms: null, mcResult: null,
+    transientResult: null, emiResult: null,
+    isComputing: true, isModified: true,
+  }
+}
+
+// ── Public API ────────────────────────────────────────────────────────────────
+
 /** Reset all history — intended for test teardown only. */
 export function clearUndoHistory(): void {
   undoHistory.length = 0
@@ -49,113 +107,62 @@ export function clearUndoHistory(): void {
   pendingSnapshot = null
 }
 
-// Flush any in-flight debounce window and commit the snapshot immediately.
-// Call this before undo() so that Ctrl+Z while dragging commits + reverts the drag.
-function flush(_get: GetFn<UndoableStore>, originalSet: SetFn<UndoableStore>): void {
-  if (debounceTimer) {
-    clearTimeout(debounceTimer)
-    debounceTimer = null
-  }
-  if (pendingSnapshot) {
-    undoHistory.push(pendingSnapshot)
-    if (undoHistory.length > MAX_HISTORY) undoHistory.shift()
-    pendingSnapshot = null
-    originalSet({ canUndo: true } as Partial<UndoableStore>)
-  }
-}
-
 /**
- * Zustand middleware that records { topology, spec } snapshots on every
+ * Zustand middleware that records `{ topology, spec }` snapshots on every
  * spec/topology change, with a 300 ms debounce so rapid slider drags
  * produce a single undo step.
  *
- * The creator must initialise canUndo/canRedo/undo/redo with stubs;
+ * The creator must initialise `canUndo`, `canRedo`, `undo`, and `redo` with stubs;
  * the middleware replaces them with real implementations before returning.
  */
 export function undoMiddleware<T extends UndoableStore>(
   creator: (set: SetFn<T>, get: GetFn<T>, api: unknown) => T
 ): (set: SetFn<T>, get: GetFn<T>, api: unknown) => T {
   return (originalSet, get, api) => {
-    // wrappedSet is what the creator's actions call via their captured `set`
+    const setU = originalSet as unknown as SetFn<UndoableStore>
+
     const wrappedSet: SetFn<T> = (partial, replace?) => {
       const state = get()
       const updates = typeof partial === 'function' ? partial(state) : partial
 
-      // Intercept user-driven spec/topology changes only.
-      // Undo/redo call originalSet directly so they never hit this branch.
-      if ('spec' in updates || 'topology' in updates) {
-        // Capture the pre-change state at the START of the debounce window
-        if (!debounceTimer) {
-          pendingSnapshot = { topology: state.topology, spec: state.spec }
-        }
-
-        // Any new spec change clears redo — merge canRedo:false into this update
-        // so we only call originalSet once (no extra re-render)
-        let finalPartial: typeof partial = partial
-        if (redoHistory.length > 0) {
-          redoHistory.length = 0
-          finalPartial = typeof partial === 'function'
-            ? (s: T) => ({ ...(partial as (s: T) => Partial<T>)(s), canRedo: false } as Partial<T>)
-            : ({ ...updates, canRedo: false } as Partial<T>)
-        }
-
-        // Reset / start the debounce timer
-        if (debounceTimer) clearTimeout(debounceTimer)
-        debounceTimer = setTimeout(() => {
-          debounceTimer = null
-          if (pendingSnapshot) {
-            undoHistory.push(pendingSnapshot)
-            if (undoHistory.length > MAX_HISTORY) undoHistory.shift()
-            pendingSnapshot = null
-            originalSet({ canUndo: true } as Partial<T>)
-          }
-        }, DEBOUNCE_MS)
-
-        originalSet(finalPartial, replace)
+      // Only intercept spec/topology changes; pass everything else straight through.
+      if (!('spec' in updates || 'topology' in updates)) {
+        originalSet(partial, replace)
         return
       }
 
-      originalSet(partial, replace)
+      // Capture pre-change state at the start of each debounce window.
+      if (!debounceTimer) pendingSnapshot = { topology: state.topology, spec: state.spec }
+
+      // Reset/start the debounce timer.
+      if (debounceTimer) clearTimeout(debounceTimer)
+      debounceTimer = setTimeout(() => {
+        debounceTimer = null
+        commitPending(setU)
+      }, DEBOUNCE_MS)
+
+      originalSet(withRedoClear(partial, updates as Partial<T>), replace)
     }
 
-    // Build the store using the wrapped setter
     const store = creator(wrappedSet, get, api)
 
-    // Replace stub undo/redo with real implementations that use originalSet
-    // directly, bypassing wrappedSet so they never re-record history.
+    // Replace stub undo/redo with real implementations that call originalSet directly,
+    // bypassing wrappedSet so they never re-record history.
     store.undo = () => {
-      flush(get as unknown as GetFn<UndoableStore>, originalSet as unknown as SetFn<UndoableStore>)
+      flush(setU)
       if (undoHistory.length === 0) return
-      const snapshot = undoHistory.pop()!
+      const snap = undoHistory.pop()!
       const state = get()
-      redoHistory.push({ topology: state.topology, spec: state.spec })
-      if (redoHistory.length > MAX_HISTORY) redoHistory.shift()
-      originalSet({
-        topology: snapshot.topology,
-        spec: snapshot.spec,
-        canUndo: undoHistory.length > 0,
-        canRedo: true,
-        result: null, waveforms: null, mcResult: null,
-        transientResult: null, emiResult: null,
-        isComputing: true, isModified: true,
-      } as Partial<T>)
+      pushCapped(redoHistory, { topology: state.topology, spec: state.spec })
+      originalSet(restorePayload(snap, undoHistory.length > 0, true) as Partial<T>)
     }
 
     store.redo = () => {
       if (redoHistory.length === 0) return
-      const snapshot = redoHistory.pop()!
+      const snap = redoHistory.pop()!
       const state = get()
-      undoHistory.push({ topology: state.topology, spec: state.spec })
-      if (undoHistory.length > MAX_HISTORY) undoHistory.shift()
-      originalSet({
-        topology: snapshot.topology,
-        spec: snapshot.spec,
-        canUndo: true,
-        canRedo: redoHistory.length > 0,
-        result: null, waveforms: null, mcResult: null,
-        transientResult: null, emiResult: null,
-        isComputing: true, isModified: true,
-      } as Partial<T>)
+      pushCapped(undoHistory, { topology: state.topology, spec: state.spec })
+      originalSet(restorePayload(snap, true, redoHistory.length > 0) as Partial<T>)
     }
 
     return store

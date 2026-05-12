@@ -1,3 +1,6 @@
+// Design serialisation: zlib deflate + Base64url encoding for shareable
+// pswb://v1/<base64url> design links that fit comfortably in a URL.
+
 import { zlibSync, unzlibSync, strToU8, strFromU8 } from 'fflate'
 import type { DesignSpec } from '../engine/types'
 import type { TopologyId } from '../store/workbenchStore'
@@ -14,14 +17,32 @@ export interface ShareableDesign {
 
 // ── Base64url helpers (URL-safe, no padding) ──────────────────────────────────
 
+/** Convert standard Base64 to Base64url (replace +/= with -/_). */
 function toBase64Url(b64: string): string {
   return b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
 }
 
+/** Convert Base64url back to standard Base64 (restore +/= padding). */
 function fromBase64Url(b64url: string): string {
   const padLen = b64url.length % 4
-  const pad = padLen === 0 ? '' : '='.repeat(4 - padLen)
+  const pad    = padLen === 0 ? '' : '='.repeat(4 - padLen)
   return b64url.replace(/-/g, '+').replace(/_/g, '/') + pad
+}
+
+// ── Binary / byte-array helpers ───────────────────────────────────────────────
+
+/** Convert a Uint8Array to a Latin-1 binary string accepted by btoa. */
+function bytesToBinary(bytes: Uint8Array): string {
+  let binary = ''
+  for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i])
+  return binary
+}
+
+/** Convert a Latin-1 binary string returned by atob back to a Uint8Array. */
+function bytesFromBinary(binary: string): Uint8Array {
+  const bytes = new Uint8Array(binary.length)
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+  return bytes
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────
@@ -39,15 +60,8 @@ export function encodeDesign(
   overrides: Record<string, unknown> = {},
 ): string {
   const payload: ShareableDesign = { topology, spec, overrides }
-  const json = JSON.stringify(payload)
-  const compressed = zlibSync(strToU8(json), { level: 9 })
-
-  // Build binary string for btoa (avoid call-stack limit with a loop)
-  let binary = ''
-  for (let i = 0; i < compressed.byteLength; i++) {
-    binary += String.fromCharCode(compressed[i])
-  }
-  return PREFIX + toBase64Url(btoa(binary))
+  const compressed = zlibSync(strToU8(JSON.stringify(payload)), { level: 9 })
+  return PREFIX + toBase64Url(btoa(bytesToBinary(compressed)))
 }
 
 /**
@@ -61,12 +75,8 @@ export function decodeDesign(encoded: string): ShareableDesign | null {
     const b64url = encoded.slice(PREFIX.length)
     if (!b64url) return null
 
-    const binary = atob(fromBase64Url(b64url))
-    const bytes = new Uint8Array(binary.length)
-    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
-
-    const json = strFromU8(unzlibSync(bytes))
-    const parsed = JSON.parse(json) as unknown
+    const bytes  = bytesFromBinary(atob(fromBase64Url(b64url)))
+    const parsed = JSON.parse(strFromU8(unzlibSync(bytes))) as unknown
 
     if (!parsed || typeof parsed !== 'object') return null
     const p = parsed as Record<string, unknown>
@@ -75,8 +85,8 @@ export function decodeDesign(encoded: string): ShareableDesign | null {
     if (!p.spec || typeof p.spec !== 'object') return null
 
     return {
-      topology: p.topology as TopologyId | string,
-      spec: p.spec as DesignSpec,
+      topology:  p.topology as TopologyId | string,
+      spec:      p.spec as DesignSpec,
       overrides: (p.overrides && typeof p.overrides === 'object')
         ? (p.overrides as Record<string, unknown>)
         : {},

@@ -5,8 +5,7 @@
 //   - Erickson & Maksimovic "Fundamentals of Power Electronics" 3rd ed., §13.1
 //   - IEC 61709:2017 — Electric components reliability, reference conditions and stress models
 
-// Default thermal resistance capacitor-to-ambient (°C/W), per Nichicon AN.
-const RTH_CAP_DEFAULT = 20
+const RTH_CAP_DEFAULT = 20  // °C/W — default cap-to-ambient thermal resistance (Nichicon AN)
 
 export interface CapacitorDataForLifetime {
   esr_mohm: number          // mΩ — equivalent series resistance at rated frequency
@@ -30,86 +29,86 @@ export interface CapLifetimeResult {
 }
 
 export interface CapOperatingConditions {
-  irms_actual: number   // A  — actual RMS ripple current through the capacitor
-  vdc: number           // V  — DC voltage across the capacitor (≈ Vout)
+  irms_actual: number    // A  — actual RMS ripple current through the capacitor
+  vdc: number            // V  — DC voltage across the capacitor (≈ Vout)
   ambient_temp_C: number
-  rth_cap?: number      // °C/W — thermal resistance cap-to-ambient; default 20 °C/W
+  rth_cap?: number       // °C/W — thermal resistance cap-to-ambient; default 20 °C/W
 }
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+/** Self-heating from ripple current dissipated in ESR — IEC 61709 §6.1. */
+function computeSelfHeating(irms_actual: number, esr_ohm: number, rth: number): number {
+  return irms_actual * irms_actual * esr_ohm * rth
+}
+
+/**
+ * Arrhenius thermal acceleration factor.
+ * L = L_base × 2^((T_rated − T_actual) / 10) — Nichicon UPS3 eq. (1).
+ */
+function computeArrheniusLifetime(L_base: number, T_rated: number, operating_temp: number): number {
+  return L_base * Math.pow(2, (T_rated - operating_temp) / 10)
+}
+
+/**
+ * Voltage derating — Vishay BCcomponents AN0012.
+ * Accelerated aging above 80 % rated voltage: factor = (Vrated / Vdc)³.
+ */
+function applyVoltageDerating(L_derated: number, vdc: number, Vrated: number): number {
+  if (vdc / Vrated > 0.8) return L_derated * Math.pow(Vrated / vdc, 3)
+  return L_derated
+}
+
+/** Collect lifetime warnings. */
+function buildLifetimeWarnings(
+  ripple_current_ratio: number,
+  voltage_stress_ratio: number,
+  derated_lifetime_years: number,
+): string[] {
+  const warnings: string[] = []
+  if (ripple_current_ratio > 0.8)
+    warnings.push('Capacitor operating near ripple current limit. Self-heating will reduce lifetime.')
+  if (voltage_stress_ratio > 0.8)
+    warnings.push('Derate by choosing a higher voltage rating for improved reliability.')
+  if (derated_lifetime_years < 2)
+    warnings.push('Capacitor lifetime critically short. Use a polymer or ceramic alternative.')
+  else if (derated_lifetime_years < 5)
+    warnings.push('Consider a higher-temperature-rated capacitor or reduce ripple current.')
+  return warnings
+}
+
+// ── Public API ─────────────────────────────────────────────────────────────────
 
 export function estimateLifetime(
   cap: CapacitorDataForLifetime,
   conditions: CapOperatingConditions,
 ): CapLifetimeResult {
-  const L_base   = cap.lifetime_hours ?? 2000
-  const T_rated  = cap.temp_rating   ?? 105
-  const Irms_rated = cap.ripple_current_a
-  const Vrated   = cap.voltage_v
-  const esr_ohm  = cap.esr_mohm / 1000
-  const rth      = conditions.rth_cap ?? RTH_CAP_DEFAULT
-
+  const L_base    = cap.lifetime_hours ?? 2000
+  const T_rated   = cap.temp_rating   ?? 105
+  const esr_ohm   = cap.esr_mohm / 1000
+  const rth       = conditions.rth_cap ?? RTH_CAP_DEFAULT
   const { irms_actual, vdc, ambient_temp_C } = conditions
 
-  // ── Self-heating from ripple current ────────────────────────────────────────
-  // IEC 61709 §6.1 — power dissipated in ESR: P = Irms² × ESR
-  const self_heating_C = irms_actual * irms_actual * esr_ohm * rth
+  const self_heating_C  = computeSelfHeating(irms_actual, esr_ohm, rth)
+  const operating_temp  = ambient_temp_C + self_heating_C
 
-  const operating_temp = ambient_temp_C + self_heating_C
-
-  // ── Arrhenius thermal acceleration factor ────────────────────────────────────
-  // L_actual = L_base × 2^((T_rated − T_actual) / 10)
-  // Nichicon General Specification UPS3, eq. (1)
-  const exponent = (T_rated - operating_temp) / 10
-  let L_derated = L_base * Math.pow(2, exponent)
-
-  // ── Voltage derating factor ──────────────────────────────────────────────────
-  // Vishay BCcomponents AN0012 — accelerated aging above 80 % rated voltage:
-  //   factor = (Vrated / Vdc)³
-  const voltage_stress_ratio = vdc / Vrated
-  if (voltage_stress_ratio > 0.8) {
-    const voltage_factor = Math.pow(Vrated / vdc, 3)
-    L_derated *= voltage_factor
-  }
-
-  // Clamp to a physically sensible minimum (wear-out still happens at low temp)
-  L_derated = Math.max(L_derated, 0)
+  let L_derated = computeArrheniusLifetime(L_base, T_rated, operating_temp)
+  L_derated     = applyVoltageDerating(L_derated, vdc, cap.voltage_v)
+  L_derated     = Math.max(L_derated, 0)
 
   const derated_lifetime_years = L_derated / 8760
-
-  const ripple_current_ratio = Irms_rated > 0 ? irms_actual / Irms_rated : 0
-
-  const warnings: string[] = []
-
-  if (ripple_current_ratio > 0.8) {
-    warnings.push(
-      'Capacitor operating near ripple current limit. Self-heating will reduce lifetime.'
-    )
-  }
-
-  if (voltage_stress_ratio > 0.8) {
-    warnings.push(
-      'Derate by choosing a higher voltage rating for improved reliability.'
-    )
-  }
-
-  if (derated_lifetime_years < 2) {
-    warnings.push(
-      'Capacitor lifetime critically short. Use a polymer or ceramic alternative.'
-    )
-  } else if (derated_lifetime_years < 5) {
-    warnings.push(
-      'Consider a higher-temperature-rated capacitor or reduce ripple current.'
-    )
-  }
+  const ripple_current_ratio   = cap.ripple_current_a > 0 ? irms_actual / cap.ripple_current_a : 0
+  const voltage_stress_ratio   = vdc / cap.voltage_v
 
   return {
-    base_lifetime_hours: L_base,
-    temp_rated: T_rated,
+    base_lifetime_hours:    L_base,
+    temp_rated:             T_rated,
     operating_temp,
     self_heating_C,
     derated_lifetime_hours: L_derated,
     derated_lifetime_years,
     ripple_current_ratio,
     voltage_stress_ratio,
-    warnings,
+    warnings: buildLifetimeWarnings(ripple_current_ratio, voltage_stress_ratio, derated_lifetime_years),
   }
 }

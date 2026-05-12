@@ -1,5 +1,6 @@
-// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
-// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
+// Monte Carlo tolerance analysis for switching power supply designs.
+// Samples perturbed component values and evaluates efficiency, ripple, thermal, and stability.
+
 import type { Topology, DesignSpec, DesignResult } from './types'
 import { analyzeBuckControlLoop } from './control-loop'
 import {
@@ -56,14 +57,14 @@ export interface MonteCarloResult {
 }
 
 // Fallback parasitic assumptions when the topology result does not carry them.
-const NOMINAL_DCR = 0.050    // Ω  — typical SMD power inductor
-const NOMINAL_RDS_ON = 0.100 // Ω  — typical low-voltage MOSFET
-const NOMINAL_VF = 0.500     // V  — Schottky diode forward voltage
-const NOMINAL_ESR = 0.050    // Ω  — ceramic output capacitor ESR
+const NOMINAL_DCR    = 0.050  // Ω  — typical SMD power inductor
+const NOMINAL_RDS_ON = 0.100  // Ω  — typical low-voltage MOSFET
+const NOMINAL_VF     = 0.500  // V  — Schottky diode forward voltage
+const NOMINAL_ESR    = 0.050  // Ω  — ceramic output capacitor ESR
 
-const THETA_JA = 50  // °C/W — conservative SMD MOSFET package thermal resistance
-const TJ_MAX = 125   // °C  — hard junction temperature limit
-const PM_MIN = 45    // °   — minimum acceptable phase margin
+const THETA_JA = 50   // °C/W — conservative SMD MOSFET package thermal resistance
+const TJ_MAX   = 125  // °C  — hard junction temperature limit
+const PM_MIN   = 45   // °   — minimum acceptable phase margin
 
 function buildHistogram(values: number[], bins: number): Array<{ bin_center: number; count: number }> {
   if (values.length === 0) return Array.from({ length: bins }, (_, i) => ({ bin_center: i, count: 0 }))
@@ -81,18 +82,95 @@ function computeDistribution(values: number[]): MCDistribution {
   const n = values.length
   if (n === 0) return { values: [], mean: NaN, std: NaN, min: NaN, max: NaN, p5: NaN, p95: NaN, histogram: [] }
   const sorted = [...values].sort((a, b) => a - b)
-  const mean = values.reduce((s, v) => s + v, 0) / n
-  const std = Math.sqrt(values.reduce((s, v) => s + (v - mean) ** 2, 0) / n)
+  const mean   = values.reduce((s, v) => s + v, 0) / n
+  const std    = Math.sqrt(values.reduce((s, v) => s + (v - mean) ** 2, 0) / n)
   return {
     values,
     mean,
     std,
     min: sorted[0],
     max: sorted[n - 1],
-    p5: sorted[Math.floor(0.05 * (n - 1))],
+    p5:  sorted[Math.floor(0.05 * (n - 1))],
     p95: sorted[Math.floor(0.95 * (n - 1))],
     histogram: buildHistogram(values, 20),
   }
+}
+
+interface SampledComponents {
+  L: number; C: number; DCR: number; RdsOn: number; Vf: number; ESR: number; Isat: number | null
+}
+
+/** Sample one set of perturbed component values from the configured tolerance models. */
+function sampleComponents(
+  rng: () => number,
+  tols: Required<NonNullable<MonteCarloConfig['tolerances']>>,
+  nomL: number,
+  nomC: number,
+  nomESR: number,
+  nomIsat: number | null,
+): SampledComponents {
+  return {
+    L:     tols.inductance.sample(nomL, rng),
+    C:     tols.capacitance.sample(nomC, rng),
+    DCR:   tols.dcr.sample(NOMINAL_DCR, rng),
+    RdsOn: tols.rdsOn.sample(NOMINAL_RDS_ON, rng),
+    Vf:    tols.vf.sample(NOMINAL_VF, rng),
+    ESR:   tols.esr.sample(nomESR, rng),
+    Isat:  nomIsat !== null ? tols.isat.sample(nomIsat, rng) : null,
+  }
+}
+
+interface IterationMetrics {
+  efficiency: number
+  outputRipple: number
+  phaseMargin: number
+  Tj: number
+  satMargin: number
+  pass: boolean
+}
+
+/** Compute all per-iteration metrics from the sampled component values. */
+function computeIterationMetrics(
+  s: SampledComponents,
+  D: number,
+  spec: DesignSpec,
+  nominalResult: DesignResult,
+  doPhaseMargin: boolean,
+): IterationMetrics {
+  const { L, C, DCR, RdsOn, Vf, ESR, Isat } = s
+  const { iout, vout, fsw, ambientTemp, efficiency: effTarget, voutRippleMax } = spec
+
+  // Ripple current with perturbed inductance — volt-second balance, buck approximation.
+  // ΔiL = Vout·(1−D) / (L·fsw)
+  const deltaIL = (vout * (1 - D)) / (L * fsw)
+  const ILrms2  = iout * iout + (deltaIL * deltaIL) / 12
+
+  // Conduction losses only (switching losses require Qg — omitted here).
+  const Pcond    = ILrms2 * RdsOn * D
+  const Pcopper  = ILrms2 * DCR
+  const Pdiode   = Math.max(Vf, 0) * iout * (1 - D)
+  const Pout     = vout * iout
+  const efficiency    = Pout / (Pout + Pcond + Pcopper + Pdiode)
+  const outputRipple  = deltaIL / (8 * C * fsw) + deltaIL * ESR
+  const Tj            = ambientTemp + Pcond * THETA_JA
+
+  let phaseMargin = NaN
+  if (doPhaseMargin) {
+    try {
+      const perturbedResult: DesignResult = { ...nominalResult, inductance: L, capacitance: C }
+      phaseMargin = analyzeBuckControlLoop(spec, perturbedResult, { esr: ESR }).phaseMarginDeg
+    } catch {
+      // Leave NaN — excluded from distribution but does not block the iteration.
+    }
+  }
+
+  const I_peak_i = iout + deltaIL / 2
+  const satMargin = Isat !== null ? (Isat - I_peak_i) / Isat * 100 : NaN
+  const satOk     = Isat === null || I_peak_i < Isat
+  const pmOk      = !doPhaseMargin || Number.isNaN(phaseMargin) || phaseMargin >= PM_MIN
+
+  const pass = efficiency >= effTarget && outputRipple <= voutRippleMax && pmOk && Tj <= TJ_MAX && satOk
+  return { efficiency, outputRipple, phaseMargin, Tj, satMargin, pass }
 }
 
 /**
@@ -114,110 +192,63 @@ export function runMonteCarlo(
   nominalResult: DesignResult,
   config: MonteCarloConfig,
 ): MonteCarloResult {
-  const rng = mulberry32(config.seed)
+  const rng          = mulberry32(config.seed)
   const doPhaseMargin = config.computePhaseMargin !== false
-  const tol = config.tolerances ?? {}
+  const tol          = config.tolerances ?? {}
 
-  const inductanceTol = tol.inductance ?? InductorTolerance
-  const dcrTol = tol.dcr ?? InductorDCRTolerance
-  const capacitanceTol = tol.capacitance ?? CeramicCapTolerance
-  const esrTol = tol.esr ?? ElectrolyticCapTolerance
-  const rdsOnTol = tol.rdsOn ?? MosfetRdsOnTolerance
-  const vfTol = tol.vf ?? DiodeVfTolerance
-  const isatTol = tol.isat ?? InductorIsatTolerance
+  const resolvedTols: Required<NonNullable<MonteCarloConfig['tolerances']>> = {
+    inductance:  tol.inductance  ?? InductorTolerance,
+    dcr:         tol.dcr         ?? InductorDCRTolerance,
+    capacitance: tol.capacitance ?? CeramicCapTolerance,
+    esr:         tol.esr         ?? ElectrolyticCapTolerance,
+    rdsOn:       tol.rdsOn       ?? MosfetRdsOnTolerance,
+    vf:          tol.vf          ?? DiodeVfTolerance,
+    isat:        tol.isat        ?? InductorIsatTolerance,
+  }
 
-  // Nominal Isat from the design result — null when no specific part is selected.
+  const nomL    = nominalResult.inductance
+  const nomC    = nominalResult.capacitance
+  const nomESR  = (nominalResult.output_cap as typeof nominalResult.output_cap | undefined)
+                  ?.esr_max ?? NOMINAL_ESR
   const nomIsat = nominalResult.saturation_check?.i_sat ?? null
-
-  const D = nominalResult.dutyCycle
-  const nomL = nominalResult.inductance
-  const nomC = nominalResult.capacitance
-  // output_cap is typed non-optional but several topologies omit it; guard defensively.
-  const nomESR = (nominalResult.output_cap as typeof nominalResult.output_cap | undefined)
-    ?.esr_max ?? NOMINAL_ESR
-
-  const { iout, vout, fsw, ambientTemp, efficiency: effTarget, voutRippleMax } = spec
+  const D       = nominalResult.dutyCycle
 
   const efficiencies: number[] = []
-  const ripples: number[] = []
+  const ripples:      number[] = []
   const phaseMargins: number[] = []
-  const tjValues: number[] = []
-  const satMargins: number[] = []
+  const tjValues:     number[] = []
+  const satMargins:   number[] = []
 
   let passes = 0
-  let worstCase = nominalResult
+  let worstCase       = nominalResult
   let worstEfficiency = Infinity
 
   for (let i = 0; i < config.iterations; i++) {
-    const L = inductanceTol.sample(nomL, rng)
-    const C = capacitanceTol.sample(nomC, rng)
-    const DCR = dcrTol.sample(NOMINAL_DCR, rng)
-    const RdsOn = rdsOnTol.sample(NOMINAL_RDS_ON, rng)
-    const Vf = vfTol.sample(NOMINAL_VF, rng)
-    const ESR = esrTol.sample(nomESR, rng)
-    // Sample Isat with ±10% spread (datasheet spread + temperature derating).
-    const Isat = nomIsat !== null ? isatTol.sample(nomIsat, rng) : null
+    const s = sampleComponents(rng, resolvedTols, nomL, nomC, nomESR, nomIsat)
+    const m = computeIterationMetrics(s, D, spec, nominalResult, doPhaseMargin)
 
-    // Ripple current with perturbed inductance (volt-second balance, buck approximation).
-    // ΔiL = Vout·(1−D) / (L·fsw)
-    const deltaIL = (vout * (1 - D)) / (L * fsw)
+    efficiencies.push(m.efficiency)
+    ripples.push(m.outputRipple)
+    phaseMargins.push(m.phaseMargin)
+    tjValues.push(m.Tj)
+    if (!Number.isNaN(m.satMargin)) satMargins.push(m.satMargin)
+    if (m.pass) passes++
 
-    // IL_rms² for triangular waveform: Iout² + (ΔiL)²/12
-    const ILrms2 = iout * iout + (deltaIL * deltaIL) / 12
-
-    // Conduction losses only (switching losses require Qg and transition times — omitted).
-    const Pcond = ILrms2 * RdsOn * D          // MOSFET conduction  W
-    const Pcopper = ILrms2 * DCR              // inductor copper     W
-    const Pdiode = Math.max(Vf, 0) * iout * (1 - D) // diode forward   W
-    const Pout = vout * iout
-    const efficiency = Pout / (Pout + Pcond + Pcopper + Pdiode)
-
-    // Output voltage ripple: capacitive term + ESR term.
-    const outputRipple = deltaIL / (8 * C * fsw) + deltaIL * ESR
-
-    // Junction temperature from MOSFET conduction dissipation.
-    const Tj = ambientTemp + Pcond * THETA_JA
-
-    // Phase margin via small-signal buck control-loop analysis with perturbed L, C, ESR.
-    let phaseMargin = NaN
-    if (doPhaseMargin) {
-      try {
-        const perturbedResult: DesignResult = { ...nominalResult, inductance: L, capacitance: C }
-        phaseMargin = analyzeBuckControlLoop(spec, perturbedResult, { esr: ESR }).phaseMarginDeg
-      } catch {
-        // leave NaN — excluded from distribution but does not block the iteration
-      }
-    }
-
-    // Saturation margin: (Isat - Ipeak) / Isat × 100; positive = safe.
-    const I_peak_i = iout + deltaIL / 2
-    const satMargin = Isat !== null ? (Isat - I_peak_i) / Isat * 100 : NaN
-    const satOk = Isat === null || I_peak_i < Isat
-
-    efficiencies.push(efficiency)
-    ripples.push(outputRipple)
-    phaseMargins.push(phaseMargin)
-    tjValues.push(Tj)
-    if (!Number.isNaN(satMargin)) satMargins.push(satMargin)
-
-    const pmOk = !doPhaseMargin || Number.isNaN(phaseMargin) || phaseMargin >= PM_MIN
-    if (efficiency >= effTarget && outputRipple <= voutRippleMax && pmOk && Tj <= TJ_MAX && satOk) passes++
-
-    if (efficiency < worstEfficiency) {
-      worstEfficiency = efficiency
-      worstCase = { ...nominalResult, efficiency }
+    if (m.efficiency < worstEfficiency) {
+      worstEfficiency = m.efficiency
+      worstCase = { ...nominalResult, efficiency: m.efficiency }
     }
   }
 
   return {
     iterations: config.iterations,
-    pass_rate: passes / config.iterations,
+    pass_rate:  passes / config.iterations,
     worst_case: worstCase,
     metrics: {
-      efficiency: computeDistribution(efficiencies),
-      output_ripple: computeDistribution(ripples),
-      phase_margin: computeDistribution(phaseMargins.filter(v => !Number.isNaN(v))),
-      tj_mosfet: computeDistribution(tjValues),
+      efficiency:        computeDistribution(efficiencies),
+      output_ripple:     computeDistribution(ripples),
+      phase_margin:      computeDistribution(phaseMargins.filter(v => !Number.isNaN(v))),
+      tj_mosfet:         computeDistribution(tjValues),
       saturation_margin: computeDistribution(satMargins),
     },
   }

@@ -1,5 +1,4 @@
-// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
-// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
+// LLC resonant converter — stub pending First Harmonic Approximation (FHA) model.
 import { DesignSpec, DesignResult, Topology } from '../types'
 
 export const llcTopology: Topology = {
@@ -7,7 +6,6 @@ export const llcTopology: Topology = {
   name: 'LLC Resonant',
 
   compute(spec: DesignSpec): DesignResult {
-    // Placeholder — FHA (First Harmonic Approximation) model TBD
     void spec
     return {
       dutyCycle: NaN,
@@ -16,5 +14,5 @@ export const llcTopology: Topology = {
       peakCurrent: NaN,
       warnings: [],
     }
-  }
+  },
 }

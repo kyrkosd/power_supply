@@ -1,5 +1,3 @@
-// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
-// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
 /**
  * PCB layout guidance generator.
  * Pure engine module — no React, no DOM, no Zustand.
@@ -60,49 +58,39 @@ export interface LayoutGuidelines {
 // IPC-2221 Table 6.2 — external layer coefficients (k, b, c)
 // W [mils] = I / (k × ΔT^b)^(1/c) / thickness [mils]
 // Then convert to mm.  1 oz copper ≈ 1.378 mils thick; 2 oz ≈ 2.756 mils.
-const IPC2221_K = 0.048
-const IPC2221_B = 0.44
-const IPC2221_C = 0.725
-const DELTA_T   = 10    // °C temperature rise
+const IPC2221_K   = 0.048
+const IPC2221_B   = 0.44
+const IPC2221_C   = 0.725
+const DELTA_T     = 10    // °C temperature rise
 const MILS_PER_MM = 39.3701
 
 function ipc2221Width(current_a: number, thickness_oz: 1 | 2): number {
   const thicknessMils = thickness_oz === 1 ? 1.378 : 2.756
-  // IPC-2221 eq: I = k × ΔT^b × (A)^c   where A = cross-section area [mils²]
-  // Solve for A, then width = A / thickness
-  const areaMils2 = (current_a / (IPC2221_K * Math.pow(DELTA_T, IPC2221_B))) ** (1 / IPC2221_C)
-  const widthMils = areaMils2 / thicknessMils
-  return widthMils / MILS_PER_MM  // mm
+  const areaMils2     = (current_a / (IPC2221_K * Math.pow(DELTA_T, IPC2221_B))) ** (1 / IPC2221_C)
+  return (areaMils2 / thicknessMils) / MILS_PER_MM
 }
 
 function makeTrace(net: string, current_a: number): TraceWidth {
   const w1oz = ipc2221Width(current_a, 1)
   const w2oz = ipc2221Width(current_a, 2)
-  // Recommend 2 oz when minimum width at 1 oz would be impractically wide (> 4 mm)
-  const copper_weight_oz: 1 | 2 = w1oz > 4 ? 2 : 1
   return {
     net,
     current_a,
-    min_width_mm: Math.max(0.2, Math.round(w1oz * 100) / 100),
-    min_width_mm_2oz: Math.max(0.2, Math.round(w2oz * 100) / 100),
-    copper_weight_oz,
+    min_width_mm:      Math.max(0.2, Math.round(w1oz * 100) / 100),
+    min_width_mm_2oz:  Math.max(0.2, Math.round(w2oz * 100) / 100),
+    copper_weight_oz:  w1oz > 4 ? 2 : 1,
   }
 }
 
 // ── Thermal via recommendation ────────────────────────────────────────────────
 
-// Rule of thumb: 1 thermal via (ø0.3 mm) ≈ 0.2 W thermal conductance through FR4
+// Rule of thumb: 1 thermal via (ø0.3 mm) ≈ 0.2 W thermal conductance through FR4.
 const WATTS_PER_VIA = 0.2
 const VIA_DIAM_MM   = 0.3
 
 function thermalVia(component: string, plossW: number, reason: string): ThermalVia | null {
   if (plossW < 0.5) return null
-  return {
-    component,
-    via_count: Math.ceil(plossW / WATTS_PER_VIA),
-    via_diameter_mm: VIA_DIAM_MM,
-    reason,
-  }
+  return { component, via_count: Math.ceil(plossW / WATTS_PER_VIA), via_diameter_mm: VIA_DIAM_MM, reason }
 }
 
 // ── Critical loop definitions per topology ────────────────────────────────────
@@ -166,8 +154,7 @@ function boostLoops(): CriticalLoop[] {
     {
       name: 'Gate drive loop',
       components: ['Gate driver', 'Rg', 'Q1 (G–S)', 'Gate driver return'],
-      description:
-        'Fast transient. Keep gate-source loop < 1 cm² to prevent ringing.',
+      description: 'Fast transient. Keep gate-source loop < 1 cm² to prevent ringing.',
       priority: 1,
     },
   ]
@@ -178,9 +165,7 @@ function buckBoostLoops(): CriticalLoop[] {
     {
       name: 'Switch node loop',
       components: ['Q1 (D–S)', 'L', 'D1', 'Q1 return'],
-      description:
-        'Current snaps to 0 through the diode every cycle. ' +
-        'This is the primary EMI source; minimize area.',
+      description: 'Current snaps to 0 through the diode every cycle. This is the primary EMI source; minimize area.',
       priority: 1,
     },
     {
@@ -198,8 +183,8 @@ function buckBoostLoops(): CriticalLoop[] {
     {
       name: 'Gate drive loop',
       components: ['Gate driver', 'Rg', 'Q1 (G–S)', 'Gate driver return'],
-      priority: 1,
       description: 'Fast transient. Keep gate-source loop < 1 cm².',
+      priority: 1,
     },
   ]
 }
@@ -233,8 +218,8 @@ function flybackLoops(): CriticalLoop[] {
     {
       name: 'Gate drive loop',
       components: ['Gate driver', 'Rg', 'Q1 (G–S)', 'Gate driver return'],
-      priority: 1,
       description: 'Fast transient. Route directly from driver IC to gate pin.',
+      priority: 1,
     },
   ]
 }
@@ -266,8 +251,8 @@ function forwardLoops(): CriticalLoop[] {
     {
       name: 'Gate drive loop',
       components: ['Gate driver', 'Rg', 'Q1 (G–S)', 'Gate driver return'],
-      priority: 1,
       description: 'Fast transient. Keep gate-source loop < 1 cm².',
+      priority: 1,
     },
   ]
 }
@@ -299,20 +284,20 @@ function sepicLoops(): CriticalLoop[] {
     {
       name: 'Gate drive loop',
       components: ['Gate driver', 'Rg', 'Q1 (G–S)', 'Gate driver return'],
-      priority: 1,
       description: 'Low-side gate drive. Keep gate-source loop < 1 cm².',
+      priority: 1,
     },
   ]
 }
 
 function loopsForTopology(topology: TopologyId): CriticalLoop[] {
   switch (topology) {
-    case 'buck':      return buckLoops()
-    case 'boost':     return boostLoops()
+    case 'buck':       return buckLoops()
+    case 'boost':      return boostLoops()
     case 'buck-boost': return buckBoostLoops()
-    case 'flyback':   return flybackLoops()
-    case 'forward':   return forwardLoops()
-    case 'sepic':     return sepicLoops()
+    case 'flyback':    return flybackLoops()
+    case 'forward':    return forwardLoops()
+    case 'sepic':      return sepicLoops()
   }
 }
 
@@ -378,10 +363,7 @@ function placementForTopology(topology: TopologyId): PlacementStep[] {
     ],
   }
 
-  return [
-    ...shared,
-    ...topologySpecific[topology],
-  ]
+  return [...shared, ...topologySpecific[topology]]
 }
 
 // ── Keep-out areas ────────────────────────────────────────────────────────────
@@ -484,75 +466,81 @@ function tipsForTopology(topology: TopologyId, spec: DesignSpec): string[] {
   return [...specific[topology], ...common]
 }
 
+// ── Trace widths and thermal vias ─────────────────────────────────────────────
+
+/** Build IPC-2221 trace-width entries for every power net in the design. */
+function computeTraceWidths(topology: TopologyId, spec: DesignSpec, result: DesignResult): TraceWidth[] {
+  const iIn          = (spec.vout * spec.iout) / (spec.vinMin * spec.efficiency)
+  const iSwitchPeak  = result.peakCurrent
+  const iGate        = 2.0 // A — typical driver peak (same assumption as gate-drive.ts)
+
+  const widths: TraceWidth[] = [
+    makeTrace('Vin power',    iIn),
+    makeTrace('Switch node',  iSwitchPeak),
+    makeTrace('Output power', spec.iout),
+    makeTrace('GND return',   Math.max(iIn, spec.iout)),
+    makeTrace('Gate drive',   iGate),
+  ]
+
+  if (topology === 'flyback' || topology === 'forward') {
+    widths.push(makeTrace('Primary winding return',   iIn))
+    widths.push(makeTrace('Secondary winding return', spec.iout / (result.turnsRatio ?? 1) * 1.2))
+  }
+
+  return widths
+}
+
+/** Build thermal via recommendations for every power-dissipating component. */
+function computeThermalVias(topology: TopologyId, result: DesignResult): ThermalVia[] {
+  const losses = result.losses
+  if (!losses) return []
+
+  const thermal_vias: ThermalVia[] = []
+  const mosfetLoss = (losses.mosfet ?? 0) + (losses.mosfet_conduction ?? 0) + (losses.mosfet_switching ?? 0)
+  const diodeLoss  = (losses.diode ?? 0) + (losses.diode_conduction ?? 0)
+  const coreLoss   = (losses.core ?? 0) + (losses.inductor_core ?? 0)
+
+  if (mosfetLoss > 0.1) {
+    const v = thermalVia('Q1 (MOSFET)', mosfetLoss, `${mosfetLoss.toFixed(1)} W conduction + switching losses`)
+    if (v) thermal_vias.push(v)
+  }
+  if (diodeLoss > 0.1) {
+    const v = thermalVia('D1 (output diode)', diodeLoss, `${diodeLoss.toFixed(1)} W forward-conduction losses`)
+    if (v) thermal_vias.push(v)
+  }
+  if ((topology === 'flyback' || topology === 'forward') && coreLoss > 0.5) {
+    thermal_vias.push({
+      component:       'T1 (transformer)',
+      via_count:       Math.ceil(coreLoss / WATTS_PER_VIA),
+      via_diameter_mm: VIA_DIAM_MM,
+      reason:          `${coreLoss.toFixed(1)} W core loss; use a copper pour under the core mounting pads.`,
+    })
+  }
+
+  return thermal_vias
+}
+
 // ── Public API ────────────────────────────────────────────────────────────────
 
+/**
+ * Generate a complete PCB layout guide for a computed switching-supply design.
+ *
+ * @param topology Converter topology identifier
+ * @param spec     Design specification (Vin, Vout, Iout, fsw, efficiency)
+ * @param result   Computed design result (peakCurrent, losses, turnsRatio, …)
+ * @returns        Structured layout guidelines ready for display or PDF export
+ */
 export function generateLayoutGuidelines(
   topology: TopologyId,
   spec: DesignSpec,
   result: DesignResult,
 ): LayoutGuidelines {
-  // ── Current magnitudes for trace-width calculations ───────────────────────
-  const iIn      = (spec.vout * spec.iout) / (spec.vinMin * spec.efficiency)
-  const iSwitchPeak = result.peakCurrent
-  const iOut     = spec.iout
-  const iGate    = 2.0   // A — typical driver peak (same assumption as gate-drive.ts)
-
-  const trace_widths: TraceWidth[] = [
-    makeTrace('Vin power', iIn),
-    makeTrace('Switch node', iSwitchPeak),
-    makeTrace('Output power', iOut),
-    makeTrace('GND return', Math.max(iIn, iOut)),
-    makeTrace('Gate drive', iGate),
-  ]
-
-  // Flyback and forward: also size primary and secondary separately
-  if (topology === 'flyback' || topology === 'forward') {
-    const iPrimary = iIn
-    const iSecondary = iOut / (result.turnsRatio ?? 1) * 1.2  // with 20 % margin
-    trace_widths.push(makeTrace('Primary winding return', iPrimary))
-    trace_widths.push(makeTrace('Secondary winding return', iSecondary))
+  return {
+    critical_loops:  loopsForTopology(topology),
+    trace_widths:    computeTraceWidths(topology, spec, result),
+    placement_order: placementForTopology(topology),
+    thermal_vias:    computeThermalVias(topology, result),
+    keep_outs:       keepOutsForTopology(topology, spec),
+    general_tips:    tipsForTopology(topology, spec),
   }
-
-  // ── Thermal vias ──────────────────────────────────────────────────────────
-  const losses = result.losses
-const thermal_vias: ThermalVia[] = []
-
-if (losses) {
-  // Compute component losses from whichever loss structure is present
-  let mosfetLoss = 0
-  let diodeLoss = 0
-  let coreLoss = 0
-
-  mosfetLoss = (losses.mosfet ?? 0) + (losses.mosfet_conduction ?? 0) + (losses.mosfet_switching ?? 0)
-  diodeLoss  = (losses.diode ?? 0) + (losses.diode_conduction ?? 0)
-  coreLoss   = (losses.core ?? 0) + (losses.inductor_core ?? 0)
-
-  if (mosfetLoss > 0.1) {
-    const mosfetVia = thermalVia('Q1 (MOSFET)', mosfetLoss, `${mosfetLoss.toFixed(1)} W conduction + switching losses`)
-    if (mosfetVia) thermal_vias.push(mosfetVia)
-  }
-
-  if (diodeLoss > 0.1) {
-    const diodeVia = thermalVia('D1 (output diode)', diodeLoss, `${diodeLoss.toFixed(1)} W forward-conduction losses`)
-    if (diodeVia) thermal_vias.push(diodeVia)
-  }
-
-  if ((topology === 'flyback' || topology === 'forward') && coreLoss > 0.5) {
-    thermal_vias.push({
-      component: 'T1 (transformer)',
-      via_count: Math.ceil(coreLoss / WATTS_PER_VIA),
-      via_diameter_mm: VIA_DIAM_MM,
-      reason: `${coreLoss.toFixed(1)} W core loss; use a copper pour under the core mounting pads.`,
-    })
-  }
-}
-
-return {
-  critical_loops:  loopsForTopology(topology),
-  trace_widths,
-  placement_order: placementForTopology(topology),
-  thermal_vias,
-  keep_outs:       keepOutsForTopology(topology, spec),
-  general_tips:    tipsForTopology(topology, spec),
-}
 }

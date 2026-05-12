@@ -15,10 +15,8 @@ import type { EMIResult } from './topologies/types'
 
 export interface InputFilterOptions {
   enabled: boolean
-  // Override attenuation target (dB). 0 = auto from EMI result.
-  attenuation_override_db: number
-  // Common-mode choke inductance (H). 0 = auto select.
-  cm_choke_h: number
+  attenuation_override_db: number  // 0 = auto from EMI result
+  cm_choke_h: number               // 0 = auto select
 }
 
 export const DEFAULT_INPUT_FILTER_OPTIONS: InputFilterOptions = {
@@ -36,49 +34,42 @@ export interface FilterComponent {
 }
 
 export interface InputFilterResult {
-  // DM filter
-  dm_inductor: number       // H
-  dm_capacitor: number      // F
-  // CM filter
-  cm_choke: number          // H
-  x_capacitor: number       // F
-  y_capacitors: number      // F — per capacitor; two required (line-to-GND each)
-  // Damping network (Rd + Cd in parallel with dm_capacitor)
-  damping_resistor: number  // Ω
-  damping_capacitor: number // F
-  // Performance
-  filter_resonant_freq: number         // Hz
-  filter_attenuation_at_fsw: number   // dB — 40 dB/dec roll-off from resonance
-  required_attenuation_db: number      // dB — from EMI margin
-  // Stability (Middlebrook criterion)
+  dm_inductor: number
+  dm_capacitor: number
+  cm_choke: number
+  x_capacitor: number
+  y_capacitors: number
+  damping_resistor: number
+  damping_capacitor: number
+  filter_resonant_freq: number
+  filter_attenuation_at_fsw: number
+  required_attenuation_db: number
   middlebrook_stable: boolean
-  negative_input_impedance: number     // Ω — magnitude of converter negative-R input
-  filter_output_impedance_at_resonance: number  // Ω
-  stability_margin_db: number          // dB — positive = stable
-  // Filter inductor loss (DCR at full load)
+  negative_input_impedance: number
+  filter_output_impedance_at_resonance: number
+  stability_margin_db: number
   filter_inductor_loss_w: number
-  // Component BOM
   components: FilterComponent[]
   warnings: string[]
 }
 
-// ── Internal helpers ──────────────────────────────────────────────────────────
+// ── E12 value snapping ────────────────────────────────────────────────────────
 
-// Select the nearest value from E12 series for inductors / capacitors.
 const E12 = [1.0, 1.2, 1.5, 1.8, 2.2, 2.7, 3.3, 3.9, 4.7, 5.6, 6.8, 8.2]
 
 function nearestE12(value: number): number {
   if (value <= 0) return E12[0]
-  const exp = Math.floor(Math.log10(value))
+  const exp      = Math.floor(Math.log10(value))
   const mantissa = value / Math.pow(10, exp)
-  let best = E12[0]
-  let bestErr = Math.abs(mantissa - best)
+  let best = E12[0], bestErr = Math.abs(mantissa - best)
   for (const v of E12) {
     const err = Math.abs(mantissa - v)
     if (err < bestErr) { best = v; bestErr = err }
   }
   return best * Math.pow(10, exp)
 }
+
+// ── Formatting helpers ────────────────────────────────────────────────────────
 
 function fmtH(h: number): string {
   if (h >= 1e-3) return `${(h * 1e3).toFixed(2)} mH`
@@ -95,6 +86,160 @@ function fmtF(f: number): string {
 function fmtR(r: number): string {
   if (r >= 1e3) return `${(r / 1e3).toFixed(1)} kΩ`
   return `${r.toFixed(2)} Ω`
+}
+
+// ── Design sub-steps ──────────────────────────────────────────────────────────
+
+/** Step 1 — Required DM attenuation target in dB. */
+function resolveAttenuationTarget(opts: InputFilterOptions, emi: EMIResult): number {
+  if (opts.attenuation_override_db > 0) return opts.attenuation_override_db
+  if (emi.worst_margin_db < 0) return Math.abs(emi.worst_margin_db) + 6
+  // Even when compliant, a minimum 20 dB filter is standard practice
+  return Math.max(20, 6 - emi.worst_margin_db)
+}
+
+/**
+ * Step 2 — DM LC filter (Lf, Cf).
+ * Target resonance: f_res = fsw / 10 gives 40 dB/dec roll-off well below fsw.
+ * Z0 ≈ Vin / (2 × Ipeak) — balanced L/C split at resonance (Erickson §10.1 eq. 10.4).
+ */
+function computeDmFilter(spec: DesignSpec, result: DesignResult, fsw: number) {
+  const f_res_target = Math.max(1000, fsw / 10)
+  const z0           = Math.max(1, spec.vinMin / (2 * Math.max(result.peakCurrent, 0.1)))
+  const omega_res    = 2 * Math.PI * f_res_target
+  const dm_inductor  = nearestE12(z0 / omega_res)
+  const dm_capacitor = nearestE12(1 / (z0 * omega_res))
+  const filter_resonant_freq      = 1 / (2 * Math.PI * Math.sqrt(dm_inductor * dm_capacitor))
+  // 40 dB/dec above resonance — TI SLYT636 eq. 1
+  const filter_attenuation_at_fsw = 40 * Math.log10(Math.max(fsw / filter_resonant_freq, 1))
+  return { dm_inductor, dm_capacitor, filter_resonant_freq, filter_attenuation_at_fsw, z0 }
+}
+
+/**
+ * Step 3 — Rd + Cd damping network (Erickson §10.2).
+ * Rd = Z0/3 → Q ≈ 1. Cd = 4 × Cf ensures Rd doesn't short Cf at DC.
+ */
+function computeDampingNetwork(z0: number, dm_capacitor: number) {
+  return {
+    damping_resistor:  z0 / 3,
+    damping_capacitor: nearestE12(4 * dm_capacitor),
+  }
+}
+
+/**
+ * Step 4 — Middlebrook stability criterion.
+ * |Zin| = Vin² / (Pout / η)  (Middlebrook IEEE IAS 1976 eq. 3).
+ * Stability: |Zout_peak| < |Zin| / 3  (tightened criterion, Erickson §10.3).
+ */
+function computeMiddlebrook(spec: DesignSpec, result: DesignResult, damping_resistor: number) {
+  const pout = spec.vout * spec.iout
+  const eff  = result.efficiency ?? spec.efficiency
+  const negative_input_impedance             = spec.vinMin ** 2 / (pout / eff)
+  const filter_output_impedance_at_resonance = damping_resistor
+  const stability_margin_db = 20 * Math.log10(
+    negative_input_impedance / (3 * filter_output_impedance_at_resonance),
+  )
+  const middlebrook_stable =
+    (filter_output_impedance_at_resonance / negative_input_impedance) < 1 / 3
+  return { negative_input_impedance, filter_output_impedance_at_resonance, stability_margin_db, middlebrook_stable }
+}
+
+/**
+ * Step 5 — CM choke and safety capacitors.
+ * Y capacitors: IEC 60384-14 safety class, max 4.7 nF line-to-PE.
+ * Reference: Würth ANP008e §3.
+ */
+function computeCmFilter(opts: InputFilterOptions, emi: EMIResult, fsw: number) {
+  const cm_choke_raw = opts.cm_choke_h > 0
+    ? opts.cm_choke_h
+    : nearestE12(Math.max(1e-3,
+        1 / (2 * Math.PI * Math.max(emi.first_failing_harmonic ?? fsw, fsw) * 2.2e-9 * 4),
+      ))
+  const cm_choke     = Math.min(47e-3, Math.max(1e-3, cm_choke_raw))
+  return {
+    cm_choke,
+    was_clamped: cm_choke !== cm_choke_raw,
+    x_capacitor: nearestE12(100e-9),
+    y_capacitors: 2.2e-9,
+  }
+}
+
+/** Step 6 — BOM component list. */
+function buildFilterComponents(
+  spec: DesignSpec,
+  result: DesignResult,
+  dm_inductor: number,
+  dm_capacitor: number,
+  damping_resistor: number,
+  damping_capacitor: number,
+  cm_choke: number,
+  x_capacitor: number,
+  y_capacitors: number,
+): FilterComponent[] {
+  const vin_rat = `${(spec.vinMax * 1.5).toFixed(0)} V`
+  const vin_max = `${spec.vinMax.toFixed(0)} V`
+  const i_pk    = `${result.peakCurrent.toFixed(1)} A`
+  const i_rip   = `Irms ≥ ${(result.peakCurrent * 0.3).toFixed(1)} A`
+  return [
+    { ref: 'Lf',  type: 'DM Inductor',           value: fmtH(dm_inductor),    voltage_rating: vin_rat, current_rating: i_pk },
+    { ref: 'Cf',  type: 'DM Capacitor (X2)',      value: fmtF(dm_capacitor),   voltage_rating: vin_rat, current_rating: i_rip },
+    { ref: 'Rd',  type: 'Damping Resistor',       value: fmtR(damping_resistor),  voltage_rating: vin_rat, current_rating: i_pk },
+    { ref: 'Cd',  type: 'Damping Capacitor (X2)', value: fmtF(damping_capacitor), voltage_rating: vin_rat, current_rating: i_rip },
+    { ref: 'Lcm', type: 'CM Choke',               value: fmtH(cm_choke),       voltage_rating: vin_max, current_rating: i_pk },
+    { ref: 'Cx',  type: 'X2 Safety Capacitor',    value: fmtF(x_capacitor),    voltage_rating: '275 Vrms (X2)', current_rating: '—' },
+    { ref: 'Cy1', type: 'Y2 Safety Capacitor',    value: fmtF(y_capacitors),   voltage_rating: '250 Vrms (Y2)', current_rating: '—' },
+    { ref: 'Cy2', type: 'Y2 Safety Capacitor',    value: fmtF(y_capacitors),   voltage_rating: '250 Vrms (Y2)', current_rating: '—' },
+  ]
+}
+
+/** Collect design warnings. */
+function buildFilterWarnings(
+  spec: DesignSpec,
+  filter_resonant_freq: number,
+  filter_attenuation_at_fsw: number,
+  required_attenuation_db: number,
+  middlebrook_stable: boolean,
+  stability_margin_db: number,
+  filter_output_impedance_at_resonance: number,
+  negative_input_impedance: number,
+  cm_choke: number,
+  was_clamped: boolean,
+): string[] {
+  const warnings: string[] = []
+  if (filter_attenuation_at_fsw < required_attenuation_db) {
+    warnings.push(
+      `Filter provides ${filter_attenuation_at_fsw.toFixed(0)} dB at fsw but ${required_attenuation_db.toFixed(0)} dB is required. ` +
+      `Reduce f_res (increase L and C) or add a second filter stage.`,
+    )
+  }
+  if (!middlebrook_stable) {
+    warnings.push(
+      `Middlebrook stability criterion violated: filter output impedance (${fmtR(filter_output_impedance_at_resonance)}) ` +
+      `≥ Zin/3 (${fmtR(negative_input_impedance / 3)}). ` +
+      `Increase damping resistor or reduce filter inductance.`,
+    )
+  } else if (stability_margin_db < 6) {
+    warnings.push(
+      `Middlebrook margin is only ${stability_margin_db.toFixed(1)} dB. Recommend > 6 dB. ` +
+      `Consider larger Rd or a lower filter inductance.`,
+    )
+  }
+  if (filter_resonant_freq < 500) {
+    warnings.push(
+      `Filter resonance at ${filter_resonant_freq.toFixed(0)} Hz is close to line frequency. ` +
+      `Reduce filter component values.`,
+    )
+  }
+  if (was_clamped) {
+    warnings.push(`CM choke clamped to ${fmtH(cm_choke)} (practical range 1–47 mH).`)
+  }
+  if (spec.vinMax > 500) {
+    warnings.push(
+      `Vin_max = ${spec.vinMax} V exceeds typical X2 capacitor ratings (275 Vrms / 400 Vdc). ` +
+      `Use X1 class capacitors (440 Vrms) for 277 Vrms mains.`,
+    )
+  }
+  return warnings
 }
 
 // ── Main function ─────────────────────────────────────────────────────────────
@@ -121,222 +266,38 @@ export function designInputFilter(
   emi: EMIResult,
   opts: InputFilterOptions = DEFAULT_INPUT_FILTER_OPTIONS,
 ): InputFilterResult {
-  const warnings: string[] = []
   const fsw = spec.fsw
 
-  // ── 1. Required attenuation ───────────────────────────────────────────────
-  // If EMI passes with margin, we still design a filter with at least 20 dB
-  // (good practice for conducted EMI even when harmonics look OK).
-  // If EMI fails, we need |worst_margin| + 6 dB safety margin.
-  let required_attenuation_db: number
-  if (opts.attenuation_override_db > 0) {
-    required_attenuation_db = opts.attenuation_override_db
-  } else if (emi.worst_margin_db < 0) {
-    // worst_margin_db is negative when limit is exceeded
-    required_attenuation_db = Math.abs(emi.worst_margin_db) + 6
-  } else {
-    // Even when compliant, a minimum 20 dB filter is standard practice
-    required_attenuation_db = Math.max(20, 6 - emi.worst_margin_db)
-  }
+  const required_attenuation_db = resolveAttenuationTarget(opts, emi)
+  const { dm_inductor, dm_capacitor, filter_resonant_freq, filter_attenuation_at_fsw, z0 } =
+    computeDmFilter(spec, result, fsw)
+  const { damping_resistor, damping_capacitor } =
+    computeDampingNetwork(z0, dm_capacitor)
+  const { negative_input_impedance, filter_output_impedance_at_resonance, stability_margin_db, middlebrook_stable } =
+    computeMiddlebrook(spec, result, damping_resistor)
+  const { cm_choke, was_clamped, x_capacitor, y_capacitors } =
+    computeCmFilter(opts, emi, fsw)
 
-  // ── 2. DM filter: Lf and Cf ───────────────────────────────────────────────
-  // Target resonance: f_res = fsw / 10 gives 40 dB/dec roll-off well below fsw.
-  // Minimum f_res ensures we don't interfere with line frequency (> 1 kHz min).
-  // Reference: Erickson §10.1 — choose f_res << fsw
-  const f_res_target = Math.max(1000, fsw / 10)
-
-  // Characteristic impedance Z0 = sqrt(Lf/Cf). Choose Z0 ≈ source impedance
-  // seen by the filter input. Practical choice: Z0 ≈ Vin / (2 × Ipeak) — a
-  // balanced split between L and C impedances at resonance.
-  const z0 = Math.max(1, spec.vinMin / (2 * Math.max(result.peakCurrent, 0.1)))
-
-  // Lf = Z0 / (2π × f_res), Cf = 1 / (Z0 × 2π × f_res)
-  // Reference: Erickson eq. 10.4
-  const omega_res = 2 * Math.PI * f_res_target
-  const lf_raw = z0 / omega_res
-  const cf_raw = 1 / (z0 * omega_res)
-
-  const dm_inductor  = nearestE12(lf_raw)
-  const dm_capacitor = nearestE12(cf_raw)
-
-  // Actual resonant frequency with snapped values
-  const filter_resonant_freq = 1 / (2 * Math.PI * Math.sqrt(dm_inductor * dm_capacitor))
-
-  // Attenuation at fsw: 40 dB/dec for second-order LC above resonance
-  // Att = 40 × log10(fsw / f_res)  (Reference: TI SLYT636 eq. 1)
-  const filter_attenuation_at_fsw = 40 * Math.log10(Math.max(fsw / filter_resonant_freq, 1))
-
-  if (filter_attenuation_at_fsw < required_attenuation_db) {
-    warnings.push(
-      `Filter provides ${filter_attenuation_at_fsw.toFixed(0)} dB at fsw but ${required_attenuation_db.toFixed(0)} dB is required. ` +
-      `Reduce f_res (increase L and C) or add a second filter stage.`,
-    )
-  }
-
-  // ── 3. Damping network (Erickson §10.2) ─────────────────────────────────
-  // Without damping the LC resonance can interact with the converter's
-  // negative input impedance and cause oscillation (Middlebrook 1976).
-  // Add Rd + Cd in parallel with Cf.
-  // Rd = Z0 / 3 → Q ≈ 1, critically damped  (Erickson eq. 10.18)
-  // Cd = 4 × Cf ensures Cd dominates at resonance and Rd doesn't short Cf at DC
-  const damping_resistor  = z0 / 3
-  const damping_capacitor = nearestE12(4 * dm_capacitor)
-
-  // ── 4. Middlebrook stability criterion ───────────────────────────────────
-  // Converter negative input impedance (CCM): Zin = -Vin² / Pout
-  // Magnitude |Zin| = Vin² / (Vout × Iout × η)
-  // Reference: Middlebrook IEEE IAS 1976 eq. 3
-  const pout = spec.vout * spec.iout
-  const eff  = result.efficiency ?? spec.efficiency
-  const negative_input_impedance = (spec.vinMin * spec.vinMin) / (pout / eff)
-
-  // Filter output impedance at resonance (without damping): Zout ≈ Z0 (Q-peaked)
-  // With Rd||Cd damping, Zout_peak ≈ Rd = Z0/3
-  const filter_output_impedance_at_resonance = damping_resistor
-
-  // Stability condition: |Zout| < |Zin| / 3  (additional 9.5 dB safety factor)
-  // Reference: Erickson §10.3 — tightened Middlebrook criterion
-  const stability_ratio = filter_output_impedance_at_resonance / negative_input_impedance
-  const stability_margin_db = 20 * Math.log10(negative_input_impedance / (3 * filter_output_impedance_at_resonance))
-  const middlebrook_stable = stability_ratio < 1 / 3
-
-  if (!middlebrook_stable) {
-    warnings.push(
-      `Middlebrook stability criterion violated: filter output impedance (${fmtR(filter_output_impedance_at_resonance)}) ` +
-      `≥ Zin/3 (${fmtR(negative_input_impedance / 3)}). ` +
-      `Increase damping resistor or reduce filter inductance.`,
-    )
-  } else if (stability_margin_db < 6) {
-    warnings.push(
-      `Middlebrook margin is only ${stability_margin_db.toFixed(1)} dB. Recommend > 6 dB. ` +
-      `Consider larger Rd or a lower filter inductance.`,
-    )
-  }
-
-  // ── 5. CM choke and Y-capacitors ─────────────────────────────────────────
-  // Y capacitors are safety-rated (IEC 60384-14): max 4.7 nF line-to-PE.
-  // Standard CM filter: L_cm ≈ 1–10 mH, Cy = 2.2 nF (common value within limit).
-  // Reference: Würth ANP008e §3
-  const cm_choke = opts.cm_choke_h > 0
-    ? opts.cm_choke_h
-    : nearestE12(Math.max(1e-3, 1 / (2 * Math.PI * Math.max(emi.first_failing_harmonic ?? fsw, fsw) * 2.2e-9 * 4)))
-
-  // Clamp CM choke to practical range: 1 mH – 47 mH
-  const cm_choke_clamped = Math.min(47e-3, Math.max(1e-3, cm_choke))
-
-  // X capacitor: across AC line, Class X2 (250 Vrms min), sized at ~100–470 nF
-  // Standard design: Cx = 1 / (2π × (mains_freq ≈ 50Hz) × Z_source) ≈ 100 nF
-  const x_capacitor = nearestE12(100e-9)
-
-  // Y capacitors: 2.2 nF is the de facto standard within IEC 60384-14 safety limit
-  const y_capacitors = 2.2e-9
-
-  // ── 6. Filter inductor loss estimate ─────────────────────────────────────
   // DCR estimate: typical power filter inductor has DCR ≈ Z0 / 100 (conservative)
-  const dcr_estimate = Math.max(0.005, z0 / 100)
-  const filter_inductor_loss_w = result.peakCurrent * result.peakCurrent * dcr_estimate
+  const filter_inductor_loss_w = result.peakCurrent ** 2 * Math.max(0.005, z0 / 100)
 
-  // ── 7. Build component list ───────────────────────────────────────────────
-  const vin_max_str = `${spec.vinMax.toFixed(0)} V`
-  const vin_rat_str = `${(spec.vinMax * 1.5).toFixed(0)} V`  // 50 % derating
-  const iout_str    = `${result.peakCurrent.toFixed(1)} A`
-
-  const components: FilterComponent[] = [
-    {
-      ref: 'Lf',
-      type: 'DM Inductor',
-      value: fmtH(dm_inductor),
-      voltage_rating: vin_rat_str,
-      current_rating: iout_str,
-    },
-    {
-      ref: 'Cf',
-      type: 'DM Capacitor (X2)',
-      value: fmtF(dm_capacitor),
-      voltage_rating: vin_rat_str,
-      current_rating: `Irms ≥ ${(result.peakCurrent * 0.3).toFixed(1)} A`,
-    },
-    {
-      ref: 'Rd',
-      type: 'Damping Resistor',
-      value: fmtR(damping_resistor),
-      voltage_rating: vin_rat_str,
-      current_rating: iout_str,
-    },
-    {
-      ref: 'Cd',
-      type: 'Damping Capacitor (X2)',
-      value: fmtF(damping_capacitor),
-      voltage_rating: vin_rat_str,
-      current_rating: `Irms ≥ ${(result.peakCurrent * 0.3).toFixed(1)} A`,
-    },
-    {
-      ref: 'Lcm',
-      type: 'CM Choke',
-      value: fmtH(cm_choke_clamped),
-      voltage_rating: vin_max_str,
-      current_rating: iout_str,
-    },
-    {
-      ref: 'Cx',
-      type: 'X2 Safety Capacitor',
-      value: fmtF(x_capacitor),
-      voltage_rating: '275 Vrms (X2)',
-      current_rating: '—',
-    },
-    {
-      ref: 'Cy1',
-      type: 'Y2 Safety Capacitor',
-      value: fmtF(y_capacitors),
-      voltage_rating: '250 Vrms (Y2)',
-      current_rating: '—',
-    },
-    {
-      ref: 'Cy2',
-      type: 'Y2 Safety Capacitor',
-      value: fmtF(y_capacitors),
-      voltage_rating: '250 Vrms (Y2)',
-      current_rating: '—',
-    },
-  ]
-
-  // ── Warnings ──────────────────────────────────────────────────────────────
-  if (filter_resonant_freq < 500) {
-    warnings.push(
-      `Filter resonance at ${filter_resonant_freq.toFixed(0)} Hz is close to line frequency. ` +
-      `Reduce filter component values.`,
-    )
-  }
-  if (cm_choke_clamped !== cm_choke) {
-    warnings.push(
-      `CM choke clamped to ${fmtH(cm_choke_clamped)} (practical range 1–47 mH).`,
-    )
-  }
-  if (spec.vinMax > 500) {
-    warnings.push(
-      `Vin_max = ${spec.vinMax} V exceeds typical X2 capacitor ratings (275 Vrms / 400 Vdc). ` +
-      `Use X1 class capacitors (440 Vrms) for 277 Vrms mains.`,
-    )
-  }
+  const components = buildFilterComponents(
+    spec, result, dm_inductor, dm_capacitor, damping_resistor, damping_capacitor,
+    cm_choke, x_capacitor, y_capacitors,
+  )
+  const warnings = buildFilterWarnings(
+    spec, filter_resonant_freq, filter_attenuation_at_fsw, required_attenuation_db,
+    middlebrook_stable, stability_margin_db, filter_output_impedance_at_resonance,
+    negative_input_impedance, cm_choke, was_clamped,
+  )
 
   return {
-    dm_inductor,
-    dm_capacitor,
-    cm_choke: cm_choke_clamped,
-    x_capacitor,
-    y_capacitors,
-    damping_resistor,
-    damping_capacitor,
-    filter_resonant_freq,
-    filter_attenuation_at_fsw,
-    required_attenuation_db,
-    middlebrook_stable,
-    negative_input_impedance,
-    filter_output_impedance_at_resonance,
-    stability_margin_db,
-    filter_inductor_loss_w,
-    components,
-    warnings,
+    dm_inductor, dm_capacitor,
+    cm_choke, x_capacitor, y_capacitors,
+    damping_resistor, damping_capacitor,
+    filter_resonant_freq, filter_attenuation_at_fsw, required_attenuation_db,
+    middlebrook_stable, negative_input_impedance, filter_output_impedance_at_resonance,
+    stability_margin_db, filter_inductor_loss_w, components, warnings,
   }
 }
 
@@ -344,7 +305,6 @@ export function designInputFilter(
 
 /**
  * Compute filter output impedance |Zout(f)| for the DM LC + damping network.
- *
  * Circuit: Lf in series with the parallel combination of Cf || (Rd + Cd).
  * Returns magnitude in Ω at each frequency in `freqs`.
  */
@@ -353,40 +313,27 @@ export function filterOutputImpedance(
 ): number[] {
   return freqs.map((f) => {
     const w = 2 * Math.PI * f
-    // Impedance of Cf: 1/(jωCf)
-    const zCf_re = 0
-    const zCf_im = -1 / (w * cf)
-    // Impedance of Rd + Cd series: Rd + 1/(jωCd)
-    const zRdCd_re = rd
-    const zRdCd_im = -1 / (w * cd)
-    // Parallel: Z1||Z2 = (Z1×Z2)/(Z1+Z2)
+    const zCf_re = 0,    zCf_im   = -1 / (w * cf)
+    const zRdCd_re = rd, zRdCd_im = -1 / (w * cd)
     const denom_re = zCf_re + zRdCd_re
     const denom_im = zCf_im + zRdCd_im
     const denom_mag2 = denom_re * denom_re + denom_im * denom_im
-    const num_re = zCf_re * zRdCd_re - zCf_im * zRdCd_im
-    const num_im = zCf_re * zRdCd_im + zCf_im * zRdCd_re
+    const num_re  = zCf_re * zRdCd_re - zCf_im * zRdCd_im
+    const num_im  = zCf_re * zRdCd_im + zCf_im * zRdCd_re
     const zPar_re = (num_re * denom_re + num_im * denom_im) / denom_mag2
     const zPar_im = (num_im * denom_re - num_re * denom_im) / denom_mag2
-    // Total: Lf + zPar
-    const zTot_re = zPar_re
-    const zTot_im = w * lf + zPar_im
-    return Math.sqrt(zTot_re * zTot_re + zTot_im * zTot_im)
+    return Math.sqrt(zPar_re * zPar_re + (w * lf + zPar_im) * (w * lf + zPar_im))
   })
 }
 
 /**
  * Converter negative input impedance magnitude vs frequency.
- *
- * At DC: |Zin| = Vin² / Pout. At high frequency it transitions to the
- * switch-node impedance. Approximation: flat negative resistance up to fsw,
- * then rises as +20 dB/dec (capacitive input filter dominates).
+ * Flat negative resistance up to fsw, then rises as +20 dB/dec above.
  */
 export function converterInputImpedance(
   zinDC: number, fsw: number, freqs: number[],
 ): number[] {
-  return freqs.map((f) => {
-    if (f <= fsw) return zinDC
-    // Above fsw: impedance rises (simplified), doubling every decade
-    return zinDC * Math.pow(f / fsw, 0.5)
-  })
+  return freqs.map((f) =>
+    f <= fsw ? zinDC : zinDC * Math.pow(f / fsw, 0.5),
+  )
 }

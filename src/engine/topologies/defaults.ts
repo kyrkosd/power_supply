@@ -1,11 +1,13 @@
-// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
-// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
 import type { DesignSpec } from '../types'
 import type { TopologyId } from '../../store/workbenchStore'
 
-// Canonical smart defaults per topology.
-// Re-exported by design-store.ts as TOPOLOGY_DEFAULTS so the rest of the
-// app keeps the same import path.
+/**
+ * Canonical default `DesignSpec` for each topology.
+ *
+ * On a topology switch the store checks whether the current spec equals the
+ * old defaults; if so it silently applies the new ones, otherwise it shows a
+ * confirmation banner ("Apply Defaults" / "Keep Current").
+ */
 export const TOPOLOGY_DEFAULTS: Record<TopologyId, DesignSpec> = {
   buck: {
     vinMin: 10, vinMax: 14, vout: 5, iout: 3,

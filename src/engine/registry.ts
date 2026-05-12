@@ -1,5 +1,3 @@
-// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
-// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
 import type { TopologyId } from '../store/workbenchStore'
 import type {
   TopologyEngine,
@@ -17,7 +15,9 @@ import type {
 } from './topologies/types'
 import { WarningCode } from './topologies/types'
 
-// ── NaN-filled shapes used by stub engines ────────────────────────────────────
+// ── NaN sentinel shapes ───────────────────────────────────────────────────────
+// Each constant matches the corresponding result interface with every numeric
+// field set to NaN, signalling "not computed" without requiring null checks.
 
 const NAN_LOSSES: LossBreakdown = {
   mosfet_conduction: NaN,
@@ -31,12 +31,15 @@ const NAN_LOSSES: LossBreakdown = {
   efficiency:        NaN,
 }
 
-const NAN_INDUCTOR: InductorResult    = { value: NaN, peak_current: NaN, rms_current: NaN }
-const NAN_OUT_CAP:  OutputCapResult   = { value: NaN, esr_max: NaN, ripple_current: NaN }
-const NAN_IN_CAP:   InputCapResult    = { value: NaN, rms_current: NaN }
-const NAN_MOSFET:   MosfetResult      = { rds_on_max: NaN, vds_max: NaN }
-const NAN_DIODE:    DiodeResult       = { vr_max: NaN, if_avg: NaN }
+const NAN_INDUCTOR: InductorResult  = { value: NaN, peak_current: NaN, rms_current: NaN }
+const NAN_OUT_CAP:  OutputCapResult = { value: NaN, esr_max: NaN, ripple_current: NaN }
+const NAN_IN_CAP:   InputCapResult  = { value: NaN, rms_current: NaN }
+const NAN_MOSFET:   MosfetResult    = { rds_on_max: NaN, vds_max: NaN }
+const NAN_DIODE:    DiodeResult     = { vr_max: NaN, if_avg: NaN }
 
+// ── Stub engine helpers ───────────────────────────────────────────────────────
+
+/** Full NaN result returned by any topology whose real engine hasn't been registered. */
 function notImplementedResult(id: string): DesignResult {
   return {
     duty_cycle:  NaN,
@@ -55,14 +58,16 @@ function notImplementedResult(id: string): DesignResult {
   }
 }
 
+/** Transfer-function stub — throws on call since stubs are never exercised for Bode plots. */
 function notImplementedTransferFn(): TransferFunction {
   throw new Error('getTransferFunction() not implemented for this topology')
 }
 
+/** Zero-filled waveform arrays sized to `params.cycles × params.points_per_cycle`. */
 function emptyWaveforms(params: WaveformParams): WaveformSet {
-  const cycles          = params.cycles          ?? 3
-  const pointsPerCycle  = params.points_per_cycle ?? 200
-  const n               = cycles * pointsPerCycle
+  const cycles         = params.cycles          ?? 3
+  const pointsPerCycle = params.points_per_cycle ?? 200
+  const n              = cycles * pointsPerCycle
   return {
     time:             new Float64Array(n),
     inductor_current: new Float64Array(n),
@@ -72,49 +77,46 @@ function emptyWaveforms(params: WaveformParams): WaveformSet {
   }
 }
 
-// ── Stub engine factory ───────────────────────────────────────────────────────
-
+/** Build a no-op engine that signals "not implemented" for a given topology id. */
 function createStubEngine(id: string, name: string): TopologyEngine {
   return {
     id,
     name,
-    compute(): DesignResult {
-      return notImplementedResult(id)
-    },
-    getTransferFunction(): TransferFunction {
-      return notImplementedTransferFn()
-    },
-    generateWaveforms(params: WaveformParams): WaveformSet {
-      return emptyWaveforms(params)
-    },
+    compute():                                DesignResult   { return notImplementedResult(id) },
+    getTransferFunction():                    TransferFunction { return notImplementedTransferFn() },
+    generateWaveforms(p: WaveformParams):     WaveformSet    { return emptyWaveforms(p) },
   }
 }
 
 // ── Registry ─────────────────────────────────────────────────────────────────
 
 const _engines  = new Map<TopologyId, TopologyEngine>()
-const _realImpl = new Set<TopologyId>()  // IDs with non-stub implementations
+const _realImpl = new Set<TopologyId>()
 
-// Pre-populate every supported topology as a stub so the UI always has a
-// complete list. Real engines replace stubs via register().
+/** Display names for all supported topology IDs. Add a new entry here before calling register(). */
 const TOPOLOGY_NAMES: Record<TopologyId, string> = {
-  buck:        'Buck (Step-Down)',
-  boost:       'Boost (Step-Up)',
-  'buck-boost':'Buck-Boost',
-  flyback:     'Flyback',
-  forward:     'Forward',
-  sepic:       'SEPIC',
+  buck:         'Buck (Step-Down)',
+  boost:        'Boost (Step-Up)',
+  'buck-boost': 'Buck-Boost',
+  flyback:      'Flyback',
+  forward:      'Forward',
+  sepic:        'SEPIC',
 }
 
-for (const [id, name] of Object.entries(TOPOLOGY_NAMES) as [TopologyId, string][]) {
-  _engines.set(id, createStubEngine(id, name))
+/** Pre-populate every supported topology as a stub so the UI always has a complete list. */
+function initStubs(): void {
+  for (const [id, name] of Object.entries(TOPOLOGY_NAMES) as [TopologyId, string][]) {
+    _engines.set(id, createStubEngine(id, name))
+  }
 }
+initStubs()
+
+// ── Public API ────────────────────────────────────────────────────────────────
 
 /**
- * Register a real TopologyEngine implementation.
- * Replaces any existing stub for the same id.
- * Call this at module level in each topology file, e.g.:
- *   registry.register(buckEngine)
+ * Register a real TopologyEngine, replacing the stub for the same id.
+ * Throws if `engine.id` is not listed in `TOPOLOGY_NAMES`.
+ * Call at module level in each topology file: `registry.register(buckEngine)`.
  */
 export function register(engine: TopologyEngine): void {
   if (!_engines.has(engine.id as TopologyId)) {
@@ -127,9 +129,8 @@ export function register(engine: TopologyEngine): void {
 }
 
 /**
- * Retrieve the engine for a topology. Always returns an engine (never throws for
- * known ids) — unimplemented topologies return a stub that produces NaN results
- * with a NOT_IMPLEMENTED warning.
+ * Retrieve the engine for `id`. Always returns an engine — unimplemented topologies
+ * return a stub that produces NaN results with a NOT_IMPLEMENTED warning.
  */
 export function getEngine(id: TopologyId): TopologyEngine {
   const engine = _engines.get(id)
@@ -138,8 +139,8 @@ export function getEngine(id: TopologyId): TopologyEngine {
 }
 
 /**
- * Returns true if a real (non-stub) engine has been registered for this id.
- * Use this to disable the "Simulate" button or show a "coming soon" badge.
+ * Returns true if a real (non-stub) engine has been registered for `id`.
+ * Use this to disable simulate buttons or show "coming soon" badges.
  */
 export function isImplemented(id: TopologyId): boolean {
   return _realImpl.has(id)
