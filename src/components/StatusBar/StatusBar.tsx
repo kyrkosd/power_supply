@@ -1,45 +1,35 @@
-// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
-// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
+// Status bar: topology name, key results summary (D, L, C, η, operating mode), and warning count.
 import React from 'react'
 import { useDesignStore } from '../../store/design-store'
 import styles from './StatusBar.module.css'
 
+const TOPOLOGY_LABELS: Record<string, string> = {
+  buck: 'Buck', boost: 'Boost', 'buck-boost': 'Buck-Boost',
+  flyback: 'Flyback', forward: 'Forward', sepic: 'SEPIC',
+}
+
+/** Map operating mode string to a status colour. */
+function modeColor(mode?: string): string {
+  if (mode === 'CCM')      return '#4ade80'
+  if (mode === 'boundary') return '#fbbf24'
+  if (mode === 'DCM')      return '#f87171'
+  return 'var(--text-secondary)'
+}
+
+/** Thin footer bar showing topology, key results, and warning badge. */
 export function StatusBar(): React.ReactElement {
   const { topology, result } = useDesignStore()
-
   const warningCount = result?.warnings?.length ?? 0
-
-  const topologyLabel: Record<string, string> = {
-    buck: 'Buck',
-    boost: 'Boost',
-    'buck-boost': 'Buck-Boost',
-    flyback: 'Flyback',
-    forward: 'Forward',
-    sepic: 'SEPIC',
-  }
-
-  const getModeColor = (mode?: string): string => {
-    switch (mode) {
-      case 'CCM':
-        return '#4ade80' // green
-      case 'boundary':
-        return '#fbbf24' // amber
-      case 'DCM':
-        return '#f87171' // red
-      default:
-        return 'var(--text-secondary)'
-    }
-  }
 
   return (
     <div className={styles.statusBar}>
-      {/* Left: topology name */}
+      {/* Topology label */}
       <div className={styles.section}>
         <span className={styles.label}>Topology:</span>
-        <span className={styles.value}>{topologyLabel[topology]}</span>
+        <span className={styles.value}>{TOPOLOGY_LABELS[topology]}</span>
       </div>
 
-      {/* Center: key results summary */}
+      {/* Key results summary */}
       <div className={styles.section}>
         {result ? (
           <>
@@ -66,7 +56,7 @@ export function StatusBar(): React.ReactElement {
                 <span className={styles.resultLabel}>Mode</span>
                 <span
                   className={styles.resultValue}
-                  style={{ color: getModeColor(result.operating_mode) }}
+                  style={{ color: modeColor(result.operating_mode) }}
                   title={`CCM/DCM boundary: ${(result.ccm_dcm_boundary ?? 0).toFixed(3)} A`}
                 >
                   {result.operating_mode}
@@ -79,7 +69,7 @@ export function StatusBar(): React.ReactElement {
         )}
       </div>
 
-      {/* Right: compute time & warnings */}
+      {/* Warning badge */}
       <div className={styles.section}>
         {warningCount > 0 && (
           <span

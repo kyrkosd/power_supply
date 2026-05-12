@@ -1,3 +1,4 @@
+// Toolbar: project file actions, undo/redo, export dropdown, share, comparison, and overflow menu.
 import React, { useEffect, useState, useCallback, useRef } from 'react'
 import { useDesignStore } from '../../store/design-store'
 import { HelpPanel } from '../HelpPanel/HelpPanel'
@@ -5,6 +6,7 @@ import { generateReport } from '../../export/pdf-report'
 import { generateBOM } from '../../export/bom-export'
 import styles from './Toolbar.module.css'
 
+/** Main application toolbar with file, export, share, and tool actions. */
 export function Toolbar(): React.ReactElement {
   const {
     currentProjectPath, isModified,
@@ -17,42 +19,37 @@ export function Toolbar(): React.ReactElement {
     setIsSequencing, setIsShareOpen,
   } = useDesignStore()
 
-  const [isExporting, setIsExporting] = useState(false)
+  const [isExporting, setIsExporting]     = useState(false)
   const [isExportingBOM, setIsExportingBOM] = useState(false)
-  const [exportOpen, setExportOpen] = useState(false)
-  const [overflowOpen, setOverflowOpen] = useState(false)
-  const exportRef = useRef<HTMLDivElement>(null)
+  const [exportOpen, setExportOpen]       = useState(false)
+  const [overflowOpen, setOverflowOpen]   = useState(false)
+  const exportRef   = useRef<HTMLDivElement>(null)
   const overflowRef = useRef<HTMLDivElement>(null)
 
-  // Sync window title
+  // Sync window title with project name + modified flag
   useEffect(() => {
     window.projectAPI?.setTitle(currentProjectPath, isModified)
   }, [currentProjectPath, isModified])
 
-  // Close dropdowns on outside click
-  useEffect(() => {
-    function onOutside(e: MouseEvent) {
-      if (exportRef.current && !exportRef.current.contains(e.target as Node)) {
-        setExportOpen(false)
-      }
-      if (overflowRef.current && !overflowRef.current.contains(e.target as Node)) {
-        setOverflowOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', onOutside)
-    return () => document.removeEventListener('mousedown', onOutside)
+  // Close dropdowns when clicking outside their containers
+  const handleOutsideClick = useCallback((e: MouseEvent) => {
+    if (exportRef.current   && !exportRef.current.contains(e.target as Node))   setExportOpen(false)
+    if (overflowRef.current && !overflowRef.current.contains(e.target as Node)) setOverflowOpen(false)
   }, [])
 
-  const projectName = currentProjectPath
-    ? currentProjectPath.replace(/.*[\\/]/, '')
-    : null
+  useEffect(() => {
+    document.addEventListener('mousedown', handleOutsideClick)
+    return () => document.removeEventListener('mousedown', handleOutsideClick)
+  }, [handleOutsideClick])
+
+  const projectName = currentProjectPath ? currentProjectPath.replace(/.*[\\/]/, '') : null
 
   const handleExport = useCallback(async () => {
     if (!result || isExporting) return
     setIsExporting(true)
     setExportOpen(false)
     try {
-      const blob = await generateReport({ topology, spec, result, notes, setActiveVizTab, currentTab: activeVizTab })
+      const blob   = await generateReport({ topology, spec, result, notes, setActiveVizTab, currentTab: activeVizTab })
       const buffer = await blob.arrayBuffer()
       await window.exportAPI?.savePdf(buffer, `${topology}_design_report.pdf`)
     } catch (err) {
@@ -74,7 +71,7 @@ export function Toolbar(): React.ReactElement {
     } finally {
       setIsExportingBOM(false)
     }
-  }, [result, isExportingBOM, topology, spec, selectedComponents])
+  }, [result, isExportingBOM, topology, spec, selectedComponents, feedbackOptions, softStartOptions])
 
   return (
     <header className={styles.toolbar}>
@@ -84,21 +81,19 @@ export function Toolbar(): React.ReactElement {
         <span className={styles.title}>Power Supply Workbench</span>
       </div>
 
-      {/* Project name — centered */}
+      {/* Centered project name */}
       <div className={styles.projectName}>
         {projectName
           ? <>{projectName}{isModified ? <span className={styles.dot}> •</span> : null}</>
-          : isModified
-            ? <span className={styles.dot}>Unsaved •</span>
-            : null}
+          : isModified ? <span className={styles.dot}>Unsaved •</span> : null}
       </div>
 
       {/* File actions */}
       <div className={styles.fileGroup}>
-        <button className={styles.btn} onClick={newProject} title="New project (Ctrl+N)">New</button>
-        <button className={styles.btn} onClick={openProject} title="Open project (Ctrl+O)">Open</button>
-        <button className={styles.btn} onClick={saveProject} title={`Save${currentProjectPath ? '' : ' as'} (Ctrl+S)`}>Save</button>
-        <button className={styles.btn} onClick={saveProjectAs} title="Save as (Ctrl+Shift+S)">Save As</button>
+        <button className={styles.btn} onClick={newProject}      title="New project (Ctrl+N)">New</button>
+        <button className={styles.btn} onClick={openProject}     title="Open project (Ctrl+O)">Open</button>
+        <button className={styles.btn} onClick={saveProject}     title={`Save${currentProjectPath ? '' : ' as'} (Ctrl+S)`}>Save</button>
+        <button className={styles.btn} onClick={saveProjectAs}   title="Save as (Ctrl+Shift+S)">Save As</button>
       </div>
 
       <div className={styles.divider} />
@@ -111,28 +106,15 @@ export function Toolbar(): React.ReactElement {
 
       {/* Export dropdown */}
       <div className={styles.dropdownWrap} ref={exportRef}>
-        <button
-          className={styles.btn}
-          onClick={() => setExportOpen(v => !v)}
-          disabled={!result}
-          title={result ? 'Export PDF or BOM' : 'Run simulation first'}
-        >
+        <button className={styles.btn} onClick={() => setExportOpen((v) => !v)} disabled={!result} title={result ? 'Export PDF or BOM' : 'Run simulation first'}>
           {isExporting || isExportingBOM ? '⏳' : '↓'} Export ▾
         </button>
         {exportOpen && (
           <div className={styles.dropdown}>
-            <button
-              className={styles.dropItem}
-              onClick={handleExport}
-              disabled={!result || isExporting}
-            >
-              {isExporting ? '⏳ Generating…' : '↓ PDF Report'}
+            <button className={styles.dropItem} onClick={handleExport}    disabled={!result || isExporting}>
+              {isExporting    ? '⏳ Generating…' : '↓ PDF Report'}
             </button>
-            <button
-              className={styles.dropItem}
-              onClick={handleExportBOM}
-              disabled={!result || isExportingBOM}
-            >
+            <button className={styles.dropItem} onClick={handleExportBOM} disabled={!result || isExportingBOM}>
               {isExportingBOM ? '⏳ Generating…' : '↓ Bill of Materials (CSV)'}
             </button>
           </div>
@@ -140,61 +122,30 @@ export function Toolbar(): React.ReactElement {
       </div>
 
       {/* Share */}
-      <button className={styles.btn} onClick={() => setIsShareOpen(true)} title="Share — copy a pswb:// link to clipboard">
-        ⇗ Share
-      </button>
+      <button className={styles.btn} onClick={() => setIsShareOpen(true)} title="Share — copy a pswb:// link to clipboard">⇗ Share</button>
 
-      {/* Save to comparison A */}
-      <button
-        className={styles.btn}
-        onClick={saveToComparison}
-        disabled={!result}
-        title={result ? 'Save current design as Design A for comparison (Ctrl+K)' : 'Run simulation first'}
-      >
+      {/* Save / Compare */}
+      <button className={styles.btn} onClick={saveToComparison} disabled={!result} title={result ? 'Save current design as Design A (Ctrl+K)' : 'Run simulation first'}>
         {comparisonSlot ? '✓ A' : '⊞ A'}
       </button>
-
-      {/* Compare */}
-      <button
-        className={styles.btn}
-        onClick={() => setIsComparing(true)}
-        disabled={!comparisonSlot || !result}
-        title={comparisonSlot && result ? 'Compare Design A vs current (Ctrl+Shift+K)' : 'Save a design first with Ctrl+K'}
-      >
+      <button className={styles.btn} onClick={() => setIsComparing(true)} disabled={!comparisonSlot || !result} title={comparisonSlot && result ? 'Compare Design A vs current (Ctrl+Shift+K)' : 'Save a design first with Ctrl+K'}>
         ⇄ Compare
       </button>
 
       <div className={styles.divider} />
 
-      {/* Overflow "..." menu */}
+      {/* Overflow "•••" menu */}
       <div className={styles.dropdownWrap} ref={overflowRef}>
-        <button
-          className={styles.btn}
-          onClick={() => setOverflowOpen(v => !v)}
-          title="More tools"
-          aria-label="More"
-        >
-          •••
-        </button>
+        <button className={styles.btn} onClick={() => setOverflowOpen((v) => !v)} title="More tools" aria-label="More">•••</button>
         {overflowOpen && (
           <div className={`${styles.dropdown} ${styles.dropdownRight}`}>
-            <button className={styles.dropItem} onClick={() => { setIsLibraryOpen(true); setOverflowOpen(false) }}>
-              📚 Design Library  <kbd>Ctrl+L</kbd>
-            </button>
-            <button className={styles.dropItem} onClick={() => { setIsSequencing(true); setOverflowOpen(false) }}>
-              ⏱ Sequencing
-            </button>
-            <button className={styles.dropItem} onClick={() => { setIsSweepOpen(true); setOverflowOpen(false) }}>
-              ∿ Parameter Sweep
-            </button>
+            <button className={styles.dropItem} onClick={() => { setIsLibraryOpen(true);  setOverflowOpen(false) }}>📚 Design Library  <kbd>Ctrl+L</kbd></button>
+            <button className={styles.dropItem} onClick={() => { setIsSequencing(true);   setOverflowOpen(false) }}>⏱ Sequencing</button>
+            <button className={styles.dropItem} onClick={() => { setIsSweepOpen(true);    setOverflowOpen(false) }}>∿ Parameter Sweep</button>
             <div className={styles.dropDivider} />
-            <button className={styles.dropItem} onClick={() => { setIsSettingsOpen(true); setOverflowOpen(false) }}>
-              ⚙ Settings
-            </button>
+            <button className={styles.dropItem} onClick={() => { setIsSettingsOpen(true); setOverflowOpen(false) }}>⚙ Settings</button>
             <div className={styles.dropDivider} />
-            <div className={styles.dropHelpItem}>
-              <HelpPanel />
-            </div>
+            <div className={styles.dropHelpItem}><HelpPanel /></div>
           </div>
         )}
       </div>

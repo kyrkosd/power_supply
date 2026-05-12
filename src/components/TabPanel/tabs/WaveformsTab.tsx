@@ -1,10 +1,10 @@
-// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
-// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
+// Waveforms tab: renders synchronized inductor/switch D3 charts for the buck topology.
 import React from 'react'
 import { useDesignStore } from '../../../store/design-store'
 import { WaveformChart } from '../../WaveformChart/WaveformChart'
 import styles from './Tab.module.css'
 
+/** Renders synchronized D3 waveform charts, or a topology-unavailable placeholder. */
 export function WaveformsTab(): React.ReactElement {
   const { topology, waveforms, spec } = useDesignStore()
 

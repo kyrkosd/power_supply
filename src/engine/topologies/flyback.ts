@@ -225,7 +225,7 @@ export const flybackTopology: Topology = {
     const vinNom      = (vinMin + vinMax) / 2
 
     const op = computeOperatingPoint(spec, secondaries)
-    const { dMax, pTotal, magnetizingInductance, primaryCurrentAvg, deltaIm, primaryPeakCurrent, turnsRatio } = op
+    const { dMax, magnetizingInductance, primaryCurrentAvg, deltaIm, primaryPeakCurrent, turnsRatio } = op
 
     const coreResult = computeCoreAndTurns(magnetizingInductance, primaryPeakCurrent, primaryCurrentAvg, turnsRatio)
     if (!coreResult) {
