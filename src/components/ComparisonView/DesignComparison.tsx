@@ -1,5 +1,4 @@
-// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
-// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
+// Side-by-side comparison modal: Design A (saved) vs Design B (current).
 import React, { useEffect, useCallback } from 'react'
 import { useDesignStore } from '../../store/design-store'
 import type { ComparisonSlot } from '../../store/design-store'
@@ -7,25 +6,35 @@ import type { DesignResult, DesignSpec } from '../../engine/types'
 import { fmtL, fmtC, fmtHz } from '../../export/format-utils'
 import styles from './DesignComparison.module.css'
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ── Types and helpers ─────────────────────────────────────────────────────────
 
+type WinSide = 'A' | 'B' | 'tie' | 'na'
+type Side    = 'A' | 'B'
+
+const TOPOLOGY_LABELS: Record<string, string> = {
+  buck: 'Buck (Step-Down)', boost: 'Boost (Step-Up)', 'buck-boost': 'Buck-Boost',
+  flyback: 'Flyback', forward: 'Forward', sepic: 'SEPIC',
+}
+
+/** Percentage string for display. */
 function pct(v: number): string { return `${(v * 100).toFixed(1)} %` }
 
+/** Effective efficiency: uses computed result first, falls back to spec target. */
 function getEfficiency(spec: DesignSpec, result: DesignResult): number {
   return result.efficiency ?? spec.efficiency
 }
 
+/** Total power loss from losses object, or estimated from efficiency and Pout. */
 function getTotalLoss(spec: DesignSpec, result: DesignResult): number | null {
   if (result.losses?.total != null) return result.losses.total
   const eff = getEfficiency(spec, result)
   const pout = spec.vout * spec.iout
-  // Estimated from Pout = η × Pin → Ploss = Pout × (1/η - 1)
+  // Ploss = Pout × (1/η − 1)
   if (eff > 0 && eff < 1) return pout * (1 / eff - 1)
   return null
 }
 
-type WinSide = 'A' | 'B' | 'tie' | 'na'
-
+/** Higher value wins (e.g. efficiency). Epsilon avoids float equality issues. */
 function higherWins(a: number | null, b: number | null): WinSide {
   if (a == null || b == null) return 'na'
   if (a > b + 1e-9) return 'A'
@@ -33,73 +42,68 @@ function higherWins(a: number | null, b: number | null): WinSide {
   return 'tie'
 }
 
-function lowerWins(a: number | null, b: number | null): WinSide {
-  return higherWins(b, a)
+/** Lower value wins (e.g. loss, peak current, warnings). */
+const lowerWins = (a: number | null, b: number | null): WinSide => higherWins(b, a)
+
+/** CSS win/lose class for a table cell based on which side wins. */
+function cellClass(side: Side, winner: WinSide): string {
+  if (winner === 'na' || winner === 'tie') return ''
+  return winner === side ? styles.win : styles.lose
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
+/** Horizontal bar chart showing efficiency as a fraction of 100 %. */
 function EffBar({ value, isWinner }: { value: number; isWinner: boolean }): React.ReactElement {
   return (
     <div className={styles.barWrap}>
       <div className={styles.barTrack}>
-        <div
-          className={isWinner ? styles.barFill : styles.barFillLose}
-          style={{ width: `${Math.min(value * 100, 100).toFixed(1)}%` }}
-        />
+        <div className={isWinner ? styles.barFill : styles.barFillLose}
+          style={{ width: `${Math.min(value * 100, 100).toFixed(1)}%` }} />
       </div>
       <span>{pct(value)}</span>
     </div>
   )
 }
 
+/** Warning pills — up to 3 shown, overflow count appended. */
 function WarnCell({ warnings }: { warnings: string[] }): React.ReactElement {
   if (warnings.length === 0) return <span className={styles.noWarn}>None</span>
   return (
     <div className={styles.warnList}>
-      {warnings.slice(0, 3).map((w, i) => (
-        <span key={i} className={styles.warnPill}>{w}</span>
-      ))}
-      {warnings.length > 3 && (
-        <span className={styles.warnPill}>+{warnings.length - 3} more…</span>
-      )}
+      {warnings.slice(0, 3).map((w, i) => <span key={i} className={styles.warnPill}>{w}</span>)}
+      {warnings.length > 3 && <span className={styles.warnPill}>+{warnings.length - 3} more…</span>}
     </div>
   )
 }
 
-// ── Row helpers ───────────────────────────────────────────────────────────────
-
-type Side = 'A' | 'B'
-
-function cellClass(side: Side, winner: WinSide): string {
-  if (winner === 'na' || winner === 'tie') return ''
-  return winner === side ? styles.win : styles.lose
+/** Single table row with optional win/lose highlight on A and B columns. */
+function Row({ label, a, b, aClass = '', bClass = '' }: {
+  label: string; a: React.ReactNode; b: React.ReactNode; aClass?: string; bClass?: string
+}): React.ReactElement {
+  return (
+    <tr>
+      <td className={styles.rowLabel}>{label}</td>
+      <td className={`${styles.colA} ${aClass}`}>{a}</td>
+      <td className={`${styles.colB} ${bClass}`}>{b}</td>
+    </tr>
+  )
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-const TOPOLOGY_LABELS: Record<string, string> = {
-  buck: 'Buck (Step-Down)',
-  boost: 'Boost (Step-Up)',
-  'buck-boost': 'Buck-Boost',
-  flyback: 'Flyback',
-  forward: 'Forward',
-  sepic: 'SEPIC',
-}
-
+/** Comparison modal — opens via Ctrl+Shift+K, closes on Escape or backdrop click. */
 export function DesignComparison(): React.ReactElement | null {
   const comparisonSlot  = useDesignStore((s) => s.comparisonSlot)
   const isComparing     = useDesignStore((s) => s.isComparing)
   const setIsComparing  = useDesignStore((s) => s.setIsComparing)
   const clearComparison = useDesignStore((s) => s.clearComparison)
-
   const currentTopology = useDesignStore((s) => s.topology)
   const currentSpec     = useDesignStore((s) => s.spec)
   const currentResult   = useDesignStore((s) => s.result)
 
   const close = useCallback(() => setIsComparing(false), [setIsComparing])
 
-  // Close on Escape
   useEffect(() => {
     if (!isComparing) return
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close() }
@@ -112,33 +116,21 @@ export function DesignComparison(): React.ReactElement | null {
   const a: ComparisonSlot = comparisonSlot
   const b: ComparisonSlot = { topology: currentTopology, spec: currentSpec, result: currentResult }
 
-  // ── Derived metrics ──────────────────────────────────────────────────────
-
-  const effA = getEfficiency(a.spec, a.result)
-  const effB = getEfficiency(b.spec, b.result)
-  const effWin = higherWins(effA, effB)
-
-  const lossA = getTotalLoss(a.spec, a.result)
-  const lossB = getTotalLoss(b.spec, b.result)
+  const effA = getEfficiency(a.spec, a.result), effB = getEfficiency(b.spec, b.result)
+  const lossA = getTotalLoss(a.spec, a.result),  lossB = getTotalLoss(b.spec, b.result)
+  const effWin  = higherWins(effA, effB)
   const lossWin = lowerWins(lossA, lossB)
-
-  const lWin = lowerWins(a.result.inductance, b.result.inductance)
-  const cWin = lowerWins(a.result.capacitance, b.result.capacitance)
-  const iWin = lowerWins(a.result.peakCurrent, b.result.peakCurrent)
+  const lWin    = lowerWins(a.result.inductance, b.result.inductance)
+  const cWin    = lowerWins(a.result.capacitance, b.result.capacitance)
+  const iWin    = lowerWins(a.result.peakCurrent, b.result.peakCurrent)
   const warnWin = lowerWins(a.result.warnings.length, b.result.warnings.length)
 
-  // Count wins (efficiency, losses, peak current, fewer warnings)
-  const wins: WinSide[] = [effWin, lossWin, iWin, warnWin]
+  const wins = [effWin, lossWin, iWin, warnWin]
   const aWins = wins.filter((w) => w === 'A').length
   const bWins = wins.filter((w) => w === 'B').length
-
-  const summaryBadgeClass = aWins > bWins ? styles.badgeA : bWins > aWins ? styles.badgeB : styles.badgeTie
-  const summaryText =
-    aWins > bWins ? `Design A wins ${aWins}/${wins.length} metrics`
-    : bWins > aWins ? `Design B wins ${bWins}/${wins.length} metrics`
-    : 'Designs are comparable'
-
-  // ── Render ───────────────────────────────────────────────────────────────
+  const summaryBadge = aWins > bWins ? styles.badgeA : bWins > aWins ? styles.badgeB : styles.badgeTie
+  const summaryText  = aWins > bWins ? `Design A wins ${aWins}/${wins.length} metrics`
+    : bWins > aWins ? `Design B wins ${bWins}/${wins.length} metrics` : 'Designs are comparable'
 
   return (
     <div className={styles.overlay} onClick={(e) => { if (e.target === e.currentTarget) close() }}>
@@ -159,121 +151,37 @@ export function DesignComparison(): React.ReactElement | null {
               </tr>
             </thead>
             <tbody>
-
-              {/* Topology */}
-              <tr>
-                <td className={styles.rowLabel}>Topology</td>
-                <td className={styles.colA}>{TOPOLOGY_LABELS[a.topology] ?? a.topology}</td>
-                <td className={styles.colB}>{TOPOLOGY_LABELS[b.topology] ?? b.topology}</td>
-              </tr>
-
-              {/* Key Specs */}
-              <tr>
-                <td className={styles.rowLabel}>Key Specs</td>
-                <td className={styles.colA}>
-                  {a.spec.vout} V @ {a.spec.iout} A
-                  <span className={styles.sub}>
-                    Vin {a.spec.vinMin}–{a.spec.vinMax} V &nbsp;·&nbsp; {fmtHz(a.spec.fsw)}
-                  </span>
-                </td>
-                <td className={styles.colB}>
-                  {b.spec.vout} V @ {b.spec.iout} A
-                  <span className={styles.sub}>
-                    Vin {b.spec.vinMin}–{b.spec.vinMax} V &nbsp;·&nbsp; {fmtHz(b.spec.fsw)}
-                  </span>
-                </td>
-              </tr>
-
-              {/* Duty Cycle */}
-              <tr>
-                <td className={styles.rowLabel}>Duty Cycle</td>
-                <td className={styles.colA}>{(a.result.dutyCycle * 100).toFixed(1)} %</td>
-                <td className={styles.colB}>{(b.result.dutyCycle * 100).toFixed(1)} %</td>
-              </tr>
-
-              {/* Inductance */}
-              <tr>
-                <td className={styles.rowLabel}>Inductance</td>
-                <td className={`${styles.colA} ${cellClass('A', lWin)}`}>{fmtL(a.result.inductance)}</td>
-                <td className={`${styles.colB} ${cellClass('B', lWin)}`}>{fmtL(b.result.inductance)}</td>
-              </tr>
-
-              {/* Capacitance */}
-              <tr>
-                <td className={styles.rowLabel}>Capacitance</td>
-                <td className={`${styles.colA} ${cellClass('A', cWin)}`}>{fmtC(a.result.capacitance)}</td>
-                <td className={`${styles.colB} ${cellClass('B', cWin)}`}>{fmtC(b.result.capacitance)}</td>
-              </tr>
-
-              {/* Peak Current */}
-              <tr>
-                <td className={styles.rowLabel}>Peak Current</td>
-                <td className={`${styles.colA} ${cellClass('A', iWin)}`}>
-                  {a.result.peakCurrent.toFixed(2)} A
-                </td>
-                <td className={`${styles.colB} ${cellClass('B', iWin)}`}>
-                  {b.result.peakCurrent.toFixed(2)} A
-                </td>
-              </tr>
-
-              {/* Efficiency */}
-              <tr>
-                <td className={styles.rowLabel}>Efficiency</td>
-                <td className={`${styles.colA} ${cellClass('A', effWin)}`}>
-                  <EffBar value={effA} isWinner={effWin === 'A' || effWin === 'tie'} />
-                </td>
-                <td className={`${styles.colB} ${cellClass('B', effWin)}`}>
-                  <EffBar value={effB} isWinner={effWin === 'B' || effWin === 'tie'} />
-                </td>
-              </tr>
-
-              {/* Total Losses */}
-              <tr>
-                <td className={styles.rowLabel}>Total Losses</td>
-                <td className={`${styles.colA} ${cellClass('A', lossWin)}`}>
-                  {lossA != null ? `${lossA.toFixed(2)} W` : '—'}
-                  {a.result.losses == null && lossA != null && (
-                    <span className={styles.sub}>estimated</span>
-                  )}
-                </td>
-                <td className={`${styles.colB} ${cellClass('B', lossWin)}`}>
-                  {lossB != null ? `${lossB.toFixed(2)} W` : '—'}
-                  {b.result.losses == null && lossB != null && (
-                    <span className={styles.sub}>estimated</span>
-                  )}
-                </td>
-              </tr>
-
-              {/* Operating Mode */}
-              <tr>
-                <td className={styles.rowLabel}>Mode</td>
-                <td className={styles.colA}>{a.result.operating_mode ?? 'CCM'}</td>
-                <td className={styles.colB}>{b.result.operating_mode ?? 'CCM'}</td>
-              </tr>
-
-              {/* Warnings */}
-              <tr>
-                <td className={styles.rowLabel}>Warnings</td>
-                <td className={`${styles.colA} ${cellClass('A', warnWin)}`}>
-                  <WarnCell warnings={a.result.warnings} />
-                </td>
-                <td className={`${styles.colB} ${cellClass('B', warnWin)}`}>
-                  <WarnCell warnings={b.result.warnings} />
-                </td>
-              </tr>
-
+              <Row label="Topology" a={TOPOLOGY_LABELS[a.topology] ?? a.topology} b={TOPOLOGY_LABELS[b.topology] ?? b.topology} />
+              <Row label="Key Specs"
+                a={<>{a.spec.vout} V @ {a.spec.iout} A<span className={styles.sub}>Vin {a.spec.vinMin}–{a.spec.vinMax} V · {fmtHz(a.spec.fsw)}</span></>}
+                b={<>{b.spec.vout} V @ {b.spec.iout} A<span className={styles.sub}>Vin {b.spec.vinMin}–{b.spec.vinMax} V · {fmtHz(b.spec.fsw)}</span></>}
+              />
+              <Row label="Duty Cycle" a={`${(a.result.dutyCycle * 100).toFixed(1)} %`} b={`${(b.result.dutyCycle * 100).toFixed(1)} %`} />
+              <Row label="Inductance"  a={fmtL(a.result.inductance)}  b={fmtL(b.result.inductance)}  aClass={cellClass('A', lWin)} bClass={cellClass('B', lWin)} />
+              <Row label="Capacitance" a={fmtC(a.result.capacitance)} b={fmtC(b.result.capacitance)} aClass={cellClass('A', cWin)} bClass={cellClass('B', cWin)} />
+              <Row label="Peak Current"
+                a={`${a.result.peakCurrent.toFixed(2)} A`} b={`${b.result.peakCurrent.toFixed(2)} A`}
+                aClass={cellClass('A', iWin)} bClass={cellClass('B', iWin)} />
+              <Row label="Efficiency"
+                a={<EffBar value={effA} isWinner={effWin === 'A' || effWin === 'tie'} />}
+                b={<EffBar value={effB} isWinner={effWin === 'B' || effWin === 'tie'} />}
+                aClass={cellClass('A', effWin)} bClass={cellClass('B', effWin)} />
+              <Row label="Total Losses"
+                a={lossA != null ? <>{lossA.toFixed(2)} W{a.result.losses == null && <span className={styles.sub}>estimated</span>}</> : '—'}
+                b={lossB != null ? <>{lossB.toFixed(2)} W{b.result.losses == null && <span className={styles.sub}>estimated</span>}</> : '—'}
+                aClass={cellClass('A', lossWin)} bClass={cellClass('B', lossWin)} />
+              <Row label="Mode" a={a.result.operating_mode ?? 'CCM'} b={b.result.operating_mode ?? 'CCM'} />
+              <Row label="Warnings"
+                a={<WarnCell warnings={a.result.warnings} />} b={<WarnCell warnings={b.result.warnings} />}
+                aClass={cellClass('A', warnWin)} bClass={cellClass('B', warnWin)} />
             </tbody>
           </table>
         </div>
 
         <div className={styles.footer}>
-          <span className={styles.summaryLabel}>
-            Based on {wins.length} comparable metrics (efficiency, losses, peak current, warnings)
-          </span>
-          <span className={`${styles.badge} ${summaryBadgeClass}`}>{summaryText}</span>
-          <button className={styles.clearBtn} onClick={clearComparison} title="Clear saved design A">
-            Clear A
-          </button>
+          <span className={styles.summaryLabel}>Based on {wins.length} metrics (efficiency, losses, peak current, warnings)</span>
+          <span className={`${styles.badge} ${summaryBadge}`}>{summaryText}</span>
+          <button className={styles.clearBtn} onClick={clearComparison} title="Clear saved design A">Clear A</button>
         </div>
 
       </div>

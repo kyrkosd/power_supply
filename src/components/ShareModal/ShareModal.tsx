@@ -1,10 +1,16 @@
+// Share and paste-confirm modals for design link sharing via pswb:// URL scheme.
 import React, { useEffect, useRef, useState } from 'react'
 import { useDesignStore } from '../../store/design-store'
 import { encodeDesign } from '../../export/share-link'
 import styles from './ShareModal.module.css'
 
-// ── Share modal — copy a pswb:// link to clipboard ────────────────────────────
+// ── Share modal ───────────────────────────────────────────────────────────────
 
+/**
+ * Displays the compressed share link for the current design.
+ * Attempts an immediate clipboard write on open; falls back to manual copy.
+ * Encodes topology, all spec parameters, and selected component overrides.
+ */
 export function ShareModal(): React.ReactElement | null {
   const isOpen             = useDesignStore((s) => s.isShareOpen)
   const setIsOpen          = useDesignStore((s) => s.setIsShareOpen)
@@ -13,9 +19,9 @@ export function ShareModal(): React.ReactElement | null {
   const spec               = useDesignStore((s) => s.spec)
   const selectedComponents = useDesignStore((s) => s.selectedComponents)
 
-  const [link, setLink]       = useState('')
-  const [copied, setCopied]   = useState(false)
-  const textareaRef           = useRef<HTMLTextAreaElement>(null)
+  const [link, setLink]     = useState('')
+  const [copied, setCopied] = useState(false)
+  const textareaRef         = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
     if (!isOpen) return
@@ -23,12 +29,10 @@ export function ShareModal(): React.ReactElement | null {
     if (selectedComponents.inductor)  overrides.inductor  = selectedComponents.inductor
     if (selectedComponents.capacitor) overrides.capacitor = selectedComponents.capacitor
     if (selectedComponents.mosfet)    overrides.mosfet    = selectedComponents.mosfet
-
     const encoded = encodeDesign(pluginTopologyId ?? topology, spec, overrides)
     setLink(encoded)
     setCopied(false)
-
-    // Try to copy immediately on open; if that fails the user can still hit Copy
+    // Attempt immediate copy; user can still click Copy if this fails
     navigator.clipboard.writeText(encoded).then(() => setCopied(true)).catch(() => {})
   }, [isOpen, topology, pluginTopologyId, spec, selectedComponents])
 
@@ -41,13 +45,12 @@ export function ShareModal(): React.ReactElement | null {
 
   if (!isOpen) return null
 
-  async function handleCopy() {
+  async function handleCopy(): Promise<void> {
     try {
       await navigator.clipboard.writeText(link)
       setCopied(true)
       setTimeout(() => setCopied(false), 2500)
     } catch {
-      // Fallback: select the text so the user can Ctrl+C
       textareaRef.current?.select()
     }
   }
@@ -59,30 +62,18 @@ export function ShareModal(): React.ReactElement | null {
           <h2 className={styles.title}>Share Design</h2>
           <button className={styles.closeBtn} onClick={() => setIsOpen(false)}>✕</button>
         </div>
-
         <p className={styles.description}>
           Anyone with this link can open your exact design — topology, all parameters, and
           selected components — in their own copy of the app.
         </p>
-
-        <textarea
-          ref={textareaRef}
-          className={styles.linkBox}
-          readOnly
-          value={link}
-          rows={3}
-          onClick={(e) => (e.target as HTMLTextAreaElement).select()}
-          spellCheck={false}
-        />
-
+        <textarea ref={textareaRef} className={styles.linkBox} readOnly value={link} rows={3}
+          onClick={(e) => (e.target as HTMLTextAreaElement).select()} spellCheck={false} />
         <div className={styles.actions}>
           <button className={styles.copyBtn} onClick={handleCopy}>
             {copied ? '✓ Copied!' : 'Copy to clipboard'}
           </button>
           <span className={styles.hint}>
-            {copied
-              ? 'Paste anywhere — chat, email, issue tracker.'
-              : 'Or click the text above to select it.'}
+            {copied ? 'Paste anywhere — chat, email, issue tracker.' : 'Or click the text above to select it.'}
           </span>
         </div>
       </div>
@@ -90,8 +81,12 @@ export function ShareModal(): React.ReactElement | null {
   )
 }
 
-// ── Paste / deep-link confirmation — offer to load a detected design ──────────
+// ── Paste / deep-link confirmation ────────────────────────────────────────────
 
+/**
+ * Confirmation modal shown when a shared design link is detected in the URL
+ * or clipboard. Displays a spec preview and lets the user accept or cancel.
+ */
 export function PasteConfirmModal(): React.ReactElement | null {
   const pending    = useDesignStore((s) => s.pendingShareDesign)
   const setpending = useDesignStore((s) => s.setPendingShareDesign)
@@ -108,21 +103,16 @@ export function PasteConfirmModal(): React.ReactElement | null {
 
   const { topology, spec } = pending
 
-  function handleLoad() {
+  function handleLoad(): void {
     if (!pending) return
-    // TopologyId guard: loadDesignSpec only accepts built-in IDs, but the
-    // store's setPluginTopology path handles community ones.  For simplicity
-    // we cast — the worker will reject unknown IDs gracefully.
+    // TopologyId cast: store's worker rejects unknown IDs gracefully; plugin
+    // topologies use a separate setPluginTopology path not needed here.
     loadDesign(topology as import('../../store/workbenchStore').TopologyId, spec)
     setpending(null)
   }
 
-  const vinStr = spec.vinMin === spec.vinMax
-    ? `${spec.vinMin} V`
-    : `${spec.vinMin}–${spec.vinMax} V`
-  const fswStr = spec.fsw >= 1e6
-    ? `${(spec.fsw / 1e6).toFixed(1)} MHz`
-    : `${(spec.fsw / 1e3).toFixed(0)} kHz`
+  const vinStr = spec.vinMin === spec.vinMax ? `${spec.vinMin} V` : `${spec.vinMin}–${spec.vinMax} V`
+  const fswStr = spec.fsw >= 1e6 ? `${(spec.fsw / 1e6).toFixed(1)} MHz` : `${(spec.fsw / 1e3).toFixed(0)} kHz`
 
   return (
     <div className={styles.overlay} onClick={() => setpending(null)}>
@@ -131,11 +121,7 @@ export function PasteConfirmModal(): React.ReactElement | null {
           <h2 className={styles.title}>Load Shared Design?</h2>
           <button className={styles.closeBtn} onClick={() => setpending(null)}>✕</button>
         </div>
-
-        <p className={styles.description}>
-          A shared design link was detected. Load it? This will replace your current design.
-        </p>
-
+        <p className={styles.description}>A shared design link was detected. Load it? This will replace your current design.</p>
         <table className={styles.specTable}>
           <tbody>
             <tr><td className={styles.specKey}>Topology</td><td className={styles.specVal}>{topology}</td></tr>
@@ -145,7 +131,6 @@ export function PasteConfirmModal(): React.ReactElement | null {
             <tr><td className={styles.specKey}>fsw</td>      <td className={styles.specVal}>{fswStr}</td></tr>
           </tbody>
         </table>
-
         <div className={styles.actions}>
           <button className={styles.copyBtn} onClick={handleLoad}>Load Design</button>
           <button className={styles.cancelBtn} onClick={() => setpending(null)}>Cancel</button>
