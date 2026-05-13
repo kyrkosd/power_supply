@@ -1,19 +1,107 @@
-// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
-// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
 import type { WaveformSet, TransferFunction, StateSpaceModel } from './topologies/types'
-import type { SaturationResult } from './inductor-saturation'
-import type { SnubberResult } from './snubber'
-import type { CurrentSenseResult } from './current-sense'
-import type { InputFilterResult } from './input-filter'
-import type { WindingResult } from './transformer-winding'
-
-export type { SaturationResult }
-export type { SnubberResult }
-export type { CurrentSenseResult }
-export type { InputFilterResult }
-export type { WindingResult }
 
 export type { TransferFunction }
+
+// ── Analysis-module result types ──────────────────────────────────────────────
+// Defined here so DesignResult can reference them without importing from the
+// analysis modules (which themselves import from types.ts — keeping this file
+// as the dependency-graph leaf for pure types).
+
+export interface SaturationResult {
+  i_peak:           number        // A — peak inductor current from design
+  i_sat:            number | null // A — datasheet saturation current; null when no part selected
+  margin_pct:       number | null // % — (Isat − Ipeak) / Isat × 100; null when no part selected
+  estimated_B_peak: number        // T — estimated peak flux density (linear B ∝ I model)
+  B_sat_material:   number        // T — assumed saturation flux density for default core material
+  is_saturated:     boolean
+  warning:          string | null
+}
+
+export interface SnubberResult {
+  type: 'RCD_clamp'
+  leakage_inductance: number // H — Llk = leakage_ratio × Lm
+  V_clamp: number            // V
+  R: number                  // Ω
+  C: number                  // F
+  P_dissipated: number       // W
+  components: {
+    R_value: number          // Ω — use nearest E24 series resistor
+    R_power_rating: number   // W — 2× P_dissipated for thermal margin
+    C_value: number          // F
+    C_voltage_rating: number // V — 125% of V_clamp
+    diode_Vr: number         // V — minimum reverse voltage for clamp diode
+  }
+}
+
+export type SenseMethod = 'resistor' | 'rdson'
+
+export interface CurrentSenseResult {
+  method: SenseMethod
+  rsense: number                       // Ω   — 0 for rdson
+  rsense_power: number                 // W   — I²_rms × Rsense (0 for rdson)
+  rsense_package: string               // recommended package (0805, 1206, 2010, 2512, shunt)
+  vsense_peak: number                  // V   — peak voltage across sense element
+  vsense_valley: number                // V   — valley voltage
+  snr_at_light_load: number            // dB  — at 10 % Iout vs 5 mV noise floor
+  kelvin_connection_required: boolean  // true when Rsense < 10 mΩ
+  rdson_temp_error_pct: number         // %   — 0 for resistor; accuracy drift at 100 °C
+  slope_comp_ramp: number              // V/s — minimum external ramp to avoid subharmonics
+  warnings: string[]
+}
+
+export interface FilterComponent {
+  type: string
+  value: string
+  voltage_rating: string
+  current_rating: string
+  ref: string
+}
+
+export interface InputFilterResult {
+  dm_inductor: number
+  dm_capacitor: number
+  cm_choke: number
+  x_capacitor: number
+  y_capacitors: number
+  damping_resistor: number
+  damping_capacitor: number
+  filter_resonant_freq: number
+  filter_attenuation_at_fsw: number
+  required_attenuation_db: number
+  middlebrook_stable: boolean
+  negative_input_impedance: number
+  filter_output_impedance_at_resonance: number
+  stability_margin_db: number
+  filter_inductor_loss_w: number
+  components: FilterComponent[]
+  warnings: string[]
+}
+
+export interface WindingSection {
+  turns: number
+  wire_gauge_awg: number
+  strands: number
+  resistance_mohm: number  // DC resistance, mΩ
+  fill_factor_pct: number  // this winding's copper area / bobbin area × 100
+  layers: number
+}
+
+export interface WindingResult {
+  primary: WindingSection
+  secondary: WindingSection[]        // index 0 = main regulated output
+  winding_order: string[]            // e.g. ["Primary (½)", "Sec 1", "Primary (½)"]
+  estimated_leakage_nh: number       // nH — Kazimierczuk eq. 6.28
+  skin_depth_mm: number              // δ at fsw
+  max_strand_diameter_mm: number     // 2 × skin_depth
+  proximity_loss_factor: number      // Fr = Rac/Rdc for primary (Dowell 1966)
+  total_copper_loss: number          // W — DC + AC (Fr-weighted)
+  creepage_mm: number                // IEC 62368-1, reinforced insulation
+  clearance_mm: number
+  bobbin_fill_check: boolean         // true = all copper fits (fill ≤ 60 %)
+  warnings: string[]
+}
+
+// ── Design domain types ───────────────────────────────────────────────────────
 
 /** One additional transformer secondary winding (flyback multi-output only). */
 export interface SecondaryOutput {
