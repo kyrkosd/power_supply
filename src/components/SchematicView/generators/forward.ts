@@ -10,7 +10,7 @@ type ForwardLabels = {
 }
 
 /** Pre-computes all display strings so component definitions contain no logic. */
-function buildLabels(spec: DesignSpec, result: DesignResult | null, duty: number): ForwardLabels {
+function buildLabels(_spec: DesignSpec, result: DesignResult | null, _duty: number): ForwardLabels {
   const coreLabel   = result?.coreType ?? '—'
   const primaryT    = result?.primaryTurns  ?? 0
   const secondaryT  = result?.secondaryTurns ?? 0
