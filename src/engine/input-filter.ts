@@ -8,8 +8,12 @@
 //   IEC 60384-14 — X and Y capacitor safety classes
 //   Würth Elektronik ANP008e — Common-mode choke design guidelines
 
-import type { DesignSpec, DesignResult } from './types'
+import type { DesignSpec, DesignResult, FilterComponent, InputFilterResult } from './types'
 import type { EMIResult } from './topologies/types'
+
+// FilterComponent and InputFilterResult are defined in types.ts so DesignResult
+// can reference them without a circular import. Re-exported here for consumers.
+export type { FilterComponent, InputFilterResult }
 
 // ── Public types ──────────────────────────────────────────────────────────────
 
@@ -23,34 +27,6 @@ export const DEFAULT_INPUT_FILTER_OPTIONS: InputFilterOptions = {
   enabled: false,
   attenuation_override_db: 0,
   cm_choke_h: 0,
-}
-
-export interface FilterComponent {
-  type: string
-  value: string
-  voltage_rating: string
-  current_rating: string
-  ref: string
-}
-
-export interface InputFilterResult {
-  dm_inductor: number
-  dm_capacitor: number
-  cm_choke: number
-  x_capacitor: number
-  y_capacitors: number
-  damping_resistor: number
-  damping_capacitor: number
-  filter_resonant_freq: number
-  filter_attenuation_at_fsw: number
-  required_attenuation_db: number
-  middlebrook_stable: boolean
-  negative_input_impedance: number
-  filter_output_impedance_at_resonance: number
-  stability_margin_db: number
-  filter_inductor_loss_w: number
-  components: FilterComponent[]
-  warnings: string[]
 }
 
 // ── E12 value snapping ────────────────────────────────────────────────────────

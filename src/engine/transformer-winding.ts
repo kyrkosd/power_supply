@@ -6,34 +6,12 @@
 //     Ch. 2 (wire data), Ch. 4 (skin/proximity losses), Ch. 6 (leakage inductance)
 //   IEC 62368-1:2018 Table F.5 — creepage and clearance for reinforced insulation
 
-import type { DesignSpec, DesignResult } from './types'
+import type { DesignSpec, DesignResult, WindingSection, WindingResult } from './types'
 import type { CoreData } from './topologies/core-selector'
 
-// ── Public types ──────────────────────────────────────────────────────────────
-
-export interface WindingSection {
-  turns: number
-  wire_gauge_awg: number
-  strands: number
-  resistance_mohm: number  // DC resistance, mΩ
-  fill_factor_pct: number  // this winding's copper area / bobbin area × 100
-  layers: number
-}
-
-export interface WindingResult {
-  primary: WindingSection
-  secondary: WindingSection[]        // index 0 = main regulated output
-  winding_order: string[]            // e.g. ["Primary (½)", "Sec 1", "Primary (½)"]
-  estimated_leakage_nh: number       // nH — Kazimierczuk eq. 6.28
-  skin_depth_mm: number              // δ at fsw
-  max_strand_diameter_mm: number     // 2 × skin_depth
-  proximity_loss_factor: number      // Fr = Rac/Rdc for primary (Dowell 1966)
-  total_copper_loss: number          // W — DC + AC (Fr-weighted)
-  creepage_mm: number                // IEC 62368-1, reinforced insulation
-  clearance_mm: number
-  bobbin_fill_check: boolean         // true = all copper fits (fill ≤ 60 %)
-  warnings: string[]
-}
+// WindingSection and WindingResult are defined in types.ts so DesignResult can
+// reference them without a circular import. Re-exported here for consumers.
+export type { WindingSection, WindingResult }
 
 // ── AWG wire table ─────────────────────────────────────────────────────────────
 // Kazimierczuk Table 2.3 / NEMA MW1000 — bare copper wire, 20 °C

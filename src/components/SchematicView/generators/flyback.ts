@@ -42,7 +42,6 @@ type FlybackLabels = {
 
 /** Pre-computes all display strings so component definitions contain no logic. */
 function buildLabels(spec: DesignSpec, result: DesignResult | null, duty: number): FlybackLabels {
-  const turnsRatio  = result?.turnsRatio ?? (spec.vinMin * duty) / spec.vout
   const primaryT    = result?.primaryTurns  ?? 0
   const secondaryT  = result?.secondaryTurns ?? 0
   const coreLabel   = result?.coreType ?? '—'

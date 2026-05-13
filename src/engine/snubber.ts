@@ -2,25 +2,13 @@
 // References: TI Application Report SLUA107 "Flyback Converter Design",
 //             Erickson & Maksimovic "Fundamentals of Power Electronics" 3rd ed., §6.2.2
 
-import type { DesignSpec, DesignResult } from './types'
+import type { DesignSpec, DesignResult, SnubberResult } from './types'
+
+// SnubberResult is defined in types.ts (the pure-type leaf) so DesignResult can
+// reference it without creating a circular import.
+export type { SnubberResult }
 
 export type SnubberTopology = 'flyback' | 'forward'
-
-export interface SnubberResult {
-  type: 'RCD_clamp'
-  leakage_inductance: number // H — Llk = leakage_ratio × Lm
-  V_clamp: number            // V
-  R: number                  // Ω
-  C: number                  // F
-  P_dissipated: number       // W
-  components: {
-    R_value: number          // Ω — use nearest E24 series resistor
-    R_power_rating: number   // W — 2× P_dissipated for thermal margin
-    C_value: number          // F
-    C_voltage_rating: number // V — 125% of V_clamp
-    diode_Vr: number         // V — minimum reverse voltage for clamp diode
-  }
-}
 
 export const DEFAULT_LEAKAGE_RATIO = 0.02  // 2 % of magnetising inductance
 
