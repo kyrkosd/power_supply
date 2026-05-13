@@ -11,7 +11,6 @@ import { designFeedback } from '../../engine/feedback'
 import { designSoftStart } from '../../engine/soft-start'
 import { Tooltip } from '../Tooltip/Tooltip'
 import { MosfetCard } from './MosfetCard'
-import { DigiKeySearchPanel } from './DigiKeySearchPanel'
 import {
   selectBadge, GateDriveSection, InductorCard,
   SoftStartDisplay, CurrentSensingDisplay,
@@ -72,7 +71,7 @@ function ccmBoundaryTip(boundary: number, mode?: string): React.ReactElement {
 
 /** Component suggestions panel; shows "run simulation first" when no result is available. */
 export function ComponentSuggestions(): React.ReactElement {
-  const { result, spec, topology, selectedComponents, setSelectedComponent, feedbackOptions, softStartOptions, setActiveVizTab, digiKeyEnabled } = useDesignStore()
+  const { result, spec, topology, selectedComponents, setSelectedComponent, feedbackOptions, softStartOptions, setActiveVizTab } = useDesignStore()
 
   if (!result) {
     return (
@@ -114,7 +113,6 @@ export function ComponentSuggestions(): React.ReactElement {
         <div className={styles.section}>
           <div className={styles.sectionTitle}>MOSFET (Q1) <Tooltip content={mosfetTip(vdsReq, result.peakCurrent)} side="right"><span className={styles.infoIcon}>ⓘ</span></Tooltip>{selectBadge(sel.mosfet?.part_number === mosfet.part_number)}</div>
           <MosfetCard data={mosfet} isSelected={sel.mosfet?.part_number === mosfet.part_number} onSelect={() => setSelectedComponent('mosfet', sel.mosfet?.part_number === mosfet.part_number ? null : mosfet)} />
-          {digiKeyEnabled && <DigiKeySearchPanel requirements={{ type: 'mosfet', vds_min_v: vdsReq, id_min_a: result.peakCurrent }} />}
         </div>
       )}
 
@@ -134,7 +132,6 @@ export function ComponentSuggestions(): React.ReactElement {
         <div className={styles.section}>
           <div className={styles.sectionTitle}>Inductor (L1) <Tooltip content={inductanceTip(result.inductance)} side="right"><span className={styles.infoIcon}>ⓘ</span></Tooltip>{selectBadge(sel.inductor?.part_number === inductor.part_number)}</div>
           <InductorCard inductor={inductor} peakCurrent={result.peakCurrent} iout={spec.iout} isSelected={sel.inductor?.part_number === inductor.part_number} peakCurrentTooltip={peakCurrentTip(result.peakCurrent)} onSelect={() => setSelectedComponent('inductor', sel.inductor?.part_number === inductor.part_number ? null : inductor)} />
-          {digiKeyEnabled && <DigiKeySearchPanel requirements={{ type: 'inductor', inductance_uh: result.inductance * 1e6, isat_min_a: result.peakCurrent, irms_min_a: spec.iout }} />}
         </div>
       )}
 
@@ -163,7 +160,6 @@ export function ComponentSuggestions(): React.ReactElement {
               : capacitor.type !== 'electrolytic' && <div className={styles.lifetimeRow}><span className={styles.lifetimeLabel}>Lifetime</span><span className={styles.lifetimeNa}>N/A — ceramic caps have no wear-out</span></div>}
             <button className={styles.selectButton} onClick={() => setSelectedComponent('capacitor', sel.capacitor?.part_number === capacitor.part_number ? null : capacitor)}>{sel.capacitor?.part_number === capacitor.part_number ? 'Deselect' : 'Select'}</button>
           </div>
-          {digiKeyEnabled && <DigiKeySearchPanel requirements={{ type: 'capacitor', capacitance_uf: result.capacitance * 1e6, voltage_min_v: spec.vout * 1.5 }} />}
         </div>
       )}
 

@@ -4,7 +4,6 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { setupLTspiceIPC } from './ltspice-bridge'
 import { setupProjectIPC } from './file-handlers'
 import { setupExportIPC } from './export-handlers'
-import { setupDigiKeyIPC } from './digikey-bridge'
 import { setupPluginIPC } from './plugin-ipc'
 
 // ── pswb:// deep-link handling ────────────────────────────────────────────────
@@ -124,7 +123,6 @@ app.whenReady().then(() => {
   setupLTspiceIPC()
   setupProjectIPC()
   setupExportIPC()
-  setupDigiKeyIPC()
   setupPluginIPC()
 
   // Allow renderer to request the pending deep-link synchronously on startup

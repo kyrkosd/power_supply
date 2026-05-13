@@ -1,7 +1,7 @@
-// Settings modal: Digi-Key API credentials and community plugins management.
+// Settings modal: community plugins management.
 import React, { useEffect } from 'react'
 import { useDesignStore } from '../../store/design-store'
-import { DigiKeySection, PluginsSection } from './settingsSections'
+import { PluginsSection } from './settingsSections'
 import styles from './Settings.module.css'
 
 /**
@@ -30,17 +30,6 @@ export function Settings(): React.ReactElement | null {
           <h2 className={styles.title}>Settings</h2>
           <button className={styles.closeBtn} onClick={() => setIsOpen(false)}>✕</button>
         </div>
-
-        <DigiKeySection />
-
-        <div className={styles.divider} />
-
-        <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary, #888)', margin: 0 }}>
-          Credentials are encrypted at rest using the OS keychain via Electron safeStorage.
-          Get your keys at <strong>developer.digikey.com</strong>.
-        </p>
-
-        <div className={styles.divider} />
 
         <PluginsSection />
       </div>

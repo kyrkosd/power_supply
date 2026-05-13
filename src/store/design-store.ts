@@ -127,7 +127,6 @@ interface UIState {
   isComparing: boolean
   isSequencing: boolean
   isSettingsOpen: boolean
-  digiKeyEnabled: boolean
   activeEquationId: string | null
   isLibraryOpen: boolean
   isShareOpen: boolean
@@ -196,7 +195,6 @@ interface UIActions {
   clearComparison: () => void
   setIsSequencing: (open: boolean) => void
   setIsSettingsOpen: (open: boolean) => void
-  setDigiKeyEnabled: (enabled: boolean) => void
   setIsLibraryOpen: (open: boolean) => void
   setIsShareOpen: (open: boolean) => void
   setPendingShareDesign: (d: ShareableDesign | null) => void
@@ -268,7 +266,6 @@ const INITIAL_UI: Partial<UIState> = {
   isComparing: false,
   isSequencing: false,
   isSettingsOpen: false,
-  digiKeyEnabled: false,
   activeEquationId: null,
   isLibraryOpen: false,
   isShareOpen: false,
@@ -468,7 +465,6 @@ export const useDesignStore = create<DesignStoreState>(
 
     setIsSequencing: (open) => set({ isSequencing: open }),
     setIsSettingsOpen: (open) => set({ isSettingsOpen: open }),
-    setDigiKeyEnabled: (enabled) => set({ digiKeyEnabled: enabled }),
     setIsLibraryOpen: (open) => set({ isLibraryOpen: open }),
     setIsShareOpen: (open) => set({ isShareOpen: open }),
     setPendingShareDesign: (d) => set({ pendingShareDesign: d }),

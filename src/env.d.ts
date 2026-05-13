@@ -22,18 +22,6 @@ interface ExportSaveResult {
   error?: string
 }
 
-interface DigiKeyCredentialResult {
-  success: boolean
-  clientId?: string
-  error?: string
-}
-
-interface DigiKeySearchResult {
-  success: boolean
-  results?: import('./engine/component-search').ComponentResult[]
-  error?: string
-}
-
 interface Window {
   electron: import('@electron-toolkit/preload').ElectronAPI
   projectAPI?: {
@@ -46,12 +34,6 @@ interface Window {
   exportAPI?: {
     savePdf: (buffer: ArrayBuffer, defaultName: string) => Promise<ExportSaveResult>
     saveCsv: (content: string, defaultName: string) => Promise<ExportSaveResult>
-  }
-  digikeyAPI?: {
-    setCredentials: (clientId: string, clientSecret: string) => Promise<{ success: boolean; error?: string }>
-    getCredentials: () => Promise<DigiKeyCredentialResult>
-    testConnection: () => Promise<{ success: boolean; error?: string }>
-    search: (req: import('./engine/component-search').ComponentRequirements) => Promise<DigiKeySearchResult>
   }
   pluginAPI?: {
     listPlugins: () => Promise<{ success: boolean; plugins: { filename: string; source: string }[]; error?: string }>
