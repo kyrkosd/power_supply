@@ -333,6 +333,32 @@ details[open] .gdrSummary::before {
   border-top: 1px solid rgba(245, 158, 11, 0.1);
 }
 
+/* ── DC-bias derating row ──────────────────────────────────────────────── */
+
+.deratingRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0 5px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  margin-top: 3px;
+  gap: 6px;
+}
+
+.deratingLabel {
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.deratingValue {
+  font-size: 10px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  text-align: right;
+}
+
 /* ── Feedback network section ───────────────────────────────────────────── */
 
 .fbBody {

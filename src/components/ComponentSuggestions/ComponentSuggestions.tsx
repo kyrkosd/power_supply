@@ -4,6 +4,7 @@ import React from 'react'
 import { useDesignStore } from '../../store/design-store'
 import { suggestInductors, suggestCapacitors, suggestMosfets } from '../../engine/component-selector'
 import type { InductorData, CapacitorData, MosfetData } from '../../engine/component-selector'
+import { derateCapacitance } from '../../engine/dc-bias'
 import { computeGateDrive } from '../../engine/gate-drive'
 import { estimateLifetime } from '../../engine/cap-lifetime'
 import { designFeedback } from '../../engine/feedback'
@@ -97,6 +98,9 @@ export function ComponentSuggestions(): React.ReactElement {
   const capLife    = (capacitor?.type === 'electrolytic')
     ? estimateLifetime(capacitor, { irms_actual: capRipple, vdc: spec.vout, ambient_temp_C: spec.ambientTemp })
     : null
+  const capDerating = capacitor
+    ? derateCapacitance(capacitor.capacitance_uf, spec.vout, capacitor.voltage_v, capacitor.dielectric ?? capacitor.type, capacitor.package ?? '')
+    : null
   const softStart  = designSoftStart(topology, spec, result, inductor, softStartOptions)
   const feedback   = ISOLATED_TOPOLOGIES.has(topology) ? null : designFeedback(spec.vout, feedbackOptions)
   const sel        = selectedComponents
@@ -147,6 +151,14 @@ export function ComponentSuggestions(): React.ReactElement {
               <span className={styles.spec}>ESR <strong>{capacitor.esr_mohm}</strong> mΩ</span>
               <span className={styles.spec}>{capacitor.type}</span>
             </div>
+            {capDerating !== null && capDerating.ratio < 0.99 && (
+              <div className={styles.deratingRow}>
+                <span className={styles.deratingLabel}>DC bias derated</span>
+                <span className={styles.deratingValue} style={{ color: capDerating.ratio < 0.5 ? '#f87171' : '#fbbf24' }}>
+                  {capDerating.effective_uF.toFixed(2)} µF ({(capDerating.ratio * 100).toFixed(0)} %)
+                </span>
+              </div>
+            )}
             {capLife !== null ? <CapLifetimeRow lifetime={capLife} ambientTemp={spec.ambientTemp} />
               : capacitor.type !== 'electrolytic' && <div className={styles.lifetimeRow}><span className={styles.lifetimeLabel}>Lifetime</span><span className={styles.lifetimeNa}>N/A — ceramic caps have no wear-out</span></div>}
             <button className={styles.selectButton} onClick={() => setSelectedComponent('capacitor', sel.capacitor?.part_number === capacitor.part_number ? null : capacitor)}>{sel.capacitor?.part_number === capacitor.part_number ? 'Deselect' : 'Select'}</button>

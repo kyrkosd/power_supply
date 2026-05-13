@@ -26,6 +26,8 @@ export interface CapacitorData {
   ripple_current_a: number // A  — rated ripple current
   type:            string  // e.g. 'electrolytic', 'ceramic'
   size:            string
+  dielectric?:     string  // e.g. 'X5R', 'X7R', 'C0G' — used for DC-bias derating
+  package?:        string  // footprint code used to look up DC-bias curves
   lifetime_hours?: number  // h  — base lifetime at max rated temp (electrolytic only)
   temp_rating?:    number  // °C — maximum rated temperature (electrolytic only)
 }

@@ -24,6 +24,7 @@ export const TAB_GROUPS: TabGroup[] = [
       { id: 'monte-carlo',  icon: 'σ', label: 'MC',       title: 'Monte Carlo' },
       { id: 'transient',    icon: '∫', label: 'Transient', title: 'Transient Simulation' },
       { id: 'input-filter', icon: '≫', label: 'Filter',   title: 'Input EMI Filter' },
+      { id: 'emi',          icon: '⚡', label: 'EMI',      title: 'Conducted EMI (CISPR 32)' },
     ],
   },
   {

@@ -10,22 +10,25 @@ import { EfficiencyMapTab } from './tabs/EfficiencyMapTab'
 import { LayoutTab }        from './tabs/LayoutTab'
 import { TransientTab }     from './tabs/TransientTab'
 import { InputFilterTab }   from './tabs/InputFilterTab'
+import { EMITab }           from './tabs/EMITab'
 import { ResultsTable }     from '../ResultsTable/ResultsTable'
 import { TAB_GROUPS, type TabDef, type TabGroup } from './tabPanelDefs'
 import styles from './TabPanel.module.css'
 
 /** Maps each tab id directly to its content component — O(1) lookup, zero conditional branches. */
 const TAB_COMPONENTS: Record<ActiveVizTab, React.ComponentType> = {
-  waveforms:        WaveformsTab,
-  bode:             BodeTab,
-  losses:           LossesTab,
-  thermal:          ThermalTab,
-  transient:        TransientTab,
-  'monte-carlo':    MonteCarloTab,
-  'efficiency-map': EfficiencyMapTab,
-  'input-filter':   InputFilterTab,
-  layout:           LayoutTab,
-  results:          ResultsTable,
+  waveforms:             WaveformsTab,
+  bode:                  BodeTab,
+  losses:                LossesTab,
+  thermal:               ThermalTab,
+  transient:             TransientTab,
+  'monte-carlo':         MonteCarloTab,
+  'efficiency-map':      EfficiencyMapTab,
+  'input-filter':        InputFilterTab,
+  emi:                   EMITab,
+  layout:                LayoutTab,
+  results:               ResultsTable,
+  'ltspice-comparison':  ResultsTable,  // LTspice overlay is launched as a modal; fallback to results view
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────

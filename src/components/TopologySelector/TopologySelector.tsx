@@ -2,17 +2,14 @@
 import React, { useCallback, useState } from 'react'
 import { useDesignStore, TopologyId } from '../../store/design-store'
 import { TOPOLOGY_DEFAULTS } from '../../engine/topologies/defaults'
+import { getAll } from '../../engine/registry'
 import type { DesignSpec } from '../../engine/types'
 import styles from './TopologySelector.module.css'
 
-const TOPOLOGIES: { id: TopologyId; label: string }[] = [
-  { id: 'buck',       label: 'Buck (Step-Down)' },
-  { id: 'boost',      label: 'Boost (Step-Up)' },
-  { id: 'buck-boost', label: 'Buck-Boost' },
-  { id: 'flyback',    label: 'Flyback' },
-  { id: 'forward',    label: 'Forward' },
-  { id: 'sepic',      label: 'SEPIC' },
-]
+// Build topology list from the registry so display names stay in one place (registry.ts).
+const TOPOLOGIES: { id: TopologyId; label: string }[] = Array.from(getAll().entries()).map(
+  ([id, eng]) => ({ id, label: eng.name }),
+)
 
 /** Display label for a built-in topology id. */
 function topologyLabel(id: TopologyId): string {
