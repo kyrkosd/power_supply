@@ -10,7 +10,7 @@ type ForwardLabels = {
 }
 
 /** Pre-computes all display strings so component definitions contain no logic. */
-function buildLabels(_spec: DesignSpec, result: DesignResult | null, _duty: number): ForwardLabels {
+function buildLabels( result: DesignResult | null): ForwardLabels {
   const coreLabel   = result?.coreType ?? '—'
   const primaryT    = result?.primaryTurns  ?? 0
   const secondaryT  = result?.secondaryTurns ?? 0
@@ -77,7 +77,7 @@ function buildWires(nodes: SchematicNode[]) {
 
 export function createForwardSchematic(spec: DesignSpec, result: DesignResult | null): SchematicDefinition {
   const duty   = result?.dutyCycle ?? Math.min(Math.max(spec.vout / spec.vinMin, 0.01), 0.45)
-  const lbl    = buildLabels(spec, result, duty)
+  const lbl    = buildLabels(result)
   const st     = buildStatuses(duty, result, spec)
   const nodes  = buildNodes()
   const turnsRatio = result?.turnsRatio ?? (spec.vinMin * duty) / spec.vout
