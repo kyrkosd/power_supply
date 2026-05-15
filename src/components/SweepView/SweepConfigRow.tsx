@@ -1,6 +1,5 @@
 import React from 'react'
 import type { SweepParam } from '../../store/design-store'
-import type { DesignSpec } from '../../engine/types'
 import type { ParamDef } from './sweepDefs'
 import { PARAM_DEFS } from './sweepDefs'
 import styles from './SweepView.module.css'

@@ -12,7 +12,7 @@ import styles from './SequencingView.module.css'
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 /** Generates a short random string ID for new rails. */
-function newId(): string { return Math.random().toString(36).slice(2, 9) }
+function newId(): string { return crypto.randomUUID().replace(/-/g, '').slice(0, 7) }
 
 /** Sorts rails by recommended power-up priority: core (≤1.8 V) → I/O (≤3.3 V) → HV. */
 function sortByPriority(arr: SequencingRail[]): SequencingRail[] {
