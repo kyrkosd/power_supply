@@ -1,6 +1,6 @@
 import type { DesignSpec, DesignResult } from '../../../engine/types'
 import type { SchematicDefinition, SchematicNode, SchematicComponent, SchematicWire, ComponentStatus } from '../schematic-types'
-import { formatU, formatResistance, inductorStatusFromResult, switchDutyStatus, cinValueLabel } from '../schematic-utils'
+import { formatU, formatResistance, inductorStatusFromResult, switchDutyStatus, cinValueLabel, resultLabel } from '../schematic-utils'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -21,6 +21,39 @@ function computeOutputEsr(spec: DesignSpec, result: DesignResult, duty: number):
 
 // ── Label builders ────────────────────────────────────────────────────────────
 
+interface SyncFetProps { label: string; value: string; meta: string | undefined }
+function syncFetProps(syncMode: boolean, pv: PhaseVariants): SyncFetProps {
+  if (syncMode) return { label: pv.d1LabelSync, value: `Rds=8mΩ${pv.nSfx}`, meta: 'Low-side sync FET (replaces freewheeling diode)' }
+  return { label: pv.d1LabelDiode, value: pv.d1ValueDiode, meta: undefined }
+}
+
+interface PhaseVariants {
+  phSfx: string; nSfx: string
+  q1Label: string; q1Meta: string
+  d1LabelSync: string; d1LabelDiode: string; d1ValueDiode: string
+  lLabel: string; lMeta: string | undefined
+}
+
+function buildPhaseVariants(N: number, K: number): PhaseVariants {
+  if (N <= 1) return {
+    phSfx: '', nSfx: '',
+    q1Label: 'Q1', q1Meta: 'High-side MOSFET',
+    d1LabelSync: 'Q2', d1LabelDiode: 'D1', d1ValueDiode: 'Freewheel diode',
+    lLabel: 'L', lMeta: undefined,
+  }
+  return {
+    phSfx:        '/ph',
+    nSfx:         ` ×${N}`,
+    q1Label:      `Q1–Q${N}`,
+    q1Meta:       `${N} high-side MOSFETs interleaved — ${(360 / N).toFixed(0)}° phase shift`,
+    d1LabelSync:  `Q2–Q${N + 1}`,
+    d1LabelDiode: `D1–D${N}`,
+    d1ValueDiode: `Freewheel ×${N}`,
+    lLabel:       `L1–L${N}`,
+    lMeta:        `Per-phase inductance. Ripple cancellation K=${K.toFixed(2)} (0=perfect).`,
+  }
+}
+
 type BuckLabels = {
   inductance: string; capacitance: string; esr: string; loadR: string
   q1Label: string; q1Value: string; q1Meta: string
@@ -30,21 +63,21 @@ type BuckLabels = {
 
 /** Pre-computes every display string so the component array remains logic-free. */
 function buildLabels(spec: DesignSpec, result: DesignResult | null, N: number, duty: number, K: number, syncMode: boolean, esr: number): BuckLabels {
-  const phSfx = N > 1 ? '/ph' : ''
-  const nSfx  = N > 1 ? ` ×${N}` : ''
+  const pv   = buildPhaseVariants(N, K)
+  const d1   = syncFetProps(syncMode, pv)
   return {
-    inductance:  result ? `${formatU(result.inductance  * 1e6, 2, 'µH')}${phSfx}` : '—',
-    capacitance: result ? `${formatU(result.capacitance * 1e6, 1, 'µF')}` : '—',
+    inductance:  resultLabel(result, (r) => `${formatU(r.inductance  * 1e6, 2, 'µH')}${pv.phSfx}`),
+    capacitance: resultLabel(result, (r) => `${formatU(r.capacitance * 1e6, 1, 'µF')}`),
     esr:         Number.isFinite(esr) ? `${(esr * 1000).toFixed(1)} mΩ ESR` : 'ESR —',
     loadR:       formatResistance(spec.iout > 0 ? spec.vout / spec.iout : NaN),
-    q1Label:     N > 1 ? `Q1–Q${N}` : 'Q1',
-    q1Value:     `D=${duty.toFixed(2)}${nSfx}`,
-    q1Meta:      N > 1 ? `${N} high-side MOSFETs interleaved — ${(360 / N).toFixed(0)}° phase shift` : 'High-side MOSFET',
-    d1Label:     syncMode ? (N > 1 ? `Q2–Q${N + 1}` : 'Q2') : (N > 1 ? `D1–D${N}` : 'D1'),
-    d1Value:     syncMode ? `Rds=8mΩ${nSfx}` : (N > 1 ? `Freewheel ×${N}` : 'Freewheel diode'),
-    d1Meta:      syncMode ? 'Low-side sync FET (replaces freewheeling diode)' : undefined,
-    lLabel:      N > 1 ? `L1–L${N}` : 'L',
-    lMeta:       N > 1 ? `Per-phase inductance. Ripple cancellation K=${K.toFixed(2)} (0=perfect).` : undefined,
+    q1Label:     pv.q1Label,
+    q1Value:     `D=${duty.toFixed(2)}${pv.nSfx}`,
+    q1Meta:      pv.q1Meta,
+    d1Label:     d1.label,
+    d1Value:     d1.value,
+    d1Meta:      d1.meta,
+    lLabel:      pv.lLabel,
+    lMeta:       pv.lMeta,
   }
 }
 

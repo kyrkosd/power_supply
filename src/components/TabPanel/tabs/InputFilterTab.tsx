@@ -103,6 +103,38 @@ function ImpedancePlot({ filter, fsw }: { filter: InputFilterResult; fsw: number
   )
 }
 
+// ── Toolbar and content area ──────────────────────────────────────────────────
+
+function FilterToolbar({ enabled, onToggle }: { enabled: boolean; onToggle: (v: boolean) => void }): React.ReactElement {
+  return (
+    <div className={styles.toolbar}>
+      <label className={styles.toggleLabel}>
+        <input type="checkbox" checked={enabled} onChange={(e) => onToggle(e.target.checked)} />
+        Design input EMI filter
+      </label>
+      {enabled && (
+        <span className={styles.hint}>Filter topology: CM choke → X-cap → DM LC + damping. Middlebrook stability checked.</span>
+      )}
+    </div>
+  )
+}
+
+function FilterContent({ filter, fsw, enabled }: { filter: InputFilterResult | null; fsw: number; enabled: boolean }): React.ReactElement {
+  if (!enabled) return (
+    <div className={styles.empty}>
+      <span>Enable the input filter to design the CM/DM filter network and check Middlebrook stability.</span>
+    </div>
+  )
+  if (!filter) return <div className={styles.empty}><span>Computing…</span></div>
+  return (
+    <div className={styles.content}>
+      <div className={styles.topRow}><ValuesTable filter={filter} /></div>
+      <Legend />
+      <ImpedancePlot filter={filter} fsw={fsw} />
+    </div>
+  )
+}
+
 // ── Main tab ──────────────────────────────────────────────────────────────────
 
 /** Input EMI filter tab: enable toggle, component value table, and impedance Bode plot. */
@@ -111,40 +143,19 @@ export function InputFilterTab(): React.ReactElement {
   const result     = useDesignStore((s) => s.result)
   const updateSpec = useDesignStore((s) => s.updateSpec)
 
-  const filter  = result?.input_filter ?? null
-  const enabled = spec.inputFilterEnabled ?? false
-
   if (!result) return (
     <div className={styles.empty}>
       <span>No design result yet — set parameters and wait for computation.</span>
     </div>
   )
 
+  const filter  = result.input_filter ?? null
+  const enabled = spec.inputFilterEnabled ?? false
+
   return (
     <div className={styles.wrapper}>
-      <div className={styles.toolbar}>
-        <label className={styles.toggleLabel}>
-          <input type="checkbox" checked={enabled}
-            onChange={(e) => updateSpec({ inputFilterEnabled: e.target.checked })} />
-          Design input EMI filter
-        </label>
-        {enabled && (
-          <span className={styles.hint}>Filter topology: CM choke → X-cap → DM LC + damping. Middlebrook stability checked.</span>
-        )}
-      </div>
-      {!enabled && (
-        <div className={styles.empty}>
-          <span>Enable the input filter to design the CM/DM filter network and check Middlebrook stability.</span>
-        </div>
-      )}
-      {enabled && !filter && <div className={styles.empty}><span>Computing…</span></div>}
-      {enabled && filter && (
-        <div className={styles.content}>
-          <div className={styles.topRow}><ValuesTable filter={filter} /></div>
-          <Legend />
-          <ImpedancePlot filter={filter} fsw={spec.fsw} />
-        </div>
-      )}
+      <FilterToolbar enabled={enabled} onToggle={(v) => updateSpec({ inputFilterEnabled: v })} />
+      <FilterContent filter={filter} fsw={spec.fsw} enabled={enabled} />
     </div>
   )
 }

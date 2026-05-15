@@ -1,5 +1,3 @@
-// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
-// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
 // ─────────────────────────────────────────────────────────────────────────────
 // Engine layer type definitions
 // All quantities are in SI base units unless a comment says otherwise.

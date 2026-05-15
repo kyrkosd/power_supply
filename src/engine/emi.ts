@@ -4,14 +4,12 @@ import type { DesignSpec, EMIResult, EMIHarmonic } from './topologies/types'
 import { getClassBLimit } from './emi/limits'
 import { harmonicAmplitude_dbuv } from './emi/harmonic'
 import { suggestDmFilter } from './emi/filter-suggest'
+import { extractEmiParams } from './emi/params'
 
 export type { EMIDesignResult } from './emi/harmonic'
 
 export function estimateEMI(_topology: string, spec: DesignSpec, result: import('./emi/harmonic').EMIDesignResult): EMIResult {
-  const fsw    = spec.fsw || 200000
-  const D      = result.dutyCycle || result.duty_cycle || 0.5
-  const Ipeak  = result.peakCurrent || result.inductor?.peak_current || spec.iout_max || 1
-  const tr     = 20e-9
+  const { fsw, D, Ipeak, tr } = extractEmiParams(spec, result)
   const n_max  = Math.floor(30e6 / fsw)
 
   const harmonics: EMIHarmonic[] = []

@@ -9,24 +9,33 @@ import styles from './ResultsTable.module.css'
 
 // ── Symbol renderer ───────────────────────────────────────────────────────────
 
+const SUB_SPLIT = /(_[^ ×()+\-\/=,]+)/
+
 /** Renders a symbol string with underscore-delimited subscripts as `<sub>` elements. */
 function Sym({ text }: { text: string }): React.ReactElement {
-  const parts: React.ReactNode[] = []
-  let buf = '', i = 0
-  while (i < text.length) {
-    if (text[i] === '_' && i + 1 < text.length) {
-      if (buf) { parts.push(buf); buf = '' }
-      i++
-      let sub = ''
-      while (i < text.length && !/[ ×()+\-/=,]/.test(text[i])) sub += text[i++]
-      parts.push(<sub key={`s${parts.length}`}>{sub}</sub>)
-    } else { buf += text[i++] }
-  }
-  if (buf) parts.push(buf)
+  const parts = text.split(SUB_SPLIT).flatMap((chunk, i) => {
+    if (!chunk) return []
+    return chunk.startsWith('_') ? [<sub key={i}>{chunk.slice(1)}</sub>] : [chunk]
+  })
   return <>{parts}</>
 }
 
 // ── Row renderer ──────────────────────────────────────────────────────────────
+
+function rowStatusClass(status?: string): string {
+  if (status === 'warning') return styles.warning
+  if (status === 'error')   return styles.error
+  return ''
+}
+
+function rowCellClass(hasEq: boolean, isActive: boolean): string {
+  return `${styles.row} ${hasEq ? styles.clickable : ''} ${isActive ? styles.active : ''}`
+}
+
+function equationClickHandler(hasEq: boolean, eqId: string | undefined, open: (id: string) => void): (() => void) | undefined {
+  if (!hasEq || !eqId) return undefined
+  return () => open(eqId)
+}
 
 interface RowCellProps {
   row:             ResultRow
@@ -36,17 +45,17 @@ interface RowCellProps {
 
 /** Renders a single result row with optional equation-explorer link and status colour. */
 function RowCell({ row, activeEquationId, openEquation }: RowCellProps): React.ReactElement {
-  const hasEq   = !!row.equationId && EQUATIONS.some((e) => e.id === row.equationId)
+  const hasEq    = !!row.equationId && EQUATIONS.some((e) => e.id === row.equationId)
   const isActive = row.equationId === activeEquationId
   return (
     <div
-      className={`${styles.row} ${hasEq ? styles.clickable : ''} ${isActive ? styles.active : ''}`}
-      onClick={hasEq && row.equationId ? () => openEquation(row.equationId!) : undefined}
+      className={rowCellClass(hasEq, isActive)}
+      onClick={equationClickHandler(hasEq, row.equationId, openEquation)}
       title={hasEq ? `Click to explore the ${row.label} equation` : undefined}
     >
       <span className={styles.symbol}><Sym text={row.symbol} /></span>
       <span className={styles.label}>{row.label}</span>
-      <span className={`${styles.value} ${row.status === 'warning' ? styles.warning : row.status === 'error' ? styles.error : ''}`}>
+      <span className={`${styles.value} ${rowStatusClass(row.status)}`}>
         {row.value}
       </span>
       {hasEq && (

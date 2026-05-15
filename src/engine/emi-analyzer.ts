@@ -63,6 +63,12 @@ function harmonicAmplitude_dbuv(
  * Corner frequency is placed at least one decade below the offending harmonic.
  * An LC filter rolls off at 40 dB/decade: f_c = f_noise / 10^(A_req / 40).
  */
+function getFilterSuggestion(maxExceedanceDb: number, offendingFrequencyHz: number | null): EMIFilterSuggestion | null {
+  if (maxExceedanceDb > 0 && offendingFrequencyHz !== null)
+    return suggestFilter(maxExceedanceDb, offendingFrequencyHz)
+  return null
+}
+
 function suggestFilter(
   maxExceedanceDb: number,
   offendingFrequencyHz: number,
@@ -112,15 +118,10 @@ export function calculateConductedEMI(
     dataPoints.push({ frequencyHz: freqHz, amplitude_dbuv, limit_dbuv });
   }
 
-  const filterSuggestion =
-    maxExceedanceDb > 0 && offendingFrequencyHz !== null
-      ? suggestFilter(maxExceedanceDb, offendingFrequencyHz)
-      : null;
-
   return {
     dataPoints,
-    maxExceedanceDb: maxExceedanceDb === -Infinity ? 0 : maxExceedanceDb,
+    maxExceedanceDb: Math.max(0, maxExceedanceDb),
     offendingFrequencyHz,
-    filterSuggestion,
+    filterSuggestion: getFilterSuggestion(maxExceedanceDb, offendingFrequencyHz),
   };
 }

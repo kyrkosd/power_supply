@@ -1,5 +1,3 @@
-// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
-// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
 import React, { useState, useRef, useEffect } from 'react'
 import styles from './Tooltip.module.css'
 

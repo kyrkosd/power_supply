@@ -1,7 +1,7 @@
 // Parameter Sweep modal: config, run, multi-metric chart, hover legend, data table, CSV export.
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { useDesignStore } from '../../store/design-store'
-import type { SweepParam } from '../../store/design-store'
+import type { SweepParam, SweepResult } from '../../store/design-store'
 import { DEFAULT_CHECKED, getParamDef, getCurrentParamSI } from './sweepDefs'
 import { SweepChart } from './SweepChart'
 import { SweepTable } from './SweepTable'
@@ -10,6 +10,43 @@ import { SweepConfigRow } from './SweepConfigRow'
 import { SweepMetricsRow } from './SweepMetricsRow'
 import { generateSweepCsv, downloadCsv } from './sweepExport'
 import styles from './SweepView.module.css'
+
+function canRunSweep(sweepLoading: boolean, minSI: number, maxSI: number, steps: number): boolean {
+  return !sweepLoading && !isNaN(minSI) && !isNaN(maxSI) && minSI < maxSI && steps >= 2
+}
+
+function SweepBody({ sweepResult, sweepLoading, checkedMetrics, spec, curParamSI, resultPd, hoverIdx, setHoverIdx, currentRowIdx }: {
+  sweepResult: SweepResult | null
+  sweepLoading: boolean
+  checkedMetrics: Set<string>
+  spec: ReturnType<typeof useDesignStore.getState>['spec']
+  curParamSI: number
+  resultPd: ReturnType<typeof getParamDef>
+  hoverIdx: number | null
+  setHoverIdx: (idx: number | null) => void
+  currentRowIdx: number
+}): React.ReactElement | null {
+  if (sweepResult && sweepResult.points.length > 0) {
+    return (
+      <>
+        <SweepChart result={sweepResult} checkedMetrics={checkedMetrics} baseSpec={spec}
+          currentParamSI={curParamSI} paramDef={resultPd} hoverIdx={hoverIdx} onHover={setHoverIdx} />
+        <SweepHoverLegend hoverIdx={hoverIdx} result={sweepResult} resultPd={resultPd} checked={checkedMetrics} spec={spec} />
+        <SweepTable result={sweepResult} resultPd={resultPd} spec={spec}
+          currentRowIdx={currentRowIdx} hoverIdx={hoverIdx} onHover={setHoverIdx} />
+      </>
+    )
+  }
+  if (!sweepLoading) {
+    return (
+      <div className={styles.emptyState}>
+        <span>No sweep results yet</span>
+        <span className={styles.emptyHint}>Select a parameter, set the range, then click ▶ Run Sweep</span>
+      </div>
+    )
+  }
+  return null
+}
 
 export function SweepView(): React.ReactElement | null {
   const isSweepOpen        = useDesignStore((s) => s.isSweepOpen)
@@ -64,7 +101,7 @@ export function SweepView(): React.ReactElement | null {
   const pd          = getParamDef(sweepParam)
   const minSI       = parseFloat(minDisp) * pd.displayScale
   const maxSI       = parseFloat(maxDisp) * pd.displayScale
-  const canRun      = !sweepLoading && !isNaN(minSI) && !isNaN(maxSI) && minSI < maxSI && steps >= 2
+  const canRun      = canRunSweep(sweepLoading, minSI, maxSI, steps)
   const resultPd    = sweepResult ? getParamDef(sweepResult.sweepParam) : pd
   const curParamSI  = getCurrentParamSI(spec, sweepResult?.sweepParam ?? sweepParam)
   const progressPct = sweepProgressTotal > 0 ? Math.round((sweepProgress / sweepProgressTotal) * 100) : 0
@@ -93,20 +130,11 @@ export function SweepView(): React.ReactElement | null {
             </div>
           )}
           <SweepMetricsRow checked={checkedMetrics} onToggle={toggleMetric} />
-          {sweepResult && sweepResult.points.length > 0 ? (
-            <>
-              <SweepChart result={sweepResult} checkedMetrics={checkedMetrics} baseSpec={spec}
-                currentParamSI={curParamSI} paramDef={resultPd} hoverIdx={hoverIdx} onHover={setHoverIdx} />
-              <SweepHoverLegend hoverIdx={hoverIdx} result={sweepResult} resultPd={resultPd} checked={checkedMetrics} spec={spec} />
-              <SweepTable result={sweepResult} resultPd={resultPd} spec={spec}
-                currentRowIdx={currentRowIdx} hoverIdx={hoverIdx} onHover={setHoverIdx} />
-            </>
-          ) : !sweepLoading ? (
-            <div className={styles.emptyState}>
-              <span>No sweep results yet</span>
-              <span className={styles.emptyHint}>Select a parameter, set the range, then click ▶ Run Sweep</span>
-            </div>
-          ) : null}
+          <SweepBody sweepResult={sweepResult} sweepLoading={sweepLoading}
+            checkedMetrics={checkedMetrics} spec={spec}
+            curParamSI={curParamSI} resultPd={resultPd}
+            hoverIdx={hoverIdx} setHoverIdx={setHoverIdx}
+            currentRowIdx={currentRowIdx} />
         </div>
       </div>
     </div>

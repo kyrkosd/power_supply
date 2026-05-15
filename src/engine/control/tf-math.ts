@@ -49,6 +49,14 @@ function pushExactZero(crossings: Array<{ freq: number; phase: number }>, point:
   if (mag === 0) crossings.push({ freq: point.freq_hz, phase: point.phase_deg })
 }
 
+function magnitudeCrossesZero(before: number, after: number): boolean {
+  return (before >= 0 && after <= 0) || (before <= 0 && after >= 0)
+}
+
+function phaseCrosses180(prev: number, next: number): boolean {
+  return (prev >= -180 && next <= -180) || (prev <= -180 && next >= -180)
+}
+
 /** Magnitude crosses zero (in either direction). Returns the closest crossing to `preferredFreq`. */
 export function findCrossoverPoint(loop: BodePoint[], preferredFreq?: number): { freq: number; phase: number } | null {
   const crossings: Array<{ freq: number; phase: number }> = []
@@ -57,7 +65,7 @@ export function findCrossoverPoint(loop: BodePoint[], preferredFreq?: number): {
     const after  = loop[i].magnitude_db
     pushExactZero(crossings, loop[i - 1], before)
     pushExactZero(crossings, loop[i],     after)
-    if ((before >= 0 && after <= 0) || (before <= 0 && after >= 0)) {
+    if (magnitudeCrossesZero(before, after)) {
       const freq  = interpolate(before, loop[i - 1].freq_hz, after, loop[i].freq_hz, 0)
       const phase = interpolate(loop[i - 1].freq_hz, loop[i - 1].phase_deg, loop[i].freq_hz, loop[i].phase_deg, freq)
       crossings.push({ freq, phase })
@@ -74,7 +82,7 @@ export function findGainMargin(loop: BodePoint[]): { freq: number; magnitude_db:
   for (let i = 1; i < loop.length; i += 1) {
     const prevPhase = loop[i - 1].phase_deg
     const nextPhase = loop[i].phase_deg
-    if ((prevPhase >= -180 && nextPhase <= -180) || (prevPhase <= -180 && nextPhase >= -180)) {
+    if (phaseCrosses180(prevPhase, nextPhase)) {
       const freq = interpolate(loop[i - 1].phase_deg, loop[i - 1].freq_hz, loop[i].phase_deg, loop[i].freq_hz, -180)
       const mag  = interpolate(loop[i - 1].freq_hz, loop[i - 1].magnitude_db, loop[i].freq_hz, loop[i].magnitude_db, freq)
       return { freq, magnitude_db: mag }

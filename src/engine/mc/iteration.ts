@@ -48,6 +48,10 @@ function evaluatePassFlags(
   }
 }
 
+function allFlagsPass(f: PassFlags): boolean {
+  return f.efficiencyOk && f.rippleOk && f.pmOk && f.thermalOk && f.satOk
+}
+
 export function computeIterationMetrics(
   s: SampledComponents,
   D: number,
@@ -76,7 +80,7 @@ export function computeIterationMetrics(
   const satMargin   = Isat !== null ? (Isat - I_peak_i) / Isat * 100 : NaN
 
   const flags = evaluatePassFlags(efficiency, outputRipple, Tj, phaseMargin, Isat, I_peak_i, doPhaseMargin, spec)
-  const pass  = flags.efficiencyOk && flags.rippleOk && flags.pmOk && flags.thermalOk && flags.satOk
+  const pass  = allFlagsPass(flags)
 
   return { efficiency, outputRipple, phaseMargin, Tj, satMargin, pass }
 }

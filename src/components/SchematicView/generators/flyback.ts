@@ -1,6 +1,6 @@
 import type { DesignSpec, DesignResult } from '../../../engine/types'
 import type { SchematicDefinition, SchematicNode, SchematicComponent, SchematicWire, ComponentStatus } from '../schematic-types'
-import { formatU, formatResistance, formatCapacitance, cinValueLabel } from '../schematic-utils'
+import { formatU, formatResistance, formatCapacitance, cinValueLabel, flybackDutyStatus, rcdClampStatus, resultLabel } from '../schematic-utils'
 
 // ── Secondary output builder ──────────────────────────────────────────────────
 
@@ -53,8 +53,8 @@ function buildLabels(spec: DesignSpec, result: DesignResult | null): FlybackLabe
     : `${coreLabel} ${primaryT}:${secondaryT}`
   return {
     turnsLabel,
-    inductance:  result ? `${formatU(result.inductance  * 1e6, 2, 'µH')}` : '—',
-    capacitance: result ? `${formatU(result.capacitance * 1e6, 1, 'µF')}` : '—',
+    inductance:  resultLabel(result, (r) => `${formatU(r.inductance  * 1e6, 2, 'µH')}`),
+    capacitance: resultLabel(result, (r) => `${formatU(r.capacitance * 1e6, 1, 'µF')}`),
     rcdLabel:    snubber ? `${formatResistance(snubber.R)}, ${formatCapacitance(snubber.C)}` : `Vclamp=${clampV.toFixed(0)}V`,
     clampMeta:   snubber ? `Vclamp=${clampV.toFixed(0)}V, P=${snubber.P_dissipated.toFixed(1)}W` : 'Clamp circuit',
   }
@@ -68,9 +68,9 @@ type FlybackStatuses = { sw: ComponentStatus; tx: ComponentStatus; rcd: Componen
 function buildStatuses(duty: number, result: DesignResult | null, spec: DesignSpec): FlybackStatuses {
   const snubber = result?.snubber
   return {
-    sw:  duty >= 0.45 ? 'violation' : duty >= 0.4 ? 'warning' : 'normal',
+    sw:  flybackDutyStatus(duty),
     tx:  result?.warnings.some(w => w.includes('core')) ? 'warning' : 'normal',
-    rcd: snubber && snubber.P_dissipated > 0.05 * spec.vout * spec.iout ? 'warning' : 'normal',
+    rcd: rcdClampStatus(snubber, spec.vout * spec.iout),
   }
 }
 

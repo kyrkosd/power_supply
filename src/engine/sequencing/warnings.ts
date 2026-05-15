@@ -1,29 +1,45 @@
 import type { SequencingRail, RailTiming } from './types'
 
+function isBrownOutConflict(
+  aT: RailTiming,
+  bT: RailTiming,
+  aSpec: NonNullable<SequencingRail['spec']>,
+  bRail: SequencingRail,
+): boolean {
+  return aSpec.vinMin <= bRail.vout
+    && bRail.vout <= aSpec.vinMax
+    && aT.enable_time_ms < bT.pg_time_ms
+}
+
+function checkPairConflict(
+  aT: RailTiming,
+  bT: RailTiming,
+  aRailSpec: NonNullable<SequencingRail['spec']>,
+  rails: SequencingRail[],
+  seenConflicts: Set<string>,
+  warnings: string[],
+): void {
+  if (aT.name === bT.name) return
+  const bRail = rails.find((r) => r.name === bT.name)
+  if (!bRail) return
+  if (!isBrownOutConflict(aT, bT, aRailSpec, bRail)) return
+  const key = `${aT.name}→${bT.name}`
+  if (seenConflicts.has(key)) return
+  seenConflicts.add(key)
+  warnings.push(
+    `Rail "${aT.name}" enables before "${bT.name}" reaches power-good ` +
+    `— may cause brown-out or latch-up.`,
+  )
+}
+
 export function checkConflicts(railTimings: RailTiming[], rails: SequencingRail[]): string[] {
-  const warnings: string[]        = []
-  const seenConflicts = new Set<string>()
+  const warnings: string[] = []
+  const seenConflicts      = new Set<string>()
 
   for (const aT of railTimings) {
     const aRail = rails.find((r) => r.name === aT.name)
     if (!aRail?.spec) continue
-    for (const bT of railTimings) {
-      if (aT.name === bT.name) continue
-      const bRail = rails.find((r) => r.name === bT.name)
-      if (!bRail) continue
-      const bIsInputForA =
-        aRail.spec.vinMin <= bRail.vout && bRail.vout <= aRail.spec.vinMax
-      if (bIsInputForA && aT.enable_time_ms < bT.pg_time_ms) {
-        const key = `${aT.name}→${bT.name}`
-        if (!seenConflicts.has(key)) {
-          seenConflicts.add(key)
-          warnings.push(
-            `Rail "${aT.name}" enables before "${bT.name}" reaches power-good ` +
-            `— may cause brown-out or latch-up.`,
-          )
-        }
-      }
-    }
+    for (const bT of railTimings) checkPairConflict(aT, bT, aRail.spec, rails, seenConflicts, warnings)
   }
   return warnings
 }

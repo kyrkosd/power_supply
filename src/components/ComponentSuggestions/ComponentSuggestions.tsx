@@ -11,6 +11,7 @@ import { computeGateDrive } from '../../engine/gate-drive'
 import { estimateLifetime } from '../../engine/cap-lifetime'
 import { designFeedback } from '../../engine/feedback'
 import { designSoftStart } from '../../engine/soft-start'
+import type { CurrentSenseResult, WindingResult, SecondaryOutputResult } from '../../engine/types'
 import {
   GateDriveSection, SoftStartDisplay, CurrentSensingDisplay,
   FeedbackNetworkDisplay, TransformerDetails,
@@ -78,9 +79,67 @@ function deriveSuggestions(
   }
 }
 
-// ── Feedback section (depends on topology) ───────────────────────────────────
+// ── Sub-components — each handles its own null guard ────────────────────────
 
-function FeedbackSection({ feedback, vout, isolated }: { feedback: ReturnType<typeof designFeedback> | null; vout: number; isolated: boolean }): React.ReactElement {
+function SwitchSection({ mosfet, syncMosfet, gateDrive, vdsReq, peakCurrent, topology, isMosfetSel, onSelectMosfet }: {
+  mosfet: MosfetData | undefined
+  syncMosfet: MosfetData | null
+  gateDrive: ReturnType<typeof computeGateDrive> | null
+  vdsReq: number
+  peakCurrent: number
+  topology: string
+  isMosfetSel: boolean
+  onSelectMosfet: () => void
+}): React.ReactElement {
+  return (
+    <>
+      {mosfet && (
+        <MosfetSection mosfet={mosfet} vdsReq={vdsReq} peakCurrent={peakCurrent}
+          isSelected={isMosfetSel} onSelect={onSelectMosfet} />
+      )}
+      {syncMosfet && <SyncFETSection mosfet={syncMosfet} />}
+      {gateDrive && <GateDriveSection gd={gateDrive} showBootstrap={HIGH_SIDE_TOPOLOGIES.has(topology)} />}
+    </>
+  )
+}
+
+function StorageSection({ inductor, capacitor, inductanceH, capacitanceH, peakCurrent, iout, ambientTemp, capDerating, capLife, isInductorSel, isCapacitorSel, onSelectInductor, onSelectCapacitor }: {
+  inductor: InductorData | undefined
+  capacitor: CapacitorData | undefined
+  inductanceH: number
+  capacitanceH: number
+  peakCurrent: number
+  iout: number
+  ambientTemp: number
+  capDerating: ReturnType<typeof derateCapacitance> | null
+  capLife: ReturnType<typeof estimateLifetime> | null
+  isInductorSel: boolean
+  isCapacitorSel: boolean
+  onSelectInductor: () => void
+  onSelectCapacitor: () => void
+}): React.ReactElement {
+  return (
+    <>
+      {inductor && (
+        <InductorSection inductor={inductor} inductanceH={inductanceH}
+          peakCurrent={peakCurrent} iout={iout}
+          isSelected={isInductorSel} onSelect={onSelectInductor} />
+      )}
+      {capacitor && (
+        <OutputCapSection capacitor={capacitor} capacitanceH={capacitanceH}
+          capDerating={capDerating} capLife={capLife}
+          ambientTemp={ambientTemp}
+          isSelected={isCapacitorSel} onSelect={onSelectCapacitor} />
+      )}
+    </>
+  )
+}
+
+function FeedbackSection({ feedback, vout, isolated }: {
+  feedback: ReturnType<typeof designFeedback> | null
+  vout: number
+  isolated: boolean
+}): React.ReactElement {
   return (
     <div className={styles.section}>
       <div className={styles.sectionTitle}>Feedback Network</div>
@@ -88,6 +147,54 @@ function FeedbackSection({ feedback, vout, isolated }: { feedback: ReturnType<ty
         ? <div className={styles.fbNote}>⚠ Feedback network is on the secondary side. TL431 + optocoupler compensation not included — see control-loop analysis for loop design.</div>
         : feedback && <FeedbackNetworkDisplay fb={feedback} vout={vout} />}
     </div>
+  )
+}
+
+function CurrentSensingSection({ cs, enabled }: {
+  cs: CurrentSenseResult | null | undefined
+  enabled: boolean
+}): React.ReactElement | null {
+  if (!enabled) return null
+  if (!cs) return null
+  return (
+    <div className={styles.section}>
+      <div className={styles.sectionTitle}>Current Sensing</div>
+      <CurrentSensingDisplay cs={cs} />
+    </div>
+  )
+}
+
+function WindingSection({ wr }: { wr: WindingResult | null | undefined }): React.ReactElement | null {
+  if (!wr) return null
+  return (
+    <details className={styles.section} open={false}>
+      <summary className={styles.gdrSummary}>Transformer Details</summary>
+      <TransformerDetails wr={wr} />
+    </details>
+  )
+}
+
+function CcmDcmWrapper({ boundary, mode }: {
+  boundary: number | null | undefined
+  mode?: 'CCM' | 'DCM' | 'boundary'
+}): React.ReactElement | null {
+  if (boundary == null) return null
+  return <CcmDcmSection boundary={boundary} mode={mode} />
+}
+
+function SecondarySection({ vout, capacitanceH, secondaryTurns, results }: {
+  vout: number
+  capacitanceH: number
+  secondaryTurns?: number
+  results: SecondaryOutputResult[] | null | undefined
+}): React.ReactElement | null {
+  if (!results) return null
+  if (results.length === 0) return null
+  return (
+    <MultiOutputSection
+      vout={vout} capacitanceH={capacitanceH}
+      secondaryTurns={secondaryTurns} results={results}
+    />
   )
 }
 
@@ -121,70 +228,41 @@ export function ComponentSuggestions(): React.ReactElement {
     <div className={styles.panel}>
       <div className={styles.header}>Components</div>
 
-      {d.mosfet && (
-        <MosfetSection
-          mosfet={d.mosfet} vdsReq={d.vdsReq} peakCurrent={result.peakCurrent}
-          isSelected={isMosfetSel}
-          onSelect={() => setSelectedComponent('mosfet', isMosfetSel ? null : d.mosfet!)}
-        />
-      )}
+      <SwitchSection
+        mosfet={d.mosfet} syncMosfet={d.syncMosfet} gateDrive={d.gateDrive}
+        vdsReq={d.vdsReq} peakCurrent={result.peakCurrent} topology={topology}
+        isMosfetSel={isMosfetSel}
+        onSelectMosfet={() => setSelectedComponent('mosfet', isMosfetSel ? null : d.mosfet!)}
+      />
 
-      {d.syncMosfet && <SyncFETSection mosfet={d.syncMosfet} />}
-
-      {d.gateDrive && <GateDriveSection gd={d.gateDrive} showBootstrap={HIGH_SIDE_TOPOLOGIES.has(topology)} />}
-
-      {d.inductor && (
-        <InductorSection
-          inductor={d.inductor} inductanceH={result.inductance}
-          peakCurrent={result.peakCurrent} iout={spec.iout}
-          isSelected={isInductorSel}
-          onSelect={() => setSelectedComponent('inductor', isInductorSel ? null : d.inductor!)}
-        />
-      )}
-
-      {d.capacitor && (
-        <OutputCapSection
-          capacitor={d.capacitor} capacitanceH={result.capacitance}
-          capDerating={d.capDerating} capLife={d.capLife}
-          ambientTemp={spec.ambientTemp}
-          isSelected={isCapacitorSel}
-          onSelect={() => setSelectedComponent('capacitor', isCapacitorSel ? null : d.capacitor!)}
-        />
-      )}
+      <StorageSection
+        inductor={d.inductor} capacitor={d.capacitor}
+        inductanceH={result.inductance} capacitanceH={result.capacitance}
+        peakCurrent={result.peakCurrent} iout={spec.iout} ambientTemp={spec.ambientTemp}
+        capDerating={d.capDerating} capLife={d.capLife}
+        isInductorSel={isInductorSel} isCapacitorSel={isCapacitorSel}
+        onSelectInductor={() => setSelectedComponent('inductor', isInductorSel ? null : d.inductor!)}
+        onSelectCapacitor={() => setSelectedComponent('capacitor', isCapacitorSel ? null : d.capacitor!)}
+      />
 
       <div className={styles.section}>
         <div className={styles.sectionTitle}>Soft-Start</div>
         <SoftStartDisplay ss={d.softStart} onTransientClick={() => setActiveVizTab('transient')} />
       </div>
 
-      {currentControl && result.current_sense && (
-        <div className={styles.section}>
-          <div className={styles.sectionTitle}>Current Sensing</div>
-          <CurrentSensingDisplay cs={result.current_sense} />
-        </div>
-      )}
+      <CurrentSensingSection cs={result.current_sense} enabled={currentControl} />
 
       <FeedbackSection feedback={d.feedback} vout={spec.vout} isolated={isolated} />
 
-      {result.ccm_dcm_boundary != null && (
-        <CcmDcmSection boundary={result.ccm_dcm_boundary} mode={result.operating_mode} />
-      )}
+      <CcmDcmWrapper boundary={result.ccm_dcm_boundary} mode={result.operating_mode} />
 
-      {result.winding_result && (
-        <details className={styles.section} open={false}>
-          <summary className={styles.gdrSummary}>Transformer Details</summary>
-          <TransformerDetails wr={result.winding_result} />
-        </details>
-      )}
+      <WindingSection wr={result.winding_result} />
 
-      {result.secondaryOutputResults && result.secondaryOutputResults.length > 0 && (
-        <MultiOutputSection
-          vout={spec.vout}
-          capacitanceH={result.capacitance}
-          secondaryTurns={result.secondaryTurns}
-          results={result.secondaryOutputResults}
-        />
-      )}
+      <SecondarySection
+        vout={spec.vout} capacitanceH={result.capacitance}
+        secondaryTurns={result.secondaryTurns}
+        results={result.secondaryOutputResults}
+      />
     </div>
   )
 }

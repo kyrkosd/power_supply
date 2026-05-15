@@ -33,16 +33,12 @@ function fromBase64Url(b64url: string): string {
 
 /** Convert a Uint8Array to a Latin-1 binary string accepted by btoa. */
 function bytesToBinary(bytes: Uint8Array): string {
-  let binary = ''
-  for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i])
-  return binary
+  return Array.from(bytes, (b) => String.fromCharCode(b)).join('')
 }
 
 /** Convert a Latin-1 binary string returned by atob back to a Uint8Array. */
 function bytesFromBinary(binary: string): Uint8Array {
-  const bytes = new Uint8Array(binary.length)
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
-  return bytes
+  return Uint8Array.from(binary, (c) => c.charCodeAt(0))
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────

@@ -4,6 +4,7 @@ import type { DesignSpec, DesignResult, StateSpaceModel, TransientResult, Transi
 import { rk4Step } from './transient/rk4'
 import { initSimState, computeVref } from './transient/init'
 import { computeTransientMetrics } from './transient/metrics'
+import { applyModeTransition } from './transient/mode-step'
 
 export function runTransientSimulation(
   spec: DesignSpec,
@@ -12,7 +13,7 @@ export function runTransientSimulation(
   getModel: (spec: DesignSpec, result: DesignResult, vin: number, iout: number) => StateSpaceModel,
   softStartSeconds?: number,
 ): TransientResult {
-  const fsw = spec.fsw || 200000
+  const fsw = spec.fsw ?? 200000
   const Tsw = 1 / fsw
   const dt  = Tsw / 20  // 20 integration steps per switching cycle
   const totalSteps = Math.floor(0.01 / dt)
@@ -33,15 +34,11 @@ export function runTransientSimulation(
   for (let step = 0; step < totalSteps; step++) {
     const t = step * dt
 
-    if (t >= 0.002) {
-      if (mode === 'load-step' && current_iout !== spec.iout) {
-        current_iout = spec.iout
-        model = getModel(spec, result, current_vin, current_iout)
-      }
-      if (mode === 'line-step' && current_vin !== spec.vinMax) {
-        current_vin = spec.vinMax
-        model = getModel(spec, result, current_vin, current_iout)
-      }
+    const stepped = applyModeTransition(t, mode, spec, current_vin, current_iout)
+    if (stepped.changed) {
+      current_vin  = stepped.vin
+      current_iout = stepped.iout
+      model = getModel(spec, result, current_vin, current_iout)
     }
 
     const vref   = computeVref(mode, t, softStartSeconds, spec.vout)
@@ -50,9 +47,10 @@ export function runTransientSimulation(
     current_duty = Math.max(0, Math.min(0.99, Kp * error + Ki * integral))
 
     const isSwitchOn = (t % Tsw) < (current_duty * Tsw)
-    x = rk4Step(x, isSwitchOn ? model.A1 : model.A2, isSwitchOn ? model.B1 : model.B2, dt)
+    const [A, B] = isSwitchOn ? [model.A1, model.B1] : [model.A2, model.B2]
+    x = rk4Step(x, A, B, dt)
 
-    if (x[0] > peak_inrush) peak_inrush = x[0]
+    peak_inrush = Math.max(peak_inrush, x[0])
     time[step] = t
     iL[step]   = x[0]
     vout[step] = x[1]

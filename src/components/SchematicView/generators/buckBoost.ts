@@ -1,6 +1,6 @@
 import type { DesignSpec, DesignResult } from '../../../engine/types'
 import type { SchematicDefinition, SchematicNode, ComponentStatus } from '../schematic-types'
-import { formatU, formatResistance, inductorStatusFromResult, switchDutyStatus, cinValueLabel } from '../schematic-utils'
+import { formatU, formatResistance, inductorStatusFromResult, switchDutyStatus, cinValueLabel, resultLabel, syncD1Labels } from '../schematic-utils'
 
 // ── Label builders ────────────────────────────────────────────────────────────
 
@@ -12,14 +12,15 @@ type BuckBoostLabels = {
 /** Pre-computes all display strings so the component array is pure data. */
 function buildLabels(spec: DesignSpec, result: DesignResult | null, syncMode: boolean): BuckBoostLabels {
   const outputEsr = result ? Math.max(0.0001, Math.min(spec.voutRippleMax, 0.1) / Math.max(result.peakCurrent, 1e-6)) : NaN
+  const d1 = syncD1Labels(syncMode, 'D1', 'Output diode')
   return {
-    inductance:  result ? `${formatU(result.inductance  * 1e6, 2, 'µH')}` : '—',
-    capacitance: result ? `${formatU(result.capacitance * 1e6, 1, 'µF')}` : '—',
+    inductance:  resultLabel(result, (r) => `${formatU(r.inductance  * 1e6, 2, 'µH')}`),
+    capacitance: resultLabel(result, (r) => `${formatU(r.capacitance * 1e6, 1, 'µF')}`),
     esr:         Number.isFinite(outputEsr) ? `${(outputEsr * 1000).toFixed(1)} mΩ ESR` : 'ESR —',
     loadR:       formatResistance(spec.iout > 0 ? Math.abs(spec.vout) / spec.iout : NaN),
-    d1Label:     syncMode ? 'Q2' : 'D1',
-    d1Value:     syncMode ? 'Sync FET (Rds=8mΩ)' : 'Output diode',
-    d1Meta:      syncMode ? 'Low-side sync FET' : undefined,
+    d1Label:     d1.label,
+    d1Value:     d1.value,
+    d1Meta:      d1.meta,
   }
 }
 

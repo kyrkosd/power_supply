@@ -38,7 +38,36 @@ export function switchDutyStatus(duty: number): ComponentStatus {
   return 'normal'
 }
 
+/** Duty-cycle status for flyback/forward topologies whose max is ~50 %. */
+export function flybackDutyStatus(duty: number): ComponentStatus {
+  if (duty >= 0.45) return 'violation'
+  if (duty >= 0.4) return 'warning'
+  return 'normal'
+}
+
+/** RCD clamp status: warning when clamp dissipates more than 5 % of output power. */
+export function rcdClampStatus(
+  snubber: { P_dissipated: number } | null | undefined,
+  pout: number,
+): ComponentStatus {
+  if (snubber && snubber.P_dissipated > 0.05 * pout) return 'warning'
+  return 'normal'
+}
+
 /** Builds the input-capacitor value string (rough estimate from charge balancing). */
 export function cinValueLabel(iout: number, fsw: number, vin: number): string {
   return `${formatU(Math.max(0.01, iout / (fsw * vin * 0.1)) * 1e6, 1, 'µF')}`
+}
+
+/** Returns fn(result) when result is non-null, otherwise '—'. Eliminates repetitive null guards in label builders. */
+export function resultLabel(result: DesignResult | null, fn: (r: DesignResult) => string): string {
+  return result != null ? fn(result) : '—'
+}
+
+export interface SyncD1 { label: string; value: string; meta: string | undefined }
+
+/** Sync-FET or diode label set for the low-side switch in non-isolated topologies. */
+export function syncD1Labels(syncMode: boolean, dioLabel: string, dioValue: string): SyncD1 {
+  if (syncMode) return { label: 'Q2', value: 'Sync FET (Rds=8mΩ)', meta: 'Low-side sync FET' }
+  return { label: dioLabel, value: dioValue, meta: undefined }
 }

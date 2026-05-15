@@ -16,6 +16,14 @@ function subharmonicWarning(result: DesignResult, slope: SlopeCompensation): str
          `Add an external ramp Se ≥ ${(slope.se_required_aps / 1e6).toFixed(1)} MA/s × Rsense.`
 }
 
+function validBelow(x: number, limit: number): boolean {
+  return !Number.isNaN(x) && x < limit
+}
+
+function validAbove(x: number, limit: number): boolean {
+  return !Number.isNaN(x) && x > limit
+}
+
 export function buildLoopWarnings(
   controlMode: ControlMode, result: DesignResult, slope: SlopeCompensation,
   metrics: LoopMetrics, spec: DesignSpec,
@@ -24,10 +32,9 @@ export function buildLoopWarnings(
   const { phaseMarginDeg, gainMarginDb, crossoverFrequencyHz } = metrics
 
   if (controlMode === 'current' && slope.subharmonic_risk) warnings.push(subharmonicWarning(result, slope))
-  if (!Number.isNaN(phaseMarginDeg)       && phaseMarginDeg < 45)         warnings.push('Phase margin is below 45° — unstable or marginal control loop')
-  if (!Number.isNaN(gainMarginDb)         && gainMarginDb < 6)            warnings.push('Gain margin is below 6 dB — poor stability reserve')
-  if (!Number.isNaN(crossoverFrequencyHz) && crossoverFrequencyHz > spec.fsw / 5)
-    warnings.push('Crossover frequency exceeds fsw/5 — may violate switching dynamics')
+  if (validBelow(phaseMarginDeg, 45))               warnings.push('Phase margin is below 45° — unstable or marginal control loop')
+  if (validBelow(gainMarginDb, 6))                  warnings.push('Gain margin is below 6 dB — poor stability reserve')
+  if (validAbove(crossoverFrequencyHz, spec.fsw / 5)) warnings.push('Crossover frequency exceeds fsw/5 — may violate switching dynamics')
 
   return warnings
 }

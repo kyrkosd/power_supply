@@ -51,6 +51,16 @@ function cellClass(side: Side, winner: WinSide): string {
   return winner === side ? styles.win : styles.lose
 }
 
+function isEffWinner(side: Side, winner: WinSide): boolean {
+  return winner === side || winner === 'tie'
+}
+
+function getSummaryOutcome(aWins: number, bWins: number, total: number): { badge: string; text: string } {
+  if (aWins > bWins) return { badge: styles.badgeA, text: `Design A wins ${aWins}/${total} metrics` }
+  if (bWins > aWins) return { badge: styles.badgeB, text: `Design B wins ${bWins}/${total} metrics` }
+  return { badge: styles.badgeTie, text: 'Designs are comparable' }
+}
+
 // ── Sub-components ────────────────────────────────────────────────────────────
 
 /** Horizontal bar chart showing efficiency as a fraction of 100 %. */
@@ -64,6 +74,12 @@ function EffBar({ value, isWinner }: { value: number; isWinner: boolean }): Reac
       <span>{pct(value)}</span>
     </div>
   )
+}
+
+/** Loss display: shows W value or '—', with "estimated" tag when actual losses unavailable. */
+function LossDisplay({ loss, hasActualLosses }: { loss: number | null; hasActualLosses: boolean }): React.ReactElement {
+  if (loss == null) return <>—</>
+  return <>{loss.toFixed(2)} W{!hasActualLosses && <span className={styles.sub}>estimated</span>}</>
 }
 
 /** Warning pills — up to 3 shown, overflow count appended. */
@@ -128,9 +144,7 @@ export function DesignComparison(): React.ReactElement | null {
   const wins = [effWin, lossWin, iWin, warnWin]
   const aWins = wins.filter((w) => w === 'A').length
   const bWins = wins.filter((w) => w === 'B').length
-  const summaryBadge = aWins > bWins ? styles.badgeA : bWins > aWins ? styles.badgeB : styles.badgeTie
-  const summaryText  = aWins > bWins ? `Design A wins ${aWins}/${wins.length} metrics`
-    : bWins > aWins ? `Design B wins ${bWins}/${wins.length} metrics` : 'Designs are comparable'
+  const { badge: summaryBadge, text: summaryText } = getSummaryOutcome(aWins, bWins, wins.length)
 
   return (
     <div className={styles.overlay} onClick={(e) => { if (e.target === e.currentTarget) close() }}>
@@ -163,12 +177,12 @@ export function DesignComparison(): React.ReactElement | null {
                 a={`${a.result.peakCurrent.toFixed(2)} A`} b={`${b.result.peakCurrent.toFixed(2)} A`}
                 aClass={cellClass('A', iWin)} bClass={cellClass('B', iWin)} />
               <Row label="Efficiency"
-                a={<EffBar value={effA} isWinner={effWin === 'A' || effWin === 'tie'} />}
-                b={<EffBar value={effB} isWinner={effWin === 'B' || effWin === 'tie'} />}
+                a={<EffBar value={effA} isWinner={isEffWinner('A', effWin)} />}
+                b={<EffBar value={effB} isWinner={isEffWinner('B', effWin)} />}
                 aClass={cellClass('A', effWin)} bClass={cellClass('B', effWin)} />
               <Row label="Total Losses"
-                a={lossA != null ? <>{lossA.toFixed(2)} W{a.result.losses == null && <span className={styles.sub}>estimated</span>}</> : '—'}
-                b={lossB != null ? <>{lossB.toFixed(2)} W{b.result.losses == null && <span className={styles.sub}>estimated</span>}</> : '—'}
+                a={<LossDisplay loss={lossA} hasActualLosses={a.result.losses != null} />}
+                b={<LossDisplay loss={lossB} hasActualLosses={b.result.losses != null} />}
                 aClass={cellClass('A', lossWin)} bClass={cellClass('B', lossWin)} />
               <Row label="Mode" a={a.result.operating_mode ?? 'CCM'} b={b.result.operating_mode ?? 'CCM'} />
               <Row label="Warnings"

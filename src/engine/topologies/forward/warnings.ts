@@ -60,6 +60,14 @@ function snubberLossWarning(P_dissipated: number, pout: number): string | null {
   return null
 }
 
+function collectCoreWarnings(selectedCore: CoreData | null, vinMin: number, dMax: number, fsw: number): string[] {
+  if (!selectedCore) return ['No suitable transformer core found. Add larger cores or reduce Lm requirement.']
+  const warns: string[] = []
+  const fluxWarn = coreFluxWarning(selectedCore, vinMin, dMax, fsw)
+  if (fluxWarn) warns.push(fluxWarn)
+  return warns
+}
+
 export function computeForwardWarnings(
   spec: DesignSpec,
   dutyCycle: number,
@@ -87,13 +95,7 @@ export function computeForwardWarnings(
   const resetWarn = resetLimitWarning(dMaxRcd, dMax, vinMin, vout)
   if (resetWarn) warnings.push(resetWarn)
 
-  if (!selectedCore)
-    warnings.push('No suitable transformer core found. Add larger cores or reduce Lm requirement.')
-
-  if (selectedCore) {
-    const fluxWarn = coreFluxWarning(selectedCore, vinMin, dMax, fsw)
-    if (fluxWarn) warnings.push(fluxWarn)
-  }
+  warnings.push(...collectCoreWarnings(selectedCore, vinMin, dMax, fsw))
 
   if (Ip_peak > 3 * primaryCurrentAvg)
     warnings.push('High peak primary current — verify transformer core does not saturate.')

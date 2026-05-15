@@ -13,15 +13,17 @@ const PM_LOG_STEPS = 400
 const PM_F_MIN     = 100
 const PM_F_RATIO   = 1e4   // span 100 Hz → 1 MHz
 
+const PARAM_APPLIERS: Record<SweepParam, (spec: DesignSpec, value: number) => DesignSpec> = {
+  vin:          (spec, value) => ({ ...spec, vinMin: value, vinMax: value }),
+  vout:         (spec, value) => ({ ...spec, vout: value }),
+  iout:         (spec, value) => ({ ...spec, iout: value }),
+  fsw:          (spec, value) => ({ ...spec, fsw: value }),
+  ripple_ratio: (spec, value) => ({ ...spec, rippleRatio: value }),
+  ambient_temp: (spec, value) => ({ ...spec, ambientTemp: value }),
+}
+
 function applyParam(spec: DesignSpec, param: SweepParam, value: number): DesignSpec {
-  switch (param) {
-    case 'vin':          return { ...spec, vinMin: value, vinMax: value }
-    case 'vout':         return { ...spec, vout: value }
-    case 'iout':         return { ...spec, iout: value }
-    case 'fsw':          return { ...spec, fsw: value }
-    case 'ripple_ratio': return { ...spec, rippleRatio: value }
-    case 'ambient_temp': return { ...spec, ambientTemp: value }
-  }
+  return PARAM_APPLIERS[param](spec, value)
 }
 
 /** Sweep gain plot until the magnitude crosses 0 dB and return the phase margin. */

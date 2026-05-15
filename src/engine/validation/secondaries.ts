@@ -1,6 +1,10 @@
 import type { DesignSpec } from '../types'
 import { type ValidationError, isPositiveFinite, err } from './types'
 
+function isSecondaryVoutTooHigh(vout: number, vinMin: number): boolean {
+  return isPositiveFinite(vout) && isPositiveFinite(vinMin) && vout > vinMin * 2
+}
+
 export function validateSecondaryOutputs(spec: DesignSpec): ValidationError[] {
   const secondaries = spec.secondary_outputs
   if (!secondaries?.length) return []
@@ -21,7 +25,7 @@ export function validateSecondaryOutputs(spec: DesignSpec): ValidationError[] {
       errors.push(err(tag, `${label}: Iout must be a positive number.`))
     if (!Number.isFinite(s.diode_vf) || s.diode_vf < 0)
       errors.push(err(tag, `${label}: Diode Vf must be ≥ 0.`))
-    if (isPositiveFinite(s.vout) && isPositiveFinite(vinMin) && s.vout > vinMin * 2)
+    if (isSecondaryVoutTooHigh(s.vout, vinMin))
       errors.push(err(tag,
         `${label}: Vout (${s.vout} V) is more than 2× Vin_min. ` +
         'Check turns ratio — large secondary voltages may be impractical.', 'warning'))

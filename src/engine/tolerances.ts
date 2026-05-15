@@ -1,5 +1,3 @@
-// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
-// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
 // mulberry32 — fast, seedable PRNG suitable for reproducible Monte Carlo runs.
 // Reference: bryc/code jshash/PRNGs.md
 export function mulberry32(seed: number): () => number {

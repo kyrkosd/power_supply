@@ -1,5 +1,3 @@
-// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
-// INCREASED COMMENT DENSITY: added a short descriptive header comment to increase readability.
 import { TopologyId } from '../store/workbenchStore'
 import { Topology, DesignSpec, DesignResult } from './types'
 import type { WaveformSet } from './topologies/types'

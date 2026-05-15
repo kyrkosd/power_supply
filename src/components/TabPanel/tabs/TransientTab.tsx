@@ -1,7 +1,7 @@
 // Transient simulation tab: RK4 state-space results for startup, load-step, and line-step modes.
 import React, { useEffect, useRef, useState } from 'react'
 import { useDesignStore } from '../../../store/design-store'
-import type { TransientMode } from '../../../engine/topologies/types'
+import type { TransientMode, TransientResult } from '../../../engine/topologies/types'
 import { drawChart, type PanelCfg } from './transientChart'
 import styles from './TransientTab.module.css'
 
@@ -99,6 +99,44 @@ function EmptyState({ supported, topology }: { supported: boolean; topology: str
   )
 }
 
+// ── Toolbar hints ─────────────────────────────────────────────────────────────
+
+/** Inline hint text shown when unsupported or before first run. */
+function ToolbarHints({ supported, tr, transientLoading }: {
+  supported: boolean
+  tr: TransientResult | null
+  transientLoading: boolean
+}): React.ReactElement | null {
+  if (!supported) return <span className={styles.hint}>Transient simulation requires a state-space model — currently available for Buck only.</span>
+  if (!tr && !transientLoading) return <span className={styles.hint}>Select a mode and click Run to simulate 10 ms of operation.</span>
+  return null
+}
+
+// ── Charts area ───────────────────────────────────────────────────────────────
+
+/** Renders MetricsStrip + waveform panels (or EmptyState) and loading overlay. */
+function ChartsArea({ tr, transientLoading, vout, supported, topology }: {
+  tr: TransientResult | null
+  transientLoading: boolean
+  vout: number
+  supported: boolean
+  topology: string
+}): React.ReactElement {
+  if (!tr) return <EmptyState supported={supported} topology={topology} />
+  return (
+    <>
+      <MetricsStrip m={tr.metrics} />
+      <div className={styles.charts}>
+        {transientLoading && (
+          <div className={styles.loadingOverlay}><span className={styles.spinner} /> Simulating…</div>
+        )}
+        <ChartPanel time={tr.time} panel={{ data: tr.vout, label: 'Output voltage',   unit: 'V', color: '#4adcf4', refLine: vout }} />
+        <ChartPanel time={tr.time} panel={{ data: tr.iL,  label: 'Inductor current', unit: 'A', color: '#f4b400' }} />
+      </div>
+    </>
+  )
+}
+
 // ── Main tab ──────────────────────────────────────────────────────────────────
 
 /** Transient simulation tab: mode selector, Run button, metrics strip, and waveform panels. */
@@ -125,8 +163,6 @@ export function TransientTab(): React.ReactElement {
     requestTransientRun({ topology, spec, result, mode, softStartSeconds })
   }
 
-  const tr = transientResult
-
   return (
     <div className={styles.wrapper}>
       <div className={styles.toolbar}>
@@ -134,27 +170,9 @@ export function TransientTab(): React.ReactElement {
         <button className={styles.runBtn} onClick={handleRun} disabled={!canRun}>
           {transientLoading ? '⏳ Simulating…' : '▶ Run'}
         </button>
-        {!supported && (
-          <span className={styles.hint}>Transient simulation requires a state-space model — currently available for Buck only.</span>
-        )}
-        {supported && !tr && !transientLoading && (
-          <span className={styles.hint}>Select a mode and click Run to simulate 10 ms of operation.</span>
-        )}
+        <ToolbarHints supported={supported} tr={transientResult} transientLoading={transientLoading} />
       </div>
-
-      {tr && <MetricsStrip m={tr.metrics} />}
-
-      {tr ? (
-        <div className={styles.charts}>
-          {transientLoading && (
-            <div className={styles.loadingOverlay}><span className={styles.spinner} /> Simulating…</div>
-          )}
-          <ChartPanel time={tr.time} panel={{ data: tr.vout, label: 'Output voltage',   unit: 'V', color: '#4adcf4', refLine: spec.vout }} />
-          <ChartPanel time={tr.time} panel={{ data: tr.iL,  label: 'Inductor current', unit: 'A', color: '#f4b400' }} />
-        </div>
-      ) : (
-        <EmptyState supported={supported} topology={topology} />
-      )}
+      <ChartsArea tr={transientResult} transientLoading={transientLoading} vout={spec.vout} supported={supported} topology={topology} />
     </div>
   )
 }

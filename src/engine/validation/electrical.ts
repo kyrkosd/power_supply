@@ -16,11 +16,7 @@ export function validateFrequency(spec: DesignSpec): ValidationError[] {
   return []
 }
 
-export function validateRipple(spec: DesignSpec): ValidationError[] {
-  const { rippleRatio, voutRippleMax, vout } = spec
-  const voutMag = Math.abs(vout)
-  const errors: ValidationError[] = []
-
+function validateRippleRatio(rippleRatio: number, errors: ValidationError[]): void {
   if (!Number.isFinite(rippleRatio))
     errors.push(err('rippleRatio', 'Ripple ratio must be a number.'))
   else if (rippleRatio < 0.05)
@@ -29,14 +25,22 @@ export function validateRipple(spec: DesignSpec): ValidationError[] {
   else if (rippleRatio > 0.8)
     errors.push(err('rippleRatio',
       `Ripple ratio ${rippleRatio.toFixed(2)} > 0.8 causes very high peak current and likely DCM.`))
+}
 
+function validateOutputRippleBudget(voutRippleMax: number, voutMag: number, errors: ValidationError[]): void {
   if (!isPositiveFinite(voutRippleMax))
     errors.push(err('voutRippleMax', 'Output ripple budget must be a positive number.'))
   else if (isPositiveFinite(voutMag) && voutRippleMax > voutMag * 0.1)
     errors.push(err('voutRippleMax',
       `Ripple budget (${(voutRippleMax * 1000).toFixed(0)} mV) exceeds 10 % of Vout ` +
       `(limit: ${(voutMag * 100).toFixed(0)} mV).`))
+}
 
+export function validateRipple(spec: DesignSpec): ValidationError[] {
+  const { rippleRatio, voutRippleMax, vout } = spec
+  const errors: ValidationError[] = []
+  validateRippleRatio(rippleRatio, errors)
+  validateOutputRippleBudget(voutRippleMax, Math.abs(vout), errors)
   return errors
 }
 

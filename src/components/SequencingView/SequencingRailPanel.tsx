@@ -36,6 +36,69 @@ interface SequencingRailPanelProps {
   onResetOrder:       () => void
 }
 
+// ── Sub-components ────────────────────────────────────────────────────────────
+
+interface RailActionsFooterProps {
+  showManual:         boolean
+  matchesRecommended: boolean
+  railCount:          number
+  form:               ManualForm
+  onFormChange:       (f: ManualForm) => void
+  onAddManual:        () => void
+  onLoadFile:         () => void
+  onToggleManual:     (v: boolean) => void
+  onResetOrder:       () => void
+}
+
+/** Rail actions area: manual form, add buttons, and reset-order button. */
+function RailActionsFooter({ showManual, matchesRecommended, railCount, form, onFormChange, onAddManual, onLoadFile, onToggleManual, onResetOrder }: RailActionsFooterProps): React.ReactElement {
+  return (
+    <div className={styles.railActions}>
+      {showManual && (
+        <div className={styles.manualForm}>
+          <div className={styles.formRow}>
+            <span className={styles.formLabel}>Name</span>
+            <input className={styles.formInput} placeholder="e.g. VDD_CORE"
+              value={form.name} onChange={(e) => onFormChange({ ...form, name: e.target.value })} />
+          </div>
+          <div className={styles.formRow}>
+            <span className={styles.formLabel}>Vout</span>
+            <input className={styles.formInput} type="number" min="0.1" max="100" step="0.1"
+              value={form.vout} onChange={(e) => onFormChange({ ...form, vout: e.target.value })} />
+            <span className={styles.formUnit}>V</span>
+          </div>
+          <div className={styles.formRow}>
+            <span className={styles.formLabel}>Soft-start</span>
+            <input className={styles.formInput} type="number" min="0.1" max="500" step="0.1"
+              value={form.tss_ms} onChange={(e) => onFormChange({ ...form, tss_ms: e.target.value })} />
+            <span className={styles.formUnit}>ms</span>
+          </div>
+          <div className={styles.formActions}>
+            <button className={styles.formCancelBtn}
+              onClick={() => { onToggleManual(false); onFormChange(EMPTY_FORM) }}>Cancel</button>
+            <button className={styles.formAddBtn} onClick={onAddManual}>Add Rail</button>
+          </div>
+        </div>
+      )}
+
+      {!showManual && (
+        <div className={styles.actionRow}>
+          <button className={styles.addBtn} onClick={onLoadFile}
+            disabled={railCount >= 8} title="Open a .pswb project file">+ From File</button>
+          <button className={styles.addBtn} onClick={() => onToggleManual(true)}
+            disabled={railCount >= 8}>+ Manual</button>
+        </div>
+      )}
+
+      {!matchesRecommended && railCount > 1 && !showManual && (
+        <button className={styles.resetOrderBtn} onClick={onResetOrder}>
+          Reset to recommended order
+        </button>
+      )}
+    </div>
+  )
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 /**
@@ -85,49 +148,11 @@ export function SequencingRailPanel(props: SequencingRailPanelProps): React.Reac
         ))}
       </div>
 
-      <div className={styles.railActions}>
-        {showManual && (
-          <div className={styles.manualForm}>
-            <div className={styles.formRow}>
-              <span className={styles.formLabel}>Name</span>
-              <input className={styles.formInput} placeholder="e.g. VDD_CORE"
-                value={form.name} onChange={(e) => onFormChange({ ...form, name: e.target.value })} />
-            </div>
-            <div className={styles.formRow}>
-              <span className={styles.formLabel}>Vout</span>
-              <input className={styles.formInput} type="number" min="0.1" max="100" step="0.1"
-                value={form.vout} onChange={(e) => onFormChange({ ...form, vout: e.target.value })} />
-              <span className={styles.formUnit}>V</span>
-            </div>
-            <div className={styles.formRow}>
-              <span className={styles.formLabel}>Soft-start</span>
-              <input className={styles.formInput} type="number" min="0.1" max="500" step="0.1"
-                value={form.tss_ms} onChange={(e) => onFormChange({ ...form, tss_ms: e.target.value })} />
-              <span className={styles.formUnit}>ms</span>
-            </div>
-            <div className={styles.formActions}>
-              <button className={styles.formCancelBtn}
-                onClick={() => { onToggleManual(false); onFormChange(EMPTY_FORM) }}>Cancel</button>
-              <button className={styles.formAddBtn} onClick={onAddManual}>Add Rail</button>
-            </div>
-          </div>
-        )}
-
-        {!showManual && (
-          <div className={styles.actionRow}>
-            <button className={styles.addBtn} onClick={onLoadFile}
-              disabled={rails.length >= 8} title="Open a .pswb project file">+ From File</button>
-            <button className={styles.addBtn} onClick={() => onToggleManual(true)}
-              disabled={rails.length >= 8}>+ Manual</button>
-          </div>
-        )}
-
-        {!matchesRecommended && rails.length > 1 && !showManual && (
-          <button className={styles.resetOrderBtn} onClick={onResetOrder}>
-            Reset to recommended order
-          </button>
-        )}
-      </div>
+      <RailActionsFooter
+        showManual={showManual} matchesRecommended={matchesRecommended} railCount={rails.length}
+        form={form} onFormChange={onFormChange} onAddManual={onAddManual} onLoadFile={onLoadFile}
+        onToggleManual={onToggleManual} onResetOrder={onResetOrder}
+      />
     </div>
   )
 }

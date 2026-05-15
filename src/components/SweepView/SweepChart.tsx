@@ -24,6 +24,31 @@ export interface ChartProps {
   onHover:        (idx: number | null) => void
 }
 
+// ── Hover overlay ─────────────────────────────────────────────────────────────
+
+interface HoverLayerProps {
+  hX:         number | null
+  hoverIdx:   number | null
+  seriesData: { metric: { key: string; color: string }; norm: (number | null)[] }[]
+  yScale:     (n: number) => number
+}
+
+function ChartHoverLayer({ hX, hoverIdx, seriesData, yScale }: HoverLayerProps): React.ReactElement | null {
+  if (hX == null || hoverIdx == null) return null
+  return (
+    <>
+      <line x1={hX} y1={MT} x2={hX} y2={MT + PH} stroke="rgba(255,255,255,0.2)" strokeWidth={1} />
+      {seriesData.map(({ metric, norm }) => {
+        const n = norm[hoverIdx]
+        return n != null ? (
+          <circle key={metric.key} cx={hX} cy={yScale(n)} r={3.5}
+            fill={metric.color} stroke="#141624" strokeWidth={1.5} />
+        ) : null
+      })}
+    </>
+  )
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 /**
@@ -131,15 +156,7 @@ export function SweepChart({ result, checkedMetrics, baseSpec, currentParamSI, p
               stroke={metric.color} strokeWidth={1.8} strokeLinejoin="round" opacity={0.9} />
           ))
         )}
-        {/* Hover elements */}
-        {hX != null && <line x1={hX} y1={MT} x2={hX} y2={MT + PH} stroke="rgba(255,255,255,0.2)" strokeWidth={1} />}
-        {hoverIdx != null && seriesData.map(({ metric, norm }) => {
-          const n = norm[hoverIdx]
-          return n != null ? (
-            <circle key={metric.key} cx={hX!} cy={yScale(n)} r={3.5}
-              fill={metric.color} stroke="#141624" strokeWidth={1.5} />
-          ) : null
-        })}
+        <ChartHoverLayer hX={hX} hoverIdx={hoverIdx} seriesData={seriesData} yScale={yScale} />
         {/* Mouse hit area */}
         <rect x={ML} y={MT} width={PW} height={PH} fill="transparent"
           onMouseMove={handleMouseMove} onMouseLeave={() => onHover(null)} />

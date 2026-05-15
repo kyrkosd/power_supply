@@ -1,6 +1,6 @@
 import type { DesignSpec, DesignResult } from '../../../engine/types'
 import type { SchematicDefinition, SchematicNode, ComponentStatus } from '../schematic-types'
-import { formatU, formatResistance, formatCapacitance, cinValueLabel } from '../schematic-utils'
+import { formatU, formatResistance, formatCapacitance, cinValueLabel, flybackDutyStatus, rcdClampStatus, resultLabel } from '../schematic-utils'
 
 // ── Label builders ────────────────────────────────────────────────────────────
 
@@ -18,8 +18,8 @@ function buildLabels( result: DesignResult | null): ForwardLabels {
   const resetV      = snubber?.V_clamp ?? result?.resetVoltage ?? 0
   return {
     turnsValue:  `${coreLabel} ${primaryT}:${secondaryT}`,
-    inductance:  result ? `${formatU(result.inductance  * 1e6, 2, 'µH')}` : '—',
-    capacitance: result ? `${formatU(result.capacitance * 1e6, 1, 'µF')}` : '—',
+    inductance:  resultLabel(result, (r) => `${formatU(r.inductance  * 1e6, 2, 'µH')}`),
+    capacitance: resultLabel(result, (r) => `${formatU(r.capacitance * 1e6, 1, 'µF')}`),
     rcdLabel:    snubber ? `${formatResistance(snubber.R)}, ${formatCapacitance(snubber.C)}` : `Vclamp=${resetV.toFixed(0)}V`,
     rcdMeta:     snubber ? `Vclamp=${resetV.toFixed(0)}V, P=${snubber.P_dissipated.toFixed(1)}W` : 'Reset clamp',
   }
@@ -33,9 +33,9 @@ type ForwardStatuses = { sw: ComponentStatus; tx: ComponentStatus; rcd: Componen
 function buildStatuses(duty: number, result: DesignResult | null, spec: DesignSpec): ForwardStatuses {
   const snubber = result?.snubber
   return {
-    sw:  duty >= 0.45 ? 'violation' : duty >= 0.4 ? 'warning' : 'normal',
+    sw:  flybackDutyStatus(duty),
     tx:  result?.warnings.some(w => w.includes('core')) ? 'warning' : 'normal',
-    rcd: snubber && snubber.P_dissipated > 0.05 * spec.vout * spec.iout ? 'warning' : 'normal',
+    rcd: rcdClampStatus(snubber, spec.vout * spec.iout),
   }
 }
 

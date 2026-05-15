@@ -59,19 +59,26 @@ export function buildResultRows(result: DesignResult): Row[] {
   ]
 }
 
+type OptEntry = [keyof DesignResult, string, (r: DesignResult) => string]
+const OPTIONAL_ENTRIES: OptEntry[] = [
+  ['efficiency',           'Efficiency (η)',              (r) => fmtPct(r.efficiency!)],
+  ['operating_mode',       'Operating mode',               (r) => r.operating_mode!],
+  ['ccm_dcm_boundary',    'CCM→DCM boundary current',   (r) => `${r.ccm_dcm_boundary!.toFixed(2)} A`],
+  ['turnsRatio',           'Turns ratio (Np/Ns)',          (r) => r.turnsRatio!.toFixed(3)],
+  ['magnetizingInductance','Magnetizing inductance',       (r) => fmtL(r.magnetizingInductance!)],
+  ['leakageInductance',    'Leakage inductance',           (r) => fmtL(r.leakageInductance!)],
+  ['clampVoltage',         'Clamp voltage',               (r) => `${r.clampVoltage!.toFixed(1)} V`],
+  ['couplingCapacitance',  'Coupling capacitor (Cc)',      (r) => fmtC(r.couplingCapacitance!)],
+  ['mosfetVdsMax',         'MOSFET Vds max',              (r) => `${r.mosfetVdsMax!.toFixed(1)} V`],
+  ['outputInductance',     'Output inductance',            (r) => fmtL(r.outputInductance!)],
+  ['resetVoltage',         'Reset winding voltage',       (r) => `${r.resetVoltage!.toFixed(1)} V`],
+]
+
 /** Optional rows are pushed only when their underlying value is present. */
 function pushOptional(rows: Row[], result: DesignResult): void {
-  if (result.efficiency != null)            rows.push(['Efficiency (η)',              fmtPct(result.efficiency)])
-  if (result.operating_mode)                rows.push(['Operating mode',               result.operating_mode])
-  if (result.ccm_dcm_boundary != null)      rows.push(['CCM→DCM boundary current',   `${result.ccm_dcm_boundary.toFixed(2)} A`])
-  if (result.turnsRatio != null)            rows.push(['Turns ratio (Np/Ns)',          result.turnsRatio.toFixed(3)])
-  if (result.magnetizingInductance != null) rows.push(['Magnetizing inductance',       fmtL(result.magnetizingInductance)])
-  if (result.leakageInductance != null)     rows.push(['Leakage inductance',           fmtL(result.leakageInductance)])
-  if (result.clampVoltage != null)          rows.push(['Clamp voltage',               `${result.clampVoltage.toFixed(1)} V`])
-  if (result.couplingCapacitance != null)   rows.push(['Coupling capacitor (Cc)',      fmtC(result.couplingCapacitance)])
-  if (result.mosfetVdsMax != null)          rows.push(['MOSFET Vds max',              `${result.mosfetVdsMax.toFixed(1)} V`])
-  if (result.outputInductance != null)      rows.push(['Output inductance',            fmtL(result.outputInductance)])
-  if (result.resetVoltage != null)          rows.push(['Reset winding voltage',       `${result.resetVoltage.toFixed(1)} V`])
+  for (const [key, label, fmt] of OPTIONAL_ENTRIES) {
+    if (result[key] != null) rows.push([label, fmt(result)])
+  }
 }
 
 export function buildComponentRows(result: DesignResult): Row[] {

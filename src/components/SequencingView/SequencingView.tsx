@@ -14,13 +14,49 @@ import styles from './SequencingView.module.css'
 /** Generates a short random string ID for new rails. */
 function newId(): string { return crypto.randomUUID().replace(/-/g, '').slice(0, 7) }
 
+/** Maps Vout to sequencing priority group: 0 = core (≤1.8 V), 1 = I/O (≤3.3 V), 2 = HV. */
+function railGroup(vout: number): number {
+  if (vout <= 1.8) return 0
+  if (vout <= 3.3) return 1
+  return 2
+}
+
 /** Sorts rails by recommended power-up priority: core (≤1.8 V) → I/O (≤3.3 V) → HV. */
 function sortByPriority(arr: SequencingRail[]): SequencingRail[] {
   return [...arr].sort((a, b) => {
-    const ga = a.vout <= 1.8 ? 0 : a.vout <= 3.3 ? 1 : 2
-    const gb = b.vout <= 1.8 ? 0 : b.vout <= 3.3 ? 1 : 2
+    const ga = railGroup(a.vout), gb = railGroup(b.vout)
     return ga !== gb ? ga - gb : a.vout - b.vout
   })
+}
+
+/** True when an index swap within a fixed-length array is in-bounds. */
+function isValidMove(idx: number, next: number, len: number): boolean {
+  return idx >= 0 && next >= 0 && next < len
+}
+
+/** True when manually entered Vout and Tss values are valid numbers. */
+function isValidManualForm(vout: number, tss: number): boolean {
+  return isFinite(vout) && vout > 0 && isFinite(tss) && tss >= 0
+}
+
+/** Footer: shows warnings list or a status message when all clear. */
+function SequencingFooter({ warnings, railCount }: { warnings: string[]; railCount: number }): React.ReactElement {
+  if (warnings.length === 0) {
+    return (
+      <span className={styles.noWarnings}>
+        {railCount > 1 ? 'No sequencing conflicts detected.' : 'Add rails to begin analysis.'}
+      </span>
+    )
+  }
+  return (
+    <div className={styles.warnList}>
+      {warnings.map((w, i) => (
+        <div key={i} className={styles.warn}>
+          <span className={styles.warnIcon}>⚠</span><span>{w}</span>
+        </div>
+      ))}
+    </div>
+  )
 }
 
 /** Extracts rail names referenced in conflict warnings for highlight rendering. */
@@ -31,6 +67,49 @@ function conflictNames(warnings: string[]): Set<string> {
     if (m) { s.add(m[1]); s.add(m[2]) }
   }
   return s
+}
+
+/** Timing diagram panel with empty state and order badge. */
+function DiagramPanel({ rails, matchesRecommended, svgRef }: {
+  rails: SequencingRail[]
+  matchesRecommended: boolean
+  svgRef: React.RefObject<SVGSVGElement>
+}): React.ReactElement {
+  return (
+    <div className={styles.rightPanel}>
+      <div className={styles.chartHeader}>
+        <span>Timing Diagram</span>
+        {rails.length > 0 && (
+          <span className={styles.orderNote}>
+            {matchesRecommended ? 'recommended order' : 'custom order'}
+          </span>
+        )}
+      </div>
+      {rails.length === 0 ? (
+        <div className={styles.emptyChart}>
+          <span>No rails added yet.</span>
+          <span className={styles.emptyHint}>
+            Add rails from .pswb project files or enter voltage, soft-start time, and name manually.
+            The timing diagram shows the sequential power-up chain with PG assertion markers.
+          </span>
+        </div>
+      ) : (
+        <div className={styles.svgWrap}><svg ref={svgRef} className={styles.svg} /></div>
+      )}
+    </div>
+  )
+}
+
+/** Summary bar shown when at least one rail is loaded. */
+function StatsBar({ rails, result }: { rails: SequencingRail[]; result: SequencingResult }): React.ReactElement | null {
+  if (rails.length === 0) return null
+  return (
+    <div className={styles.statsBar}>
+      <span className={styles.stat}>Rails: <strong>{rails.length}</strong></span>
+      <span className={styles.stat}>Total boot: <strong>{result.total_time_ms.toFixed(1)} ms</strong></span>
+      <span className={styles.stat}>Warnings: <strong>{result.warnings.length}</strong></span>
+    </div>
+  )
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
@@ -81,7 +160,7 @@ export function SequencingView(): React.ReactElement | null {
     setRails((prev) => {
       const idx  = prev.findIndex((r) => r.id === id)
       const next = idx + dir
-      if (idx < 0 || next < 0 || next >= prev.length) return prev
+      if (!isValidMove(idx, next, prev.length)) return prev
       const arr = [...prev];
       [arr[idx], arr[next]] = [arr[next], arr[idx]]
       return arr
@@ -106,7 +185,7 @@ export function SequencingView(): React.ReactElement | null {
   function handleAddManual(): void {
     const vout = parseFloat(form.vout)
     const tss  = parseFloat(form.tss_ms) / 1000
-    if (!isFinite(vout) || vout <= 0 || !isFinite(tss) || tss < 0) return
+    if (!isValidManualForm(vout, tss)) return
     addRail({ id: newId(), name: form.name.trim() || `${vout} V Rail`, vout, tss, pg_delay: tss + 0.002 })
     setShowManual(false)
     setForm(EMPTY_FORM)
@@ -137,51 +216,13 @@ export function SequencingView(): React.ReactElement | null {
             onResetOrder={resetOrder}
           />
 
-          <div className={styles.rightPanel}>
-            <div className={styles.chartHeader}>
-              <span>Timing Diagram</span>
-              {rails.length > 0 && (
-                <span className={styles.orderNote}>
-                  {matchesRecommended ? 'recommended order' : 'custom order'}
-                </span>
-              )}
-            </div>
-            {rails.length === 0 ? (
-              <div className={styles.emptyChart}>
-                <span>No rails added yet.</span>
-                <span className={styles.emptyHint}>
-                  Add rails from .pswb project files or enter voltage, soft-start time, and name manually.
-                  The timing diagram shows the sequential power-up chain with PG assertion markers.
-                </span>
-              </div>
-            ) : (
-              <div className={styles.svgWrap}><svg ref={svgRef} className={styles.svg} /></div>
-            )}
-          </div>
+          <DiagramPanel rails={rails} matchesRecommended={matchesRecommended} svgRef={svgRef} />
         </div>
 
-        {rails.length > 0 && (
-          <div className={styles.statsBar}>
-            <span className={styles.stat}>Rails: <strong>{rails.length}</strong></span>
-            <span className={styles.stat}>Total boot: <strong>{result.total_time_ms.toFixed(1)} ms</strong></span>
-            <span className={styles.stat}>Warnings: <strong>{result.warnings.length}</strong></span>
-          </div>
-        )}
+        <StatsBar rails={rails} result={result} />
 
         <div className={styles.footer}>
-          {result.warnings.length === 0 ? (
-            <span className={styles.noWarnings}>
-              {rails.length > 1 ? 'No sequencing conflicts detected.' : 'Add rails to begin analysis.'}
-            </span>
-          ) : (
-            <div className={styles.warnList}>
-              {result.warnings.map((w, i) => (
-                <div key={i} className={styles.warn}>
-                  <span className={styles.warnIcon}>⚠</span><span>{w}</span>
-                </div>
-              ))}
-            </div>
-          )}
+          <SequencingFooter warnings={result.warnings} railCount={rails.length} />
         </div>
 
       </div>

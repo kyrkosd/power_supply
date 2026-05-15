@@ -1,6 +1,7 @@
 import type { DesignSpec } from '../types'
 import type { TopologyId } from '../../store/workbenchStore'
 import { type ValidationError, isPositiveFinite, err } from './types'
+import { isBuckOutputHigh, isBoostOutputLow, isBuckBoostPositive, isFlybackDOverrun, isForwardDOverrun } from './predicates'
 
 export function validateInputVoltages(spec: DesignSpec): ValidationError[] {
   const { vinMin, vinMax } = spec
@@ -18,21 +19,20 @@ export function validateInputVoltages(spec: DesignSpec): ValidationError[] {
 
 export function validateOutputVoltage(topology: TopologyId, spec: DesignSpec): ValidationError[] {
   const { vinMin, vinMax, vout } = spec
-  const voutMag = Math.abs(vout)
   const errors: ValidationError[] = []
 
-  if (!isPositiveFinite(voutMag))
+  if (!isPositiveFinite(Math.abs(vout)))
     errors.push(err('vout', 'Vout magnitude must be positive.'))
 
-  if (topology === 'buck' && Number.isFinite(vout) && isPositiveFinite(vinMin) && vout >= vinMin)
+  if (isBuckOutputHigh(topology, spec))
     errors.push(err('vout',
       `Buck output (${vout} V) must be less than Vin_min (${vinMin} V). Buck is a step-down converter.`))
 
-  if (topology === 'boost' && Number.isFinite(vout) && isPositiveFinite(vinMax) && vout <= vinMax)
+  if (isBoostOutputLow(topology, spec))
     errors.push(err('vout',
       `Boost output (${vout} V) must exceed Vin_max (${vinMax} V). Boost is a step-up converter.`))
 
-  if (topology === 'buck-boost' && Number.isFinite(vout) && vout > 0)
+  if (isBuckBoostPositive(topology, spec))
     errors.push(err('vout',
       'Enter Vout as a negative value for buck-boost (e.g. −5 V for a −5 V rail).', 'warning'))
 
@@ -44,7 +44,7 @@ export function validateDutyCycle(topology: TopologyId, spec: DesignSpec): Valid
   const { vinMin, vout } = spec
   const voutMag = Math.abs(vout)
 
-  if (topology === 'flyback' && isPositiveFinite(vinMin) && isPositiveFinite(voutMag)) {
+  if (isFlybackDOverrun(topology, spec)) {
     const d = voutMag / (vinMin + voutMag)
     if (d > 0.5)
       return [err('vout',
@@ -52,7 +52,7 @@ export function validateDutyCycle(topology: TopologyId, spec: DesignSpec): Valid
         'Off-line flyback designs typically stay below D = 50 % to avoid runaway.', 'warning')]
   }
 
-  if (topology === 'forward' && isPositiveFinite(vinMin) && isPositiveFinite(vout)) {
+  if (isForwardDOverrun(topology, spec)) {
     const d = vout / vinMin
     if (d > 0.45)
       return [err('vout',

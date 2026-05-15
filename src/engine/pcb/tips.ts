@@ -70,18 +70,16 @@ const SEPIC_TIPS: string[] = [
   'The switch node (Q1 drain) swings from GND to Vin + Vout; size copper clearance accordingly.',
 ]
 
-function specificTips(topology: TopologyId, spec: DesignSpec): string[] {
-  switch (topology) {
-    case 'buck':       return buckTips(spec)
-    case 'boost':      return BOOST_TIPS
-    case 'buck-boost': return BUCK_BOOST_TIPS
-    case 'flyback':    return flybackTips(spec)
-    case 'forward':    return forwardTips(spec)
-    case 'sepic':      return SEPIC_TIPS
-  }
+const TOPO_TIPS: Record<TopologyId, (spec: DesignSpec) => string[]> = {
+  buck:         buckTips,
+  boost:        () => BOOST_TIPS,
+  'buck-boost': () => BUCK_BOOST_TIPS,
+  flyback:      flybackTips,
+  forward:      forwardTips,
+  sepic:        () => SEPIC_TIPS,
 }
 
 /** Concatenates topology-specific tips followed by the universal best-practice list. */
 export function tipsForTopology(topology: TopologyId, spec: DesignSpec): string[] {
-  return [...specificTips(topology, spec), ...COMMON_TIPS]
+  return [...TOPO_TIPS[topology](spec), ...COMMON_TIPS]
 }

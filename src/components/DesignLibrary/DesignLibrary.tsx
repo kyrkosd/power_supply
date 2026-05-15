@@ -9,6 +9,103 @@ import styles from './DesignLibrary.module.css'
 const ALL_TOPOLOGIES: TopologyId[]                    = ['buck', 'boost', 'buck-boost', 'flyback', 'forward', 'sepic']
 const ALL_DIFFICULTIES: ReferenceDesign['difficulty'][] = ['beginner', 'intermediate', 'advanced']
 
+function matchesSearch(d: ReferenceDesign, q: string): boolean {
+  if (!q) return true
+  return d.title.toLowerCase().includes(q)
+    || d.application.toLowerCase().includes(q)
+    || d.description.toLowerCase().includes(q)
+}
+
+function matchesFilters(d: ReferenceDesign, topoFilter: TopologyId | 'all', diffFilter: ReferenceDesign['difficulty'] | 'all', q: string): boolean {
+  if (topoFilter !== 'all' && d.topology !== topoFilter) return false
+  if (diffFilter !== 'all' && d.difficulty !== diffFilter) return false
+  return matchesSearch(d, q)
+}
+
+interface BrowseProps {
+  filtered: ReferenceDesign[]
+  selected: ReferenceDesign | null
+  setSelected: (d: ReferenceDesign) => void
+  search: string
+  setSearch: (s: string) => void
+  topoFilter: TopologyId | 'all'
+  setTopoFilter: (t: TopologyId | 'all') => void
+  diffFilter: ReferenceDesign['difficulty'] | 'all'
+  setDiffFilter: (d: ReferenceDesign['difficulty'] | 'all') => void
+}
+
+function LibraryBrowse({ filtered, selected, setSelected, search, setSearch, topoFilter, setTopoFilter, diffFilter, setDiffFilter }: BrowseProps): React.ReactElement {
+  return (
+    <>
+      <div className={styles.filterBar}>
+        <input className={styles.searchInput} placeholder="Search designs…"
+          value={search} onChange={(e) => setSearch(e.target.value)} />
+
+        <div className={styles.filterDivider} />
+
+        <div className={styles.filterGroup}>
+          <span className={styles.filterLabel}>Topology</span>
+          <button className={`${styles.pill} ${topoFilter === 'all' ? styles.active : ''}`}
+            onClick={() => setTopoFilter('all')}>All</button>
+          {ALL_TOPOLOGIES.map((t) => {
+            const active = topoFilter === t
+            const c = TOPO_COLOR[t]
+            return (
+              <button key={t}
+                className={`${styles.pill} ${active ? styles.active : ''}`}
+                onClick={() => setTopoFilter(t)}
+                style={active ? { color: c?.text, borderColor: (c?.text ?? '') + '88', background: c?.bg } : undefined}>
+                {t.charAt(0).toUpperCase() + t.slice(1)}
+              </button>
+            )
+          })}
+        </div>
+
+        <div className={styles.filterDivider} />
+
+        <div className={styles.filterGroup}>
+          <span className={styles.filterLabel}>Level</span>
+          <button className={`${styles.pill} ${diffFilter === 'all' ? styles.active : ''}`}
+            onClick={() => setDiffFilter('all')}>All</button>
+          {ALL_DIFFICULTIES.map((d) => (
+            <button key={d}
+              className={`${styles.pill} ${diffFilter === d ? styles.active : ''}`}
+              onClick={() => setDiffFilter(d)}>
+              {d.charAt(0).toUpperCase() + d.slice(1)}
+            </button>
+          ))}
+        </div>
+
+        <span className={styles.countBadge}>
+          {filtered.length} design{filtered.length !== 1 ? 's' : ''}
+        </span>
+      </div>
+
+      <div className={styles.gridWrap}>
+        {filtered.length === 0 ? (
+          <div className={styles.emptyState}>No designs match the current filters</div>
+        ) : (
+          <div className={styles.grid}>
+            {filtered.map((d) => (
+              <div key={d.title}
+                className={`${styles.card} ${selected === d ? styles.selected : ''}`}
+                onClick={() => setSelected(d)}>
+                <div className={styles.cardHeader}>
+                  <span className={styles.cardTitle}>{d.title}</span>
+                  <TopoBadge topo={d.topology} />
+                </div>
+                <DiffBadge diff={d.difficulty} />
+                <div className={styles.cardApp}>{d.application}</div>
+                <div className={styles.cardDesc}>{d.description}</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </>
+  )
+}
+
 /**
  * Design library modal — opens via Ctrl+L or toolbar button.
  * Supports text search across title, application, and description fields.
@@ -41,12 +138,7 @@ export function DesignLibrary(): React.ReactElement | null {
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase()
-    return REFERENCE_DESIGNS.filter((d) => {
-      if (topoFilter !== 'all' && d.topology !== topoFilter) return false
-      if (diffFilter !== 'all' && d.difficulty !== diffFilter) return false
-      if (q && !d.title.toLowerCase().includes(q) && !d.application.toLowerCase().includes(q) && !d.description.toLowerCase().includes(q)) return false
-      return true
-    })
+    return REFERENCE_DESIGNS.filter((d) => matchesFilters(d, topoFilter, diffFilter, q))
   }, [search, topoFilter, diffFilter])
 
   const handleLoad = useCallback((d: ReferenceDesign) => {
@@ -78,75 +170,12 @@ export function DesignLibrary(): React.ReactElement | null {
           <DetailView design={selected} onBack={() => setSelected(null)}
             onLoad={handleLoad} isModified={isModified} />
         ) : (
-          <>
-            {/* Filter bar */}
-            <div className={styles.filterBar}>
-              <input className={styles.searchInput} placeholder="Search designs…"
-                value={search} onChange={(e) => setSearch(e.target.value)} />
-
-              <div className={styles.filterDivider} />
-
-              <div className={styles.filterGroup}>
-                <span className={styles.filterLabel}>Topology</span>
-                <button className={`${styles.pill} ${topoFilter === 'all' ? styles.active : ''}`}
-                  onClick={() => setTopoFilter('all')}>All</button>
-                {ALL_TOPOLOGIES.map((t) => {
-                  const active = topoFilter === t
-                  const c = TOPO_COLOR[t]
-                  return (
-                    <button key={t}
-                      className={`${styles.pill} ${active ? styles.active : ''}`}
-                      onClick={() => setTopoFilter(t)}
-                      style={active ? { color: c?.text, borderColor: (c?.text ?? '') + '88', background: c?.bg } : undefined}>
-                      {t.charAt(0).toUpperCase() + t.slice(1)}
-                    </button>
-                  )
-                })}
-              </div>
-
-              <div className={styles.filterDivider} />
-
-              <div className={styles.filterGroup}>
-                <span className={styles.filterLabel}>Level</span>
-                <button className={`${styles.pill} ${diffFilter === 'all' ? styles.active : ''}`}
-                  onClick={() => setDiffFilter('all')}>All</button>
-                {ALL_DIFFICULTIES.map((d) => (
-                  <button key={d}
-                    className={`${styles.pill} ${diffFilter === d ? styles.active : ''}`}
-                    onClick={() => setDiffFilter(d)}>
-                    {d.charAt(0).toUpperCase() + d.slice(1)}
-                  </button>
-                ))}
-              </div>
-
-              <span className={styles.countBadge}>
-                {filtered.length} design{filtered.length !== 1 ? 's' : ''}
-              </span>
-            </div>
-
-            {/* Card grid */}
-            <div className={styles.gridWrap}>
-              {filtered.length === 0 ? (
-                <div className={styles.emptyState}>No designs match the current filters</div>
-              ) : (
-                <div className={styles.grid}>
-                  {filtered.map((d) => (
-                    <div key={d.title}
-                      className={`${styles.card} ${selected === d ? styles.selected : ''}`}
-                      onClick={() => setSelected(d)}>
-                      <div className={styles.cardHeader}>
-                        <span className={styles.cardTitle}>{d.title}</span>
-                        <TopoBadge topo={d.topology} />
-                      </div>
-                      <DiffBadge diff={d.difficulty} />
-                      <div className={styles.cardApp}>{d.application}</div>
-                      <div className={styles.cardDesc}>{d.description}</div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </>
+          <LibraryBrowse
+            filtered={filtered} selected={selected} setSelected={setSelected}
+            search={search} setSearch={setSearch}
+            topoFilter={topoFilter} setTopoFilter={setTopoFilter}
+            diffFilter={diffFilter} setDiffFilter={setDiffFilter}
+          />
         )}
 
       </div>
