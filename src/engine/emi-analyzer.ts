@@ -85,6 +85,13 @@ function suggestFilter(
  * Full conducted EMI profile using Fourier analysis of a trapezoidal switching current.
  * Evaluates each harmonic up to 30 MHz against CISPR 32 Class B limits.
  *
+ * Called by: EMITab component — directly on the renderer thread when the user opens the EMI
+ * analysis tab. This function is separate from estimateEMI (engine/emi.ts) which runs in the
+ * worker: calculateConductedEMI produces the full EMIAnalysisResult for chart rendering,
+ * whereas estimateEMI produces the lighter EMIResult (worst_margin_db, pass/fail) used by
+ * the input-filter designer and warnings system. The _tfall parameter is reserved for a
+ * future asymmetric-waveform model; currently the conservative envelope uses trise for both edges.
+ *
  * @param fsw       Switching frequency in Hz
  * @param dutyCycle Steady-state duty cycle (0–1)
  * @param trise     Current rise time in seconds

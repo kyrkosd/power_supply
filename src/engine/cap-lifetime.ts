@@ -79,6 +79,9 @@ function buildLifetimeWarnings(
 
 // ── Public API ─────────────────────────────────────────────────────────────────
 
+// Called by: ComponentSuggestions component — directly on the renderer thread when the selected
+// capacitor type is 'electrolytic'. Ceramic capacitors skip this call and show "N/A". The
+// function is a pure arithmetic model (Arrhenius + ripple self-heating), so it needs no worker.
 export function estimateLifetime(
   cap: CapacitorDataForLifetime,
   conditions: CapOperatingConditions,

@@ -13,6 +13,11 @@ function isExemptDielectric(d: string): boolean {
   return !d || u === 'C0G' || u === 'NP0' || l === 'electrolytic' || l === 'aluminum'
 }
 
+// Called by: topology compute() functions (all topologies that size an output capacitor) —
+// inline during component sizing, not as a post-compute step. The effective_uF returned here
+// replaces the nominal capacitance in ripple and bandwidth calculations so that DC-bias
+// derating is automatically reflected in the design result. X7R and X5R dielectrics are
+// corrected via dc-bias-curves.json; C0G/NP0 and electrolytics are exempt (ratio = 1.0).
 export function derateCapacitance(
   nominal_uF: number,
   vdc: number,

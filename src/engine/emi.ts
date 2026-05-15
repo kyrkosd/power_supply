@@ -8,6 +8,12 @@ import { extractEmiParams } from './emi/params'
 
 export type { EMIDesignResult } from './emi/harmonic'
 
+// Called by: worker/compute.ts (applyOptionalAnalyses) — runs in the worker after the base
+// topology compute() so it can use peakCurrent and dutyCycle from the steady-state result.
+// The _topology parameter is accepted for future topology-specific harmonic models (e.g.,
+// flyback primary-current envelope differs from buck) but is currently unused; the trapezoidal
+// spectrum model is applied uniformly. The EMIResult feeds the input-filter designer that runs
+// next in the same optional-analyses chain.
 export function estimateEMI(_topology: string, spec: DesignSpec, result: import('./emi/harmonic').EMIDesignResult): EMIResult {
   const { fsw, D, Ipeak, tr } = extractEmiParams(spec, result)
   const n_max  = Math.floor(30e6 / fsw)

@@ -77,6 +77,11 @@ function accumulate(agg: Aggregator, m: ReturnType<typeof computeIterationMetric
 }
 
 /**
+ * Called by: worker/handlers.ts (handleMC, on 'MC_COMPUTE' worker message)
+ * Why: runs entirely in the worker so thousands of iterations don't block the renderer.
+ * The _topology parameter is accepted but currently unused — it is reserved for topologies
+ * that override the default conduction-loss model with their own MC-aware version.
+ *
  * Runs a Monte Carlo tolerance analysis on a topology at a fixed operating point.
  * For each iteration: sample components → recompute ripple → derive losses & Tj →
  * optionally analyse loop for phase margin. Pass criterion = all metrics within budget.

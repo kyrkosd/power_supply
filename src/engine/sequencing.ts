@@ -9,6 +9,11 @@ import { checkConflicts, buildSequencingWarnings } from './sequencing/warnings'
 export type { SequencingRail, RailTiming, TimingEvent, SequencingResult } from './sequencing/types'
 export { estimatePgDelay, recommendedOrder }
 
+// Called by: SequencingView component — directly on the renderer thread, not through the worker.
+// Sequencing analysis is fast (O(n²) over typically 2–6 rails) and needs synchronous results
+// so the D3 timing diagram can re-render interactively as the user drags rails. The re-exported
+// estimatePgDelay and recommendedOrder helpers are also called from SequencingView independently
+// (estimatePgDelay uses the transient result when available, so the component passes it in).
 export function analyzeSequencing(
   rails: import('./sequencing/types').SequencingRail[],
 ): SequencingResult {

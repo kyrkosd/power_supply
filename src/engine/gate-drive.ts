@@ -21,6 +21,11 @@ export interface GateDriveResult {
   dead_time_recommended:  number   // s
 }
 
+// Called by: ComponentSuggestions component — directly on the renderer thread, not through
+// the worker. Gate drive sizing is a fast arithmetic-only calculation (no iteration), so it
+// runs inline whenever the user selects a different MOSFET from the suggestion list. The
+// _result parameter is accepted for future use (e.g. topology-specific bootstrap logic) but
+// is currently unused; all needed values come from spec and the mosfet data record.
 export function computeGateDrive(spec: DesignSpec, _result: DesignResult, mosfet: MosfetData): GateDriveResult {
   const Qg  = mosfet.qg_nc * 1e-9
   const Qgd = mosfet.qgd_nc > 0 ? mosfet.qgd_nc * 1e-9 : Qg * 0.30

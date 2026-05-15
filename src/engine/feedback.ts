@@ -18,6 +18,11 @@ export function fmtResistor(ohm: number): string {
   return `${ohm.toPrecision(3)} Ω`
 }
 
+// Called by: FeedbackPanel component — directly on the renderer thread on every spec change or
+// feedbackOptions update (vref, divider_current, use_e96). Isolated topologies (flyback, forward)
+// show a note instead of computed values because their regulation feedback path includes a
+// transformer-coupled optocoupler not modelled here; the component guards this with a topology
+// check before calling. fmtResistor (above) is a display-layer helper, also called directly.
 export function designFeedback(vout: number, options: Partial<FeedbackOptions> = {}): FeedbackResult {
   return computeDesign(vout, { ...DEFAULT_FEEDBACK_OPTIONS, ...options })
 }

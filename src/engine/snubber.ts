@@ -47,6 +47,11 @@ function computeRcdValues(Llk: number, Ip_peak: number, vinMax: number, fsw: num
 
 // ── Public API ─────────────────────────────────────────────────────────────────
 
+// Called by: flyback.ts (computeFlyback) and forward.ts (computeForward) — inline within the
+// topology compute() call, before the result is returned to the worker. Running here rather
+// than as a separate post-compute step means the clamp-power dissipation is available in the
+// same result object that feeds the efficiency and thermal calculations, keeping the numbers
+// consistent. A warning fires if P_dissipated > 5 % of Pout (see warnings.ts).
 export function designSnubber(
   topologyId: SnubberTopology,
   spec: DesignSpec,

@@ -54,6 +54,11 @@ function workingVoltage(spec: DesignSpec, result: DesignResult): number {
   return result.clampVoltage ?? (spec.vinMax * CLAMP_VOLTAGE_FALLBACK)
 }
 
+// Called by: worker/compute.ts (applyWinding) — runs in the worker after the base topology
+// compute() because it requires result.coreType (set by flyback/forward compute()) to look up
+// core geometry from getCoreByType(). If no matching core is found, applyWinding skips this
+// call and leaves result.winding_result undefined. Restricted to flyback and forward topologies;
+// buck/boost/sepic have no transformer and skip this step entirely.
 export function designWinding(
   topology: 'flyback' | 'forward',
   spec: DesignSpec,

@@ -29,6 +29,10 @@ export { filterOutputImpedance, converterInputImpedance } from './input-filter/i
 
 import type { InputFilterOptions } from './input-filter/types'
 
+// Called by: worker/compute.ts (applyInputFilter), guarded by spec.inputFilterEnabled
+// Why: filter design needs the EMI result (to derive the required attenuation target), which
+// is itself produced earlier in the same optional-analyses chain. Running sequentially in the
+// worker keeps the design data consistent — both EMI and filter use the same result snapshot.
 export function designInputFilter(
   _topology: string,
   spec: DesignSpec,

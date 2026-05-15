@@ -14,6 +14,11 @@ import { designRdsonSense } from './current-sense/rdson'
 
 export type { SenseMethod, CurrentSenseResult }
 
+// Called by: worker/compute.ts (applyCurrentSense), guarded by spec.controlMode === 'current'
+// Why: sizing the sense element requires peakCurrent and dutyCycle from the base result,
+// so this runs as a post-compute step in the worker rather than inside the topology engine.
+// The _topology parameter is accepted for future topology-specific sense methods (e.g.,
+// a flyback primary-side sense that uses a different peak-current formula).
 export function designCurrentSense(
   _topology: string,
   spec: DesignSpec,

@@ -87,6 +87,12 @@ function checkWithHeuristic(I_peak: number, I_avg: number, B_sat: number): Satur
  * @param I_avg    Average DC inductor current (A) — used only by the heuristic branch.
  * @param inductor Optional database entry; when present, uses the actual I_sat rating.
  */
+// Called by: topology compute() functions (buck.ts, boost.ts, buckBoost.ts, sepic.ts,
+// flyback.ts, forward.ts) — inline within the topology engine, not as a post-compute step.
+// Running inside compute() means the saturation check result is part of the initial
+// DesignResult and available immediately for warnings and the saturation margin MC metric.
+// ComponentSuggestions also calls this directly when the user changes the selected inductor,
+// to update the margin display without triggering a full recompute.
 export function checkSaturation(
   I_peak: number,
   I_avg: number,

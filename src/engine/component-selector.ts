@@ -67,6 +67,11 @@ const mosfets:    MosfetData[]    = mosfetsData    as MosfetData[]
  * @param requiredInductance  Minimum inductance in µH.
  * @param requiredIsat        Minimum saturation current in A.
  */
+// Called by: ComponentSuggestions component and DigiKey fallback path — directly on the
+// renderer thread. All three suggest* functions are pure database filters with no heavy
+// computation, so a worker round-trip would add latency without benefit. The LocalDatabaseProvider
+// in component-search.ts delegates to these functions; DigiKeyProvider overrides them with live
+// API results when Digi-Key credentials are configured.
 export function suggestInductors(requiredInductance: number, requiredIsat: number): InductorData[] {
   return inductors
     .filter(ind => ind.inductance_uh >= requiredInductance && ind.isat_a >= requiredIsat)

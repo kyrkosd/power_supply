@@ -16,6 +16,9 @@ import { postError } from './types'
 
 const DEBOUNCE_MS = 8
 
+// Called by: applyOptionalAnalyses (below), guarded by spec.controlMode === 'current'
+// Why: current-sense sizing depends on the fully-computed peakCurrent and dutyCycle from the
+// base result, so it must run after computeAny() rather than inside the topology engine itself.
 function applyCurrentSense(topology: string, spec: DesignSpec, r: DesignResult): DesignResult {
   if (spec.controlMode !== 'current') return r
   const cs = designCurrentSense(
@@ -26,6 +29,9 @@ function applyCurrentSense(topology: string, spec: DesignSpec, r: DesignResult):
   return { ...r, current_sense: cs }
 }
 
+// Called by: applyOptionalAnalyses (below), guarded by spec.inputFilterEnabled
+// Why: filter design requires the EMI result (attenuation target) which is computed first in
+// the optional-analyses chain, so this cannot be merged into the topology compute() call.
 function applyInputFilter(topology: string, spec: DesignSpec, r: DesignResult, emi: EMIResult): DesignResult {
   if (!spec.inputFilterEnabled) return r
   const opts: InputFilterOptions = {
@@ -37,6 +43,9 @@ function applyInputFilter(topology: string, spec: DesignSpec, r: DesignResult, e
   return { ...r, input_filter: inputFilter }
 }
 
+// Called by: applyOptionalAnalyses (below), restricted to flyback and forward topologies
+// Why: winding design requires r.coreType (set by flyback/forward compute()), which is only
+// available after the base topology result has been produced.
 function applyWinding(topology: string, spec: DesignSpec, r: DesignResult): DesignResult {
   if (topology !== 'flyback' && topology !== 'forward') return r
   if (!r.coreType) return r
@@ -45,6 +54,9 @@ function applyWinding(topology: string, spec: DesignSpec, r: DesignResult): Desi
   return { ...r, winding_result: designWinding(topology as TopologyId, spec, r, core) }
 }
 
+// Called by: runCompute (below), which is itself called from scheduleCompute after debouncing
+// Why: the optional analyses are kept separate from computeAny() so the topology engines stay
+// pure and testable without having to stub EMI, winding, or current-sense dependencies.
 /** Run optional post-compute analyses and return the augmented result + EMI estimate. */
 function applyOptionalAnalyses(
   topology: string, spec: DesignSpec, result: DesignResult,

@@ -57,6 +57,12 @@ function resolveOptions(spec: DesignSpec, options?: AnalyzeOptions) {
   }
 }
 
+// Called by:
+//   - buck.ts (computeBuck) — loop analysis runs inline with every COMPUTE to populate Bode data
+//   - mc/iteration.ts (tryPhaseMargin) — perturbed-component phase-margin check per MC iteration
+// Why: keeping loop analysis in the engine layer (rather than a component) means the Bode
+// result is part of DesignResult and available to all consumers (chart, PDF export, warnings)
+// without a second worker round-trip.
 export function analyzeBuckControlLoop(
   spec: DesignSpec, result: DesignResult, options?: AnalyzeOptions,
 ): ControlLoopAnalysis {

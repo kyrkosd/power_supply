@@ -33,7 +33,12 @@ export const DEFAULT_SOFT_START_OPTIONS: SoftStartOptions = {
   auto_tss: true,
 }
 
-// Size the soft-start capacitor and estimate inrush currents.
+// Called by: SoftStartPanel component (directly, renderer thread) — on every spec change or
+// SoftStartOptions update (mode, tss_ms). Also called from SequencingView to populate the
+// pg_delay estimate when a rail has soft-start data but no transient result available.
+// TransientTab reads softStartOptions from the store and converts tss_ms → softStartSeconds
+// before dispatching TRANSIENT_COMPUTE, but does NOT call this function — the transient
+// solver manages its own ramp directly from the tss value.
 // References: TI SLVA801, Erickson §10.1, ON Semi AND9135, TI SLVA236A.
 export function designSoftStart(
   topology: string,

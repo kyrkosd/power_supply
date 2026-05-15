@@ -29,6 +29,12 @@ export type {
 /**
  * Generate a complete PCB layout guide for a computed switching-supply design.
  *
+ * Called by: LayoutGuide component (src/components/LayoutGuide/) — invoked directly on the
+ * renderer thread after every COMPUTE result, not through the worker. Layout guidelines are
+ * pure table lookups + trace-width arithmetic (no heavy iteration), so a worker round-trip
+ * is unnecessary. The result is also captured during PDF export (pdfExport.ts) to include
+ * layout recommendations in the report.
+ *
  * @param topology Converter topology identifier
  * @param spec     Design specification (Vin, Vout, Iout, fsw, efficiency)
  * @param result   Computed design result (peakCurrent, losses, turnsRatio, …)
