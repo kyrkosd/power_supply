@@ -2,7 +2,7 @@ import type { DesignSpec, DesignResult } from '../types'
 import type { CurrentSenseResult } from './types'
 import { packageForPower, slopeCompRamp, VNOISE_FLOOR_V } from './common'
 
-function vsenseWarnings(vsenseTargetMv: number, rsense_power: number, rsense: number): string[] {
+function vsenseWarnings(vsenseTargetMv: number, rsense_power: number, _: number): string[] {
   const warns: string[] = []
   if (vsenseTargetMv < 50)   warns.push(`Target Vsense ${vsenseTargetMv} mV is very low — noise immunity will be poor. Recommend ≥ 100 mV.`)
   if (vsenseTargetMv > 300)  warns.push(`Target Vsense ${vsenseTargetMv} mV is high — Rsense dissipation increases. Typical: 100–200 mV.`)
